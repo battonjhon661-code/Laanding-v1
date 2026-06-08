@@ -468,7 +468,7 @@ export function initProdScripts(): void {
 
     // Mat block: row carousels
     (function(){
-      var VISIBLE = 4;
+      var VISIBLE = 5;
       var GAP = 14;
       var DUR = 550;
 
@@ -796,7 +796,8 @@ export function initProdScripts(): void {
       var navWrap = document.getElementById('navWrap');
       var nav     = document.getElementById('nav');
       var sheet   = document.getElementById('navSheet');
-      if (!navWrap || !nav || !sheet) return;
+      var hero    = document.getElementById('hero');
+      if (!navWrap || !nav || !sheet || !hero) return;
 
       var CIRCLE = 60, MARGIN = 28;
 
@@ -813,8 +814,8 @@ export function initProdScripts(): void {
       var wasCollapsed = false;
 
       function onScroll() {
-        var trigger    = 1;
-        var collapsed  = window.scrollY > trigger;
+        var trigger   = 1;
+        var collapsed = window.scrollY > trigger;
         if (collapsed === wasCollapsed) return;
         wasCollapsed = collapsed;
         navWrap.classList.toggle('collapsed', collapsed);
@@ -855,6 +856,36 @@ export function initProdScripts(): void {
 
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeSheet();
+      });
+    })();
+
+    // mat-cell hover video — only for cells with data-hover-video
+    (function () {
+      document.querySelectorAll('.mat-cell[data-hover-video]').forEach(function (cell) {
+        var src = cell.dataset.hoverVideo;
+        var bg = cell.querySelector('.mat-cell-bg');
+        if (!bg || !src) return;
+        var vid = null;
+        var playProm = null;
+        cell.addEventListener('mouseenter', function () {
+          if (!vid) {
+            vid = document.createElement('video');
+            vid.muted = true; vid.loop = true; vid.playsInline = true;
+            vid.src = src;
+            bg.appendChild(vid);
+          }
+          playProm = vid.play();
+          if (playProm) playProm.catch(function () {});
+        });
+        cell.addEventListener('mouseleave', function () {
+          if (!vid) return;
+          if (playProm) {
+            playProm.then(function () { vid.pause(); vid.currentTime = 0; }).catch(function () {});
+            playProm = null;
+          } else {
+            vid.pause(); vid.currentTime = 0;
+          }
+        });
       });
     })();
 }
