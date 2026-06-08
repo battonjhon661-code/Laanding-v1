@@ -27,7 +27,8 @@ const ZONES = [
 const TRANSITIONS: ({ src: string; reversed: boolean } | null)[] = [
   { src: "/balcony-bedroom.mp4", reversed: true  }, // Спальня → Балкон
   { src: "/balcony-gym.mp4",     reversed: false }, // Балкон → Спортзал
-  null, null, null, null, null, null,
+  { src: "/gym-swim.mp4",        reversed: false }, // Спортзал → Бассейн
+  null, null, null, null, null,
 ];
 
 const N = ZONES.length;

@@ -264,6 +264,7 @@ export function initProdScripts(): void {
       const hsGroups = Array.from(document.querySelectorAll('.ps-hs-group'));
       const dotsWrap = document.getElementById('ps-dots');
       const carousel = document.getElementById('ps-carousel');
+      if (!cards.length) return;
 
       /* build dots */
       const dotEls = cards.map((_, i) => {
@@ -791,17 +792,83 @@ export function initProdScripts(): void {
       }, { threshold: 0.35 }).observe(stage);
     })();
 
-    // ── Nav: transparent over hero, dark everywhere else ──────────
+    // ── Nav morph: full bar → circle in corner ──────────────────
     (function () {
       var navWrap = document.getElementById('navWrap');
-      if (!navWrap) return;
+      var nav     = document.getElementById('nav');
+      var sheet   = document.getElementById('navSheet');
+      var hero    = document.getElementById('hero');
+      if (!navWrap || !nav || !sheet || !hero) return;
+
+      var CIRCLE = 60, MARGIN = 28;
+
+      function recomputeTarget() {
+        var halfW  = window.innerWidth / 2;
+        var tx     = halfW - MARGIN - CIRCLE / 2;
+        var ty     = window.innerHeight - MARGIN - CIRCLE;
+        document.documentElement.style.setProperty('--tx', tx + 'px');
+        document.documentElement.style.setProperty('--ty', ty + 'px');
+      }
+      recomputeTarget();
+      window.addEventListener('resize', recomputeTarget, { passive: true });
+
+      var wasCollapsed = false;
+      var lastScrollY  = window.scrollY;
 
       function onScroll() {
-        var atHero = window.scrollY < window.innerHeight * 0.8;
-        navWrap.classList.toggle('nav-at-hero', atHero);
+        var y          = window.scrollY;
+        var trigger    = 1;
+        var collapsed  = y > trigger;
+        if (collapsed !== wasCollapsed) {
+          wasCollapsed = collapsed;
+          navWrap.classList.toggle('collapsed', collapsed);
+          if (collapsed) {
+            navWrap.classList.add('just-collapsed');
+            setTimeout(function () { navWrap.classList.remove('just-collapsed'); }, 1700);
+          } else {
+            closeSheet();
+          }
+        }
+        if (y < 40) {
+          navWrap.classList.remove('hidden');
+        } else if (y > lastScrollY) {
+          navWrap.classList.add('hidden');
+        } else {
+          navWrap.classList.remove('hidden');
+        }
+        lastScrollY = y;
       }
       window.addEventListener('scroll', onScroll, { passive: true });
       onScroll();
+
+      function openSheet() {
+        navWrap.classList.add('nav-open');
+        sheet.classList.add('show');
+      }
+      function closeSheet() {
+        navWrap.classList.remove('nav-open');
+        sheet.classList.remove('show');
+      }
+
+      nav.addEventListener('click', function (e) {
+        if (!navWrap.classList.contains('collapsed')) return;
+        if (e.target.closest('a')) return;
+        if (navWrap.classList.contains('nav-open')) closeSheet();
+        else openSheet();
+      });
+
+      sheet.addEventListener('click', function (e) {
+        if (e.target === sheet) closeSheet();
+      });
+
+      // Close sheet when clicking a nav link inside it
+      sheet.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () { closeSheet(); });
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeSheet();
+      });
     })();
 
     // mat-cell hover video — only for cells with data-hover-video
@@ -833,4 +900,16 @@ export function initProdScripts(): void {
         });
       });
     })();
+
+  // Block examples iframe interaction until section is fully in view
+  (function() {
+    var section = document.querySelector('.examples-section');
+    var iframe = section && section.querySelector('iframe');
+    if (!iframe) return;
+    iframe.style.pointerEvents = 'none';
+    var observer = new IntersectionObserver(function(entries) {
+      iframe.style.pointerEvents = entries[0].intersectionRatio >= 0.95 ? 'auto' : 'none';
+    }, { threshold: [0, 0.25, 0.5, 0.75, 0.95, 1.0] });
+    observer.observe(section);
+  })();
 }

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Media Center</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  @property --pos { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", "Frutiger", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 300; overflow: hidden; color: #fff; -webkit-font-smoothing: antialiased;
+    background: #0a1828;
+  }
+  #root { height: 100vh; width: 100vw; }
+
+  .stage {
+    position: relative; height: 100%; width: 100%; overflow: hidden;
+    background: #1a1814 url("back-1.png") center / cover no-repeat;
+  }
+  .stage::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(120% 120% at 50% 46%, rgba(8,10,14,0.18) 0%, rgba(8,10,14,0.42) 62%, rgba(5,7,11,0.66) 100%);
+  }
+  .stage::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 40%; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent 70%);
+  }
+
+  /* brand */
+  .brand {
+    position: absolute; top: clamp(20px, 3.4vh, 34px); right: clamp(26px, 3vw, 46px);
+    display: flex; align-items: center; gap: 11px; z-index: 9; opacity: 0.92;
+  }
+  .brand .wordmark { font-size: clamp(15px, 1.35vw, 19px); letter-spacing: 0.16em; font-weight: 400; }
+  .brand .wordmark b { font-weight: 600; }
+  .brand .orb {
+    width: clamp(22px, 1.9vw, 27px); height: clamp(22px, 1.9vw, 27px); border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #eaf4ff, #8fc4ff 38%, #2f7fe0 70%, #15498f 100%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.4), 0 0 14px rgba(120,190,255,0.55);
+  }
+
+  /* ===== horizontal category rail ===== */
+  .rail-wrap {
+    position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+    z-index: 4; overflow: visible; pointer-events: none;
+  }
+  .rail {
+    position: absolute; left: 0; top: 0; display: flex; align-items: center;
+    pointer-events: auto;
+    transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.27, 1);
+  }
+  .slot {
+    position: relative; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.5s cubic-bezier(0.22,0.61,0.27,1), opacity 0.5s ease, filter 0.5s ease;
+  }
+  .slot.side { cursor: pointer; }
+
+  /* big preview tile (collapsed category) */
+  .preview {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    border-radius: 9px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.22);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.25);
+    transition: opacity 0.5s ease;
+  }
+  .slot.focused .preview { opacity: 0; pointer-events: none; }
+
+  .mosaic-wrap { position: absolute; inset: 0; }
+  .mosaic-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile-glow { position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.15), transparent 26%); }
+  .tile-scrim { position: absolute; left:0; right:0; bottom:0; height: 52%; pointer-events:none;
+    background: linear-gradient(180deg, transparent, rgba(5,14,28,0.72) 78%); }
+
+  /* category name */
+  .cat-name {
+    position: absolute; left: 50%; top: 50%; z-index: 80;
+    transform: translate(-50%, -50%);
+    text-align: center; white-space: nowrap; pointer-events: none;
+    font-weight: 300; color: #fff; letter-spacing: 0.005em;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.85), 0 1px 3px rgba(0,0,0,0.75);
+    transition: font-size 0.4s ease;
+  }
+  .cat-name.under {
+    padding: 7px 26px; border-radius: 40px;
+    background: rgba(8,18,32,0.5);
+    box-shadow: 0 6px 22px rgba(0,0,0,0.4);
+  }
+
+  /* ===== carousel (expanded) — circular 3D wheel driven by --pos ===== */
+  .carousel {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    perspective: 1150px; transform-style: preserve-3d; pointer-events: auto;
+    transition: --pos 0.5s cubic-bezier(0.25, 0.7, 0.25, 1);
+  }
+  .citem {
+    --ang: calc(mod((calc(var(--i) - var(--pos)) * var(--step)) + 3.14159265rad, 6.28318531rad) - 3.14159265rad);
+    --c: cos(var(--ang));
+    position: absolute; left: 50%; top: 50%;
+    border-radius: 8px; overflow: hidden; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.26);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    transition: height 0.45s cubic-bezier(0.25,0.7,0.25,1);
+    transform:
+      translate(-50%, -50%)
+      translateY(calc(var(--R) * sin(var(--ang))))
+      translateZ(calc(var(--R) * (var(--c) - 1)))
+      scale(calc(0.79 + 0.21 * ((var(--c) + 1) / 2)));
+    opacity: clamp(0.16, calc(0.22 + 0.42 * (var(--c) + 1)), 1);
+    will-change: transform, opacity;
+  }
+  .citem.center {
+    border-color: rgba(255,255,255,0.82);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.3), 0 16px 42px rgba(0,0,0,0.58), 0 0 32px rgba(130,190,255,0.5);
+  }
+  .citem .cap {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 10px 7px;
+    background: linear-gradient(180deg, transparent, rgba(5,14,28,0.6) 36%, rgba(5,14,28,0.94) 100%);
+    color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.85); line-height: 1.1;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .citem.center .cap { opacity: 1; }
+
+  /* autoplay strips */
+  .auto-strips {
+    position: absolute; left: 50%; bottom: clamp(46px, 6vh, 60px); transform: translateX(-50%);
+    z-index: 9; display: flex; align-items: center; gap: 8px;
+  }
+  .auto-strip {
+    width: 48px; height: 3px; border-radius: 99px;
+    background: rgba(255,255,255,0.22); overflow: hidden; cursor: pointer;
+    transition: filter .35s ease;
+  }
+  .auto-strip.active { filter: drop-shadow(0 0 5px rgba(255,255,255,.5)); }
+  .auto-strip-fill {
+    height: 100%; width: 0%; background: #fff; border-radius: 99px;
+    animation: strip-progress 4s linear forwards;
+  }
+  @keyframes strip-progress { from { width: 0%; } to { width: 100%; } }
+
+  /* hint */
+  .hint {
+    position: absolute; left: 50%; bottom: clamp(15px, 2.4vh, 24px); transform: translateX(-50%);
+    z-index: 9; display: flex; align-items: center; gap: 9px;
+    font-size: 13px; letter-spacing: 0.03em; color: rgba(210,228,250,0.5);
+  }
+  .hint kbd {
+    font-family: inherit; font-size: 12px; min-width: 22px; height: 22px; padding: 0 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.28); border-radius: 5px;
+    background: rgba(255,255,255,0.06); color: rgba(232,242,255,0.8);
+  }
+  .hint .sep { opacity: 0.4; margin: 0 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback, useLayoutEffect } = React;
+
+/* ---------- seeded mosaic generator ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function makeMosaic(seed, hr, sr, lr){
+  const r = mulberry32(seed); const out = [];
+  for(let i=0;i<28;i++){
+    out.push(`hsl(${(hr[0]+r()*(hr[1]-hr[0]))|0} ${(sr[0]+r()*(sr[1]-sr[0]))|0}% ${(lr[0]+r()*(lr[1]-lr[0]))|0}%)`);
+  }
+  return out;
+}
+const HUE_FAMILIES = {
+  spotlight: [195, 255], movies: [205, 360], music: [0, 360],
+  tv: [180, 265], photos: [25, 210], programs: [150, 285], tasks: [200, 250],
+};
+
+/* ---------- data ---------- */
+const CATS = [
+  { id:"spotlight", label:"Spotlight", subs:["обзор", "что нового", "избранное"] },
+  { id:"movies", label:"Movies", subs:["ещё фильмы", "библиотека фильмов", "play dvd", "поиск"] },
+  { id:"music", label:"Music", subs:["ещё музыка", "музыкальная библиотека", "play all", "радио", "поиск"] },
+  { id:"tv", label:"TV", subs:["прямой эфир", "записанное", "телегид", "настройка"] },
+  { id:"photos", label:"Photos + Video", subs:["видео", "библиотека фото", "избранное", "слайд-шоу"] },
+  { id:"programs", label:"Programs", subs:["ещё приложения", "библиотека", "поиск"] },
+  { id:"tasks", label:"Tasks", subs:["синхронизация", "настройки", "выключение"] },
+];
+const DEFAULT_CAT = 2;
+
+const SUB_MOSAICS = CATS.map((c, ci) =>
+  c.subs.map((s, si) => makeMosaic((ci + 1) * 97 + si * 13 + 5, HUE_FAMILIES[c.id] || [0,360], [44, 82], [30, 62]))
+);
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function ringOffset(i, pos, n){ let d = ((i - pos) % n + n) % n; if(d > n/2) d -= n; return d; }
+const wrap = (v, n) => ((v % n) + n) % n;
+// fill the ring with repeated covers so it's dense AND closes seamlessly
+function ringSize(n){ let M = n; while(M < 10) M += n; return M; }
+
+/* geometry (design px, scaled by u) */
+const PREV_W = 470, PREV_H = 602;
+const TILE_W = 360, TILE_H = 360, CENTER_H = 540;
+const RADIUS = 326;
+const GAP = 90;
+
+const PHOTOS = Array.from({ length: 42 }, (_, i) => `https://picsum.photos/seed/${i + 20}/470/600`);
+
+function Mosaic({ src }){
+  return (
+    <div className="mosaic-wrap"><img src={src} alt="" draggable="false" /></div>
+  );
+}
+
+function Carousel({ ci, posAccum, u, onPick }){
+  const subs = CATS[ci].subs, n = subs.length;
+  const M = ringSize(n);
+  const step = (2 * Math.PI) / M;
+  const center = wrap(Math.round(posAccum), M);
+  const tw = TILE_W * u, th = TILE_H * u, R = RADIUS * u;
+  return (
+    <div className="carousel"
+         style={{ width: tw, height: th, "--pos": posAccum, "--R": R + "px", "--step": step + "rad" }}>
+      {Array.from({ length: M }, (_, c) => {
+        const sub = c % n;
+        const isC = c === center;
+        const z = 60 - Math.round(Math.abs(ringOffset(c, posAccum, M)) * 5);
+        return (
+          <div key={c}
+               className={"citem" + (isC ? " center" : "")}
+               onClick={() => onPick(c)}
+               style={{ width: tw, height: (isC ? CENTER_H : TILE_H) * u, "--i": c, zIndex: z }}>
+            <Mosaic src={PHOTOS[(ci * 7 + sub) % PHOTOS.length]} />
+            <div className="tile-glow" />
+            <div className="cap" style={{ fontSize: 17.5 * u }}>{subs[sub]}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function App(){
+  const [ai, setAi] = useState(DEFAULT_CAT);
+  const [selMap, setSelMap] = useState(() => {
+    const o = {}; CATS.forEach((c, i) => { o[i] = c.subs.length > 1 ? 1 : 0; }); return o;
+  });
+  const [posAccum, setPosAccum] = useState(selMap[DEFAULT_CAT]);
+  const [dim, setDim] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const u = clamp(Math.min(dim.w / 1920, dim.h / 1080), 0.55, 1.15);
+
+  const railRef = useRef(null);
+  const [shift, setShift] = useState(0);
+
+  const posRef = useRef(posAccum); posRef.current = posAccum;
+  const aiRef = useRef(ai); aiRef.current = ai;
+  const selMapRef = useRef(selMap); selMapRef.current = selMap;
+
+  // autoplay state
+  const [autoEnabled, setAutoEnabled] = useState(true);
+  const [animKey, setAnimKey] = useState(0);
+  const idleRef = useRef(null);
+
+  const onUserInteract = useCallback(() => {
+    setAutoEnabled(false);
+    clearTimeout(idleRef.current);
+    idleRef.current = setTimeout(() => {
+      setAutoEnabled(true);
+      setAnimKey(k => k + 1);
+    }, 3000);
+  }, []);
+
+  const onStripEnd = useCallback(() => {
+    setAi(v => (v + 1) % CATS.length);
+    setAnimKey(k => k + 1);
+  }, []);
+
+  // center focused slot horizontally
+  useLayoutEffect(() => {
+    const rail = railRef.current; if(!rail) return;
+    const child = rail.children[ai]; if(!child) return;
+    setShift(Math.round(dim.w / 2 - (child.offsetLeft + child.offsetWidth / 2)));
+  }, [ai, dim]);
+
+  // entering a category: snap accumulator to its remembered selection (carousel remounts -> no spin)
+  useLayoutEffect(() => {
+    const v = selMapRef.current[ai];
+    posRef.current = v; setPosAccum(v);
+    // eslint-disable-next-line
+  }, [ai]);
+
+  useEffect(() => {
+    const onResize = () => setDim({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const stepCat = useCallback((dir) => setAi(v => clamp(v + dir, 0, CATS.length - 1)), []);
+
+  const stepSub = useCallback((dir) => {
+    const a = aiRef.current, n = CATS[a].subs.length;
+    const np = posRef.current + dir;
+    posRef.current = np; setPosAccum(np);
+    setSelMap(m => ({ ...m, [a]: wrap(np, n) }));
+  }, []);
+
+  const pickSub = useCallback((cell) => {
+    const a = aiRef.current, n = CATS[a].subs.length, M = ringSize(n);
+    const off = ringOffset(cell, wrap(posRef.current, M), M);
+    const np = posRef.current + off;
+    posRef.current = np; setPosAccum(np);
+    setSelMap(m => ({ ...m, [a]: cell % n }));
+    onUserInteract();
+  }, [onUserInteract]);
+
+  // keyboard
+  useEffect(() => {
+    const onKey = (e) => {
+      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault();
+      if(e.key === "ArrowLeft")  { stepCat(-1); onUserInteract(); }
+      else if(e.key === "ArrowRight") { stepCat(1); onUserInteract(); }
+      else if(e.key === "ArrowUp")    { stepSub(-1); onUserInteract(); }
+      else if(e.key === "ArrowDown")  { stepSub(1); onUserInteract(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [stepCat, stepSub, onUserInteract]);
+
+  // wheel
+  const accum = useRef(0), cool = useRef(0), lastT = useRef("cat");
+  useEffect(() => {
+    const onWheel = (e) => {
+      const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+      const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+      const inSubs = Math.abs(e.clientX - cx) < 0.5 * PREV_W * u + 40 && Math.abs(e.clientY - cy) < 0.5 * PREV_H * u + 60;
+      if (!horizontal && !inSubs) return;
+      e.preventDefault();
+      const delta = horizontal ? e.deltaX : e.deltaY;
+      if(lastT.current !== (horizontal ? "cat" : "sub")){ accum.current = 0; lastT.current = horizontal ? "cat" : "sub"; }
+      accum.current += delta;
+      const now = performance.now();
+      if(now < cool.current) return;
+      const TH = 30;
+      const step = horizontal ? stepCat : stepSub;
+      if(accum.current > TH){ step(1); accum.current = 0; cool.current = now + 80; onUserInteract(); }
+      else if(accum.current < -TH){ step(-1); accum.current = 0; cool.current = now + 80; onUserInteract(); }
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, [stepCat, stepSub, u, onUserInteract]);
+
+  const slotW = PREV_W * u, slotH = PREV_H * u;
+
+  return (
+    <div className="stage">
+      <div className="rail-wrap" style={{ height: slotH }}>
+        <div className="rail" ref={railRef} style={{ transform: `translateX(${shift}px)`, gap: GAP * u }}>
+          {CATS.map((c, ci) => {
+            const focused = ci === ai;
+            const coverPhoto = PHOTOS[(ci * 7 + (selMap[ci] || 0)) % PHOTOS.length];
+            return (
+              <div key={c.id}
+                   className={"slot" + (focused ? " focused" : " side")}
+                   onClick={() => { if(!focused){ setAi(ci); onUserInteract(); } }}
+                   style={{
+                     width: slotW, height: slotH,
+                     transform: focused ? "scale(1)" : "scale(0.74)",
+                     opacity: focused ? 1 : 0.82,
+                     filter: focused ? "none" : "saturate(0.85) brightness(0.9)",
+                   }}>
+                <div className="preview" style={{ width: slotW, height: slotH }}>
+                  <Mosaic src={coverPhoto} />
+                  <div className="tile-glow" />
+                  <div className="tile-scrim" />
+                </div>
+                {focused && (
+                  <Carousel key={"car-" + c.id} ci={ci} posAccum={posAccum} u={u} onPick={pickSub} />
+                )}
+                <div className={"cat-name" + (focused ? " under" : "")}
+                     style={{ transform: `translate(-50%, ${(focused ? (CENTER_H / 2 + 34) : 0) * u}px)`, fontSize: (focused ? 35 : 33) * u }}>
+                  {c.label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="auto-strips">
+        {CATS.map((_, ci) => (
+          <div key={ci} className={"auto-strip" + (ci === ai ? " active" : "")}
+               onClick={() => { setAi(ci); onUserInteract(); }}>
+            {ci === ai && autoEnabled && (
+              <div key={animKey} className="auto-strip-fill" onAnimationEnd={onStripEnd} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="hint">
+        <kbd>←</kbd><kbd>→</kbd><span>категории</span>
+        <span className="sep">•</span>
+        <kbd>↑</kbd><kbd>↓</kbd><span>подкатегории</span>
+        <span className="sep">•</span>
+        <span>или колёсико мыши</span>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
