@@ -518,21 +518,7 @@ function Chapters({
       zIndex: 30,
     } as React.CSSProperties}>
 
-      {/* backdrop */}
-      <div style={{
-        position: "absolute",
-        inset: "-18px -14px",
-        borderRadius: 32,
-        background: "rgba(5,7,9,0.12)",
-        backdropFilter: "blur(4px)",
-        WebkitBackdropFilter: "blur(4px)",
-        maskImage: "linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%)",
-        WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 14%, black 86%, transparent 100%)",
-        zIndex: -1,
-        pointerEvents: "none",
-      } as React.CSSProperties} />
-
-      {ZONES.map((zone, i) => {
+{ZONES.map((zone, i) => {
         const active = activeZone === i;
         const hot    = hovered === i;
         return (
