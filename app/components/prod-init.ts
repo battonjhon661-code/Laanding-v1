@@ -796,8 +796,7 @@ export function initProdScripts(): void {
       var navWrap = document.getElementById('navWrap');
       var nav     = document.getElementById('nav');
       var sheet   = document.getElementById('navSheet');
-      var hero    = document.getElementById('hero');
-      if (!navWrap || !nav || !sheet || !hero) return;
+      if (!navWrap || !nav || !sheet) return;
 
       var CIRCLE = 60, MARGIN = 28;
 
