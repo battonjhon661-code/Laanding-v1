@@ -791,71 +791,17 @@ export function initProdScripts(): void {
       }, { threshold: 0.35 }).observe(stage);
     })();
 
-    // ── Nav morph: full bar → circle in corner ──────────────────
+    // ── Nav: transparent over hero, dark everywhere else ──────────
     (function () {
       var navWrap = document.getElementById('navWrap');
-      var nav     = document.getElementById('nav');
-      var sheet   = document.getElementById('navSheet');
-      if (!navWrap || !nav || !sheet) return;
-
-      var CIRCLE = 60, MARGIN = 28;
-
-      function recomputeTarget() {
-        var halfW  = window.innerWidth / 2;
-        var tx     = halfW - MARGIN - CIRCLE / 2;
-        var ty     = window.innerHeight - MARGIN - CIRCLE;
-        document.documentElement.style.setProperty('--tx', tx + 'px');
-        document.documentElement.style.setProperty('--ty', ty + 'px');
-      }
-      recomputeTarget();
-      window.addEventListener('resize', recomputeTarget, { passive: true });
-
-      var wasCollapsed = false;
+      if (!navWrap) return;
 
       function onScroll() {
-        var trigger   = 1;
-        var collapsed = window.scrollY > trigger;
-        if (collapsed === wasCollapsed) return;
-        wasCollapsed = collapsed;
-        navWrap.classList.toggle('collapsed', collapsed);
-        if (collapsed) {
-          navWrap.classList.add('just-collapsed');
-          setTimeout(function () { navWrap.classList.remove('just-collapsed'); }, 1700);
-        } else {
-          closeSheet();
-        }
+        var atHero = window.scrollY < window.innerHeight * 0.8;
+        navWrap.classList.toggle('nav-at-hero', atHero);
       }
       window.addEventListener('scroll', onScroll, { passive: true });
       onScroll();
-
-      function openSheet() {
-        navWrap.classList.add('nav-open');
-        sheet.classList.add('show');
-      }
-      function closeSheet() {
-        navWrap.classList.remove('nav-open');
-        sheet.classList.remove('show');
-      }
-
-      nav.addEventListener('click', function (e) {
-        if (!navWrap.classList.contains('collapsed')) return;
-        if (e.target.closest('a')) return;
-        if (navWrap.classList.contains('nav-open')) closeSheet();
-        else openSheet();
-      });
-
-      sheet.addEventListener('click', function (e) {
-        if (e.target === sheet) closeSheet();
-      });
-
-      // Close sheet when clicking a nav link inside it
-      sheet.querySelectorAll('a').forEach(function (a) {
-        a.addEventListener('click', function () { closeSheet(); });
-      });
-
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeSheet();
-      });
     })();
 
     // mat-cell hover video — only for cells with data-hover-video
