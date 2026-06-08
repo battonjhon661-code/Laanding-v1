@@ -200,22 +200,36 @@ export default function ScrollVideoHero() {
       const targetW = window.innerWidth  * dpr;
       const targetH = window.innerHeight * dpr;
 
-      let imagesLoaded = 0;
-      await Promise.all(
-        ZONES.map(async (zone, i) => {
-          if (cancelled) return;
+      // Phase 1: fetch all blobs in parallel (fast, network-bound)
+      const blobs = await Promise.all(
+        ZONES.map(async (zone) => {
           try {
             const resp = await fetch(zone.imageSrc);
-            const blob = await resp.blob();
-            const img  = await createImageBitmap(blob);
-            zoneBitmapsRef.current[i] = await makeBitmap(img, img.width, img.height, targetW, targetH);
+            return await resp.blob();
           } catch {
-            console.warn("Could not load:", zone.imageSrc);
+            console.warn("Could not fetch:", zone.imageSrc);
+            return null;
           }
-          imagesLoaded++;
-          setLoadPct(Math.round((imagesLoaded / N) * 65));
         })
       );
+
+      // Phase 2: decode + scale bitmaps sequentially (stable, memory-bound)
+      let imagesLoaded = 0;
+      for (let i = 0; i < N; i++) {
+        if (cancelled) return;
+        const blob = blobs[i];
+        if (blob) {
+          try {
+            const raw = await createImageBitmap(blob);
+            zoneBitmapsRef.current[i] = await makeBitmap(raw, raw.width, raw.height, targetW, targetH);
+            raw.close();
+          } catch {
+            console.warn("Could not decode:", ZONES[i].imageSrc);
+          }
+        }
+        imagesLoaded++;
+        setLoadPct(Math.round((imagesLoaded / N) * 65));
+      }
 
       const videoCount = TRANSITIONS.filter(Boolean).length;
       let videosDone   = 0;
