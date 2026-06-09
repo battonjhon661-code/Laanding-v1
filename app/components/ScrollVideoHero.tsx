@@ -555,6 +555,20 @@ export default function ScrollVideoHero() {
         fontFamily: "'Manrope', sans-serif",
       }}
     >
+      {/* LCP placeholder — visible immediately before canvas loads */}
+      <img
+        src="/locations/bedroom.png"
+        alt=""
+        fetchPriority="high"
+        style={{
+          position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+          objectFit: "cover", zIndex: 1,
+          opacity: phase === "ready" ? 0 : 1,
+          transition: "opacity 0.5s ease",
+          pointerEvents: "none",
+        }}
+      />
+
       {/* canvas */}
       <canvas ref={canvasRef} style={{
         position: "absolute", top: 0, left: 0, width: "100%", height: "100%",

@@ -1,10 +1,9 @@
 "use client";
 import { useEffect } from "react";
-import { initProdScripts } from "./prod-init";
 
 export default function ProdScripts() {
   useEffect(() => {
-    initProdScripts();
+    import("./prod-init").then(({ initProdScripts }) => initProdScripts());
   }, []);
 
   useEffect(() => {
