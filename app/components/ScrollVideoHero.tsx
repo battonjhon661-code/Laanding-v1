@@ -99,6 +99,38 @@ async function makeBitmap(
   return createImageBitmap(off);
 }
 
+async function bitmapToBlob(bm: ImageBitmap): Promise<Blob> {
+  const off = new OffscreenCanvas(bm.width, bm.height);
+  (off.getContext("2d") as OffscreenCanvasRenderingContext2D).drawImage(bm, 0, 0);
+  return off.convertToBlob({ type: "image/webp", quality: 0.88 });
+}
+
+function openFrameDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("vipglass-hero", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("frames");
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+function idbGet(db: IDBDatabase, key: string): Promise<Blob[] | undefined> {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction("frames").objectStore("frames").get(key);
+    req.onsuccess = () => resolve(req.result as Blob[] | undefined);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+function idbPut(db: IDBDatabase, key: string, blobs: Blob[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("frames", "readwrite");
+    tx.objectStore("frames").put(blobs, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror    = () => reject(tx.error);
+  });
+}
+
 export default function ScrollVideoHero() {
   const wrapRef   = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -109,6 +141,7 @@ export default function ScrollVideoHero() {
   const virtualPosRef      = useRef(0);
   const isDraggingRef      = useRef(false);
   const dragStartXRef      = useRef(0);
+  const dragStartYRef      = useRef(0);
   const dragStartPosRef    = useRef(0);
   const jumpRafRef         = useRef<number | null>(null);
   const autoTimerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -201,6 +234,23 @@ export default function ScrollVideoHero() {
       const targetW = window.innerWidth  * dpr;
       const targetH = window.innerHeight * dpr;
 
+      let db: IDBDatabase | null = null;
+      try { db = await openFrameDB(); } catch { /* IDB недоступен */ }
+
+      // Warm cache probe: если зона 0 уже в IDB — показываем canvas сразу, без лоадера
+      let warmCache = false;
+      if (db) {
+        try {
+          const key0 = `img_${ZONES[0].imageSrc}_${targetW}x${targetH}`;
+          const c0   = await idbGet(db, key0);
+          if (c0) {
+            zoneBitmapsRef.current[0] = await createImageBitmap(c0[0]);
+            warmCache = true;
+            if (!cancelled) setPhase("ready");
+          }
+        } catch { /* fall through */ }
+      }
+
       // Phase 1: fetch all blobs in parallel (fast, network-bound)
       const blobs = await Promise.all(
         ZONES.map(async (zone) => {
@@ -214,16 +264,35 @@ export default function ScrollVideoHero() {
         })
       );
 
-      // Phase 2: decode + scale bitmaps sequentially (stable, memory-bound)
+      // Phase 2: decode + scale bitmaps (IDB cache → fallback to decode)
       let imagesLoaded = 0;
       for (let i = 0; i < N; i++) {
         if (cancelled) return;
+        const imgKey = `img_${ZONES[i].imageSrc}_${targetW}x${targetH}`;
+
+        if (db) {
+          try {
+            const cached = await idbGet(db, imgKey);
+            if (cached) {
+              zoneBitmapsRef.current[i] = await createImageBitmap(cached[0]);
+              imagesLoaded++;
+              setLoadPct(Math.round((imagesLoaded / N) * 65));
+              continue;
+            }
+          } catch { /* fall through to decode */ }
+        }
+
         const blob = blobs[i];
         if (blob) {
           try {
             const raw = await createImageBitmap(blob);
-            zoneBitmapsRef.current[i] = await makeBitmap(raw, raw.width, raw.height, targetW, targetH);
+            const bm  = await makeBitmap(raw, raw.width, raw.height, targetW, targetH);
             raw.close();
+            zoneBitmapsRef.current[i] = bm;
+            if (db) {
+              const dbRef = db;
+              bitmapToBlob(bm).then(b => idbPut(dbRef, imgKey, [b])).catch(() => {});
+            }
           } catch {
             console.warn("Could not decode:", ZONES[i].imageSrc);
           }
@@ -239,6 +308,21 @@ export default function ScrollVideoHero() {
         if (cancelled) return;
         const t = TRANSITIONS[ti];
         if (!t) continue;
+
+        const cacheKey = `${t.src}_${targetW}x${targetH}`;
+
+        // Попытка загрузить из кеша
+        if (db) {
+          try {
+            const cached = await idbGet(db, cacheKey);
+            if (cached) {
+              videoFramesRef.current[ti] = await Promise.all(cached.map(b => createImageBitmap(b)));
+              videosDone++;
+              setLoadPct(65 + Math.round((videosDone / videoCount) * 35));
+              continue;
+            }
+          } catch { /* ошибка чтения — извлекаем заново */ }
+        }
 
         const video       = document.createElement("video");
         video.src         = t.src;
@@ -271,9 +355,17 @@ export default function ScrollVideoHero() {
         if (t.reversed) frames.reverse();
         videoFramesRef.current[ti] = frames;
         videosDone++;
+
+        // Сохраняем в кеш асинхронно, не блокируя рендер
+        if (db) {
+          const dbRef = db;
+          Promise.all(frames.map(bitmapToBlob))
+            .then(blobs => idbPut(dbRef, cacheKey, blobs))
+            .catch(() => {});
+        }
       }
 
-      if (!cancelled) setPhase("ready");
+      if (!cancelled && !warmCache) setPhase("ready");
     };
 
     load();
@@ -333,27 +425,67 @@ export default function ScrollVideoHero() {
       scheduleHsRef.current();
     };
 
+    const onTouchStart = (e: TouchEvent) => {
+      cancelJump();
+      cancelAutoAdvance();
+      clearHotspots();
+      isDraggingRef.current   = true;
+      dragStartXRef.current   = e.touches[0].clientX;
+      dragStartYRef.current   = e.touches[0].clientY;
+      dragStartPosRef.current = virtualPosRef.current;
+      setIsDragging(true);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDraggingRef.current) return;
+      const dx = dragStartXRef.current - e.touches[0].clientX;
+      const dy = dragStartYRef.current - e.touches[0].clientY;
+      // Let vertical scroll pass through; only handle clearly horizontal swipes
+      if (Math.abs(dy) > Math.abs(dx) * 0.8) return;
+      if (Math.abs(dx) < 6) return;
+      e.preventDefault();
+      virtualPosRef.current = Math.max(0, Math.min(N - 1,
+        dragStartPosRef.current + dx / DRAG_SENSITIVITY
+      ));
+      setActiveZone(Math.round(virtualPosRef.current));
+    };
+
+    const onTouchEnd = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      setIsDragging(false);
+      scheduleAutoRef.current();
+      scheduleHsRef.current();
+    };
+
     const wrap = wrapRef.current;
     if (!wrap) return;
     wrap.addEventListener("wheel", onWheel, { passive: false });
     wrap.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+    wrap.addEventListener("touchstart", onTouchStart, { passive: true });
+    wrap.addEventListener("touchmove", onTouchMove, { passive: false });
+    wrap.addEventListener("touchend", onTouchEnd);
     return () => {
       wrap.removeEventListener("wheel", onWheel);
       wrap.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      wrap.removeEventListener("touchstart", onTouchStart);
+      wrap.removeEventListener("touchmove", onTouchMove);
+      wrap.removeEventListener("touchend", onTouchEnd);
       if (wheelEndTimerRef.current) { clearTimeout(wheelEndTimerRef.current); wheelEndTimerRef.current = null; }
     };
   }, [cancelAutoAdvance, clearHotspots]);
 
-  // ── RAF: draw frame ──────────────────────────────────────────────────────────
+  // ── RAF: draw frame — pauses automatically when hero is off-screen ──────────
   useEffect(() => {
     if (phase !== "ready") return;
 
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const wrap   = wrapRef.current;
+    if (!canvas || !wrap) return;
 
     const dpr     = window.devicePixelRatio || 1;
     canvas.width  = window.innerWidth  * dpr;
@@ -361,7 +493,8 @@ export default function ScrollVideoHero() {
     const ctx     = canvas.getContext("2d")!;
 
     let prevBitmap: ImageBitmap | null = null;
-    let raf: number;
+    let raf: number | null = null;
+    let visible = true;
 
     const tick = () => {
       const pos       = virtualPosRef.current;
@@ -390,11 +523,24 @@ export default function ScrollVideoHero() {
         prevBitmap = bitmap;
       }
 
-      raf = requestAnimationFrame(tick);
+      raf = visible ? requestAnimationFrame(tick) : null;
     };
 
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const startTick = () => {
+      if (raf === null) raf = requestAnimationFrame(tick);
+    };
+
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible) startTick();
+    }, { threshold: 0 });
+    observer.observe(wrap);
+    startTick();
+
+    return () => {
+      if (raf !== null) cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
   }, [phase]);
 
   return (

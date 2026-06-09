@@ -490,6 +490,7 @@ export function initProdScripts(): void {
         next.addEventListener('click', function() {
           if (busy) return;
           lock();
+          track.style.willChange = 'transform';
           var dx = step();
           track.style.transition = 'transform ' + DUR + 'ms cubic-bezier(.65,.05,.25,1)';
           track.style.transform  = 'translateX(' + (-dx) + 'px)';
@@ -499,12 +500,14 @@ export function initProdScripts(): void {
             track.style.transform = 'translateX(0)';
             void track.offsetWidth;
             track.style.transition = '';
+            track.style.willChange = '';
           }, DUR);
         });
 
         prev.addEventListener('click', function() {
           if (busy) return;
           lock();
+          track.style.willChange = 'transform';
           var dx = step();
           track.style.transition = 'none';
           track.insertBefore(track.lastElementChild, track.firstElementChild);
@@ -512,6 +515,7 @@ export function initProdScripts(): void {
           void track.offsetWidth;
           track.style.transition = 'transform ' + DUR + 'ms cubic-bezier(.65,.05,.25,1)';
           track.style.transform  = 'translateX(0)';
+          setTimeout(function() { track.style.willChange = ''; }, DUR + 30);
         });
       });
     })();
@@ -541,28 +545,6 @@ export function initProdScripts(): void {
         setTimeout(function () { setLit([]); }, t);
       }
 
-      // overlap: наезд пропорционален скролу в обе стороны
-      // margin-top: -250px задан в CSS константой; translateY компенсирует его при скролле
-      var OVERLAP_MAX = 250;
-      var OVERLAP_RANGE = 1100;
-      function updateOverlap() {
-        var top = block.getBoundingClientRect().top;
-        var vh  = window.innerHeight;
-        var progress = (vh - top) / OVERLAP_RANGE;
-        var offset;
-        if (progress <= 0) {
-          offset = OVERLAP_MAX;
-        } else if (progress >= 1) {
-          offset = 0;
-        } else {
-          var e = progress * progress * (3 - 2 * progress);
-          offset = Math.round(OVERLAP_MAX * (1 - e));
-        }
-        block.style.transform = 'translateY(' + offset + 'px)';
-      }
-      window.addEventListener('scroll', updateOverlap, { passive: true });
-      updateOverlap();
-
       var obs = new IntersectionObserver(function (entries) {
         if (entries[0].isIntersecting && !triggered) {
           triggered = true;
@@ -582,9 +564,7 @@ export function initProdScripts(): void {
       if (!stage) return;
       function fitMat(){
         const s = stage.parentElement.offsetWidth / 1920;
-        stage.style.transform = 'scale(' + s + ')';
-        stage.style.transformOrigin = 'top left';
-        stage.parentElement.style.height = (1080 * s) + 'px';
+        stage.style.zoom = s;
       }
       fitMat();
       window.addEventListener('resize', fitMat);
@@ -901,15 +881,46 @@ export function initProdScripts(): void {
       });
     })();
 
-  // Block examples iframe interaction until section is fully in view
+  // Block examples iframe vertical interaction until fully in view,
+  // but always forward horizontal scroll/swipe so categories can be browsed mid-scroll
   (function() {
     var section = document.querySelector('.examples-section');
     var iframe = section && section.querySelector('iframe');
     if (!iframe) return;
     iframe.style.pointerEvents = 'none';
+
+    var ratio = 0;
     var observer = new IntersectionObserver(function(entries) {
-      iframe.style.pointerEvents = entries[0].intersectionRatio >= 0.95 ? 'auto' : 'none';
-    }, { threshold: [0, 0.25, 0.5, 0.75, 0.95, 1.0] });
+      ratio = entries[0].intersectionRatio;
+      iframe.style.pointerEvents = ratio >= 0.80 ? 'auto' : 'none';
+      fwd({ type: 'visibility', ratio: ratio });
+    }, { threshold: [0, 0.25, 0.5, 0.75, 0.80, 1.0] });
     observer.observe(section);
+
+    function fwd(msg) {
+      try { iframe.contentWindow.postMessage(msg, '*'); } catch(e) {}
+    }
+
+    // Forward horizontal wheel to iframe even when section is only partially visible
+    window.addEventListener('wheel', function(e) {
+      if (ratio < 0.08 || ratio >= 0.80) return;
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      fwd({ type: 'wheelX', delta: e.deltaX });
+    }, { passive: false });
+
+    // Forward horizontal touch swipe to iframe when section is partially visible
+    var tx = 0, ty = 0;
+    window.addEventListener('touchstart', function(e) {
+      tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+    }, { passive: true });
+    window.addEventListener('touchend', function(e) {
+      if (ratio >= 0.95) return;
+      var dx = e.changedTouches[0].clientX - tx;
+      var dy = e.changedTouches[0].clientY - ty;
+      if (Math.abs(dx) > Math.abs(dy) * 1.1 && Math.abs(dx) > 30) {
+        fwd({ type: 'swipeX', dir: dx < 0 ? 1 : -1 });
+      }
+    }, { passive: true });
   })();
 }
