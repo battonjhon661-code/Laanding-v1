@@ -29,6 +29,9 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://vipglass.ru"),
+  verification: {
+    google: "e4WnUIL3TFRyItiFvehYNoTycpzOuxlc_qKb0bv3sEQ",
+  },
   title: "VIPGLASS — Современные интерьеры",
   description: "Интерьерное стекло премиум-качества для архитектуры, в которой важна каждая деталь.",
   openGraph: {
