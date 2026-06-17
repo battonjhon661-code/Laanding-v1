@@ -14,28 +14,28 @@ const DIMMER = "rgba(244,241,236,0.30)";
 const LINE   = "rgba(244,241,236,0.22)";
 
 const ZONES = [
-  { label: "Спальня",   imageSrc: "/locations/bedroom.png"       },
-  { label: "Балкон",    imageSrc: "/locations/balcony.png"       },
-  { label: "Спортзал",  imageSrc: "/locations/gym.png"           },
-  { label: "Бассейн",   imageSrc: "/locations/swimming-pool.png" },
-  { label: "Душевая",   imageSrc: "/locations/shower.png"        },
-  { label: "Кухня",     imageSrc: "/locations/kitchen.png"       },
-  { label: "Прихожая",  imageSrc: "/locations/foeroom.png"       },
-  { label: "Холл",      imageSrc: "/locations/hall.png"          },
-  { label: "Детская",   imageSrc: "/locations/children.png"      },
-  { label: "Ванная",    imageSrc: "/locations/bathroom.png"      },
+  { label: "Спальня",   imageSrc: "/locations/bedroom.webp"       },
+  { label: "Балкон",    imageSrc: "/locations/balcony.webp"       },
+  { label: "Спортзал",  imageSrc: "/locations/gym.webp"           },
+  { label: "Бассейн",   imageSrc: "/locations/swimming-pool.webp" },
+  { label: "Душевая",   imageSrc: "/locations/shower.webp"        },
+  { label: "Кухня",     imageSrc: "/locations/kitchen.webp"       },
+  { label: "Прихожая",  imageSrc: "/locations/foeroom.webp"       },
+  { label: "Холл",      imageSrc: "/locations/hall.webp"          },
+  { label: "Детская",   imageSrc: "/locations/children.webp"      },
+  { label: "Ванная",    imageSrc: "/locations/bathroom.webp"      },
 ];
 
 // transitions[i] = video between zone[i] and zone[i+1]; null = no video
 const TRANSITIONS: ({ src: string; reversed: boolean } | null)[] = [
-  { src: "/balcony-bedroom.mp4",  reversed: true  }, // Спальня → Балкон
-  { src: "/balcony-gym.mp4",      reversed: false }, // Балкон → Спортзал
-  { src: "/gym-swim.mp4",         reversed: false }, // Спортзал → Бассейн
-  { src: "/swim-shower.mp4",      reversed: false }, // Бассейн → Душевая
-  { src: "/shower-kitchen.mp4",   reversed: false }, // Душевая → Кухня
-  { src: "/kitchen-foeroom.mp4", reversed: false }, // Кухня → Прихожая
-  { src: "/foeroom-hall.mp4",    reversed: false }, // Прихожая → Холл
-  { src: "/hall-children.mp4",   reversed: false }, // Холл → Детская
+  { src: "/balcony-bedroom.webm", reversed: true  }, // Спальня → Балкон
+  { src: "/balcony-gym.webm",     reversed: false }, // Балкон → Спортзал
+  { src: "/gym-swim.webm",        reversed: false }, // Спортзал → Бассейн
+  { src: "/swim-shower.webm",     reversed: false }, // Бассейн → Душевая
+  { src: "/shower-kitchen.webm",  reversed: false }, // Душевая → Кухня
+  { src: "/kitchen-foeroom.webm", reversed: false }, // Кухня → Прихожая
+  { src: "/foeroom-hall.webm",    reversed: false }, // Прихожая → Холл
+  { src: "/hall-children.webm",  reversed: false }, // Холл → Детская
   null, // Детская → Ванная
 ];
 
@@ -303,25 +303,19 @@ export default function ScrollVideoHero() {
         setLoadPct(Math.round((imagesLoaded / N) * 65));
       }
 
-      const videoCount = TRANSITIONS.filter(Boolean).length;
-      let videosDone   = 0;
-
-      for (let ti = 0; ti < TRANSITIONS.length; ti++) {
-        if (cancelled) return;
+      // Загружает кадры одного перехода (кеш IDB → иначе нарезка видео).
+      const loadTransitionFrames = async (ti: number) => {
         const t = TRANSITIONS[ti];
-        if (!t) continue;
+        if (!t) return;
 
         const cacheKey = `${t.src}_${targetW}x${targetH}`;
 
-        // Попытка загрузить из кеша
         if (db) {
           try {
             const cached = await idbGet(db, cacheKey);
             if (cached) {
               videoFramesRef.current[ti] = await Promise.all(cached.map(b => createImageBitmap(b)));
-              videosDone++;
-              setLoadPct(65 + Math.round((videosDone / videoCount) * 35));
-              continue;
+              return;
             }
           } catch { /* ошибка чтения — извлекаем заново */ }
         }
@@ -349,14 +343,10 @@ export default function ScrollVideoHero() {
             setTimeout(r, 400);
           });
           frames.push(await makeBitmap(video, videoWidth, videoHeight, targetW, targetH));
-
-          const vProg = (videosDone + f / Math.max(totalFrames - 1, 1)) / videoCount;
-          setLoadPct(65 + Math.round(vProg * 35));
         }
 
         if (t.reversed) frames.reverse();
         videoFramesRef.current[ti] = frames;
-        videosDone++;
 
         // Сохраняем в кеш асинхронно, не блокируя рендер
         if (db) {
@@ -365,12 +355,29 @@ export default function ScrollVideoHero() {
             .then(blobs => idbPut(dbRef, cacheKey, blobs))
             .catch(() => {});
         }
+      };
+
+      // Прелоадер ждёт только первые CRITICAL_TRANSITIONS переходов —
+      // их достаточно, чтобы пролистать первые несколько комнат сразу.
+      const CRITICAL_TRANSITIONS = 5;
+      const criticalCount = Math.min(CRITICAL_TRANSITIONS, TRANSITIONS.length);
+
+      for (let ti = 0; ti < criticalCount; ti++) {
+        if (cancelled) return;
+        await loadTransitionFrames(ti);
+        setLoadPct(65 + Math.round(((ti + 1) / criticalCount) * 35));
       }
 
       if (!cancelled) {
         const remaining = MIN_PRELOADER_MS - (performance.now() - loadStart);
         if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
         if (!cancelled) setPhase("ready");
+      }
+
+      // Остальные переходы догружаются в фоне, не блокируя показ сайта.
+      for (let ti = criticalCount; ti < TRANSITIONS.length; ti++) {
+        if (cancelled) return;
+        await loadTransitionFrames(ti);
       }
     };
 
@@ -563,7 +570,7 @@ export default function ScrollVideoHero() {
     >
       {/* LCP placeholder — visible immediately before canvas loads */}
       <img
-        src="/locations/bedroom.png"
+        src="/locations/bedroom.webp"
         alt=""
         fetchPriority="high"
         style={{

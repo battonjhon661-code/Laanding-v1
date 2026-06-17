@@ -72,7 +72,7 @@ export default function RootLayout({
     <html lang="ru" className={`${inter.variable} ${jetbrainsMono.variable} ${manrope.variable} ${outfit.variable}`}>
       <head>
         <meta name="google-site-verification" content="e4WnUIL3TFRyItiFvehYNoTycpzOuxlc_qKb0bv3sEQ" />
-        <link rel="preload" as="image" fetchPriority="high" href="/locations/bedroom.png" />
+        <link rel="preload" as="image" fetchPriority="high" href="/locations/bedroom.webp" />
       </head>
       <body>{children}</body>
     </html>
