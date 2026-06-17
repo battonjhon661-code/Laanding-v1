@@ -27,14 +27,14 @@ const ZONES = [
 
 // transitions[i] = pre-rendered frame sequence between zone[i] and zone[i+1]; null = no transition
 const TRANSITIONS: ({ folder: string; frames: number; reversed: boolean } | null)[] = [
-  { folder: "balcony-bedroom", frames: 32, reversed: true  }, // Спальня → Балкон
-  { folder: "balcony-gym",     frames: 33, reversed: false }, // Балкон → Спортзал
-  { folder: "gym-swim",        frames: 32, reversed: false }, // Спортзал → Бассейн
-  { folder: "swim-shower",     frames: 32, reversed: false }, // Бассейн → Душевая
-  { folder: "shower-kitchen",  frames: 32, reversed: false }, // Душевая → Кухня
-  { folder: "kitchen-foeroom", frames: 32, reversed: false }, // Кухня → Прихожая
-  { folder: "foeroom-hall",    frames: 32, reversed: false }, // Прихожая → Холл
-  { folder: "hall-children",   frames: 32, reversed: false }, // Холл → Детская
+  { folder: "balcony-bedroom", frames: 65, reversed: true  }, // Спальня → Балкон
+  { folder: "balcony-gym",     frames: 66, reversed: false }, // Балкон → Спортзал
+  { folder: "gym-swim",        frames: 65, reversed: false }, // Спортзал → Бассейн
+  { folder: "swim-shower",     frames: 65, reversed: false }, // Бассейн → Душевая
+  { folder: "shower-kitchen",  frames: 65, reversed: false }, // Душевая → Кухня
+  { folder: "kitchen-foeroom", frames: 65, reversed: false }, // Кухня → Прихожая
+  { folder: "foeroom-hall",    frames: 65, reversed: false }, // Прихожая → Холл
+  { folder: "hall-children",   frames: 65, reversed: false }, // Холл → Детская
   null, // Детская → Ванная
 ];
 
@@ -115,6 +115,26 @@ async function bitmapToBlob(bm: ImageBitmap): Promise<Blob> {
   const off = new OffscreenCanvas(bm.width, bm.height);
   (off.getContext("2d") as OffscreenCanvasRenderingContext2D).drawImage(bm, 0, 0);
   return off.convertToBlob({ type: "image/webp", quality: 0.88 });
+}
+
+// Однократный тест декодирования AVIF реальным файлом из набора кадров —
+// надёжнее, чем встроенная тестовая картинка, и заодно прогревает кэш браузера.
+let avifSupportPromise: Promise<boolean> | null = null;
+function detectAvifSupport(): Promise<boolean> {
+  if (!avifSupportPromise) {
+    avifSupportPromise = (async () => {
+      try {
+        const resp = await fetch(`/hero-frames-avif/${TRANSITIONS[0]!.folder}/f001.avif`);
+        const blob = await resp.blob();
+        const bm   = await createImageBitmap(blob);
+        bm.close();
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+  }
+  return avifSupportPromise;
 }
 
 function openFrameDB(): Promise<IDBDatabase> {
@@ -250,18 +270,23 @@ export default function ScrollVideoHero() {
       let db: IDBDatabase | null = null;
       try { db = await openFrameDB(); } catch { /* IDB недоступен */ }
 
-      // Phase 1: fetch all blobs in parallel (fast, network-bound)
-      const blobs = await Promise.all(
-        ZONES.map(async (zone) => {
-          try {
-            const resp = await fetch(zone.imageSrc);
-            return await resp.blob();
-          } catch {
-            console.warn("Could not fetch:", zone.imageSrc);
-            return null;
-          }
-        })
-      );
+      // Phase 1: fetch all blobs in parallel (fast, network-bound),
+      // заодно проверяем поддержку AVIF — её результат нужен только
+      // при загрузке кадров переходов чуть ниже.
+      const [blobs, avifOk] = await Promise.all([
+        Promise.all(
+          ZONES.map(async (zone) => {
+            try {
+              const resp = await fetch(zone.imageSrc);
+              return await resp.blob();
+            } catch {
+              console.warn("Could not fetch:", zone.imageSrc);
+              return null;
+            }
+          })
+        ),
+        detectAvifSupport(),
+      ]);
 
       // Phase 2: decode + scale bitmaps (IDB cache → fallback to decode)
       // blob.size входит в ключ кэша, чтобы замена файла на диске сама
@@ -303,12 +328,17 @@ export default function ScrollVideoHero() {
       }
 
       // Загружает кадры одного перехода: кеш IDB → иначе fetch готовых
-      // .webp-кадров (нарезаны заранее ffmpeg'ом в public/hero-frames/).
+      // кадров (нарезаны заранее ffmpeg'ом). AVIF — основной формат для
+      // браузеров, что его поддерживают (легче почти на треть), WebP —
+      // фолбэк для остальных.
+      const dir = avifOk ? "hero-frames-avif" : "hero-frames";
+      const ext = avifOk ? "avif" : "webp";
+
       const loadTransitionFrames = async (ti: number) => {
         const t = TRANSITIONS[ti];
         if (!t) return;
 
-        const cacheKey = `${t.folder}_${t.frames}_${targetW}x${targetH}`;
+        const cacheKey = `${t.folder}_${t.frames}_${ext}_${targetW}x${targetH}`;
 
         if (db) {
           try {
@@ -321,7 +351,7 @@ export default function ScrollVideoHero() {
         }
 
         const urls = Array.from({ length: t.frames }, (_, f) =>
-          `/hero-frames/${t.folder}/f${String(f + 1).padStart(3, "0")}.webp`
+          `/${dir}/${t.folder}/f${String(f + 1).padStart(3, "0")}.${ext}`
         );
 
         const blobs = await Promise.all(urls.map(async (url) => {
