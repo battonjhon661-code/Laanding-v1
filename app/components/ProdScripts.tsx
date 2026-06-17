@@ -28,6 +28,13 @@ export default function ProdScripts() {
         pendingTransform  = "";
       }
       lastY = y;
+
+      // ScrollVideoHero is exactly 100vh tall; once scrolled past it, the
+      // nav needs a dark backdrop so it stays legible over non-hero content.
+      // Kept here (not in prod-init.ts) because that file is regenerated
+      // from index-prod.html, which has no knowledge of ScrollVideoHero.
+      navWrap.classList.toggle("has-bg", y > window.innerHeight - 4);
+
       if (rafId !== null) return;
       rafId = requestAnimationFrame(() => {
         rafId = null;
@@ -36,6 +43,7 @@ export default function ProdScripts() {
       });
     };
 
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
