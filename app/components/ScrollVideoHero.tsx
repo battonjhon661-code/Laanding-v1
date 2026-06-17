@@ -137,6 +137,50 @@ function detectAvifSupport(): Promise<boolean> {
   return avifSupportPromise;
 }
 
+// Ограничивает число одновременных fetch — без этого 500+ кадров,
+// запущенных разом через Promise.all, перегружают пул соединений и
+// часть запросов рвётся с ошибкой соединения.
+function createSemaphore(limit: number) {
+  let active = 0;
+  const queue: (() => void)[] = [];
+  const acquire = () => new Promise<void>((resolve) => {
+    const tryAcquire = () => {
+      if (active < limit) { active++; resolve(); }
+      else queue.push(tryAcquire);
+    };
+    tryAcquire();
+  });
+  const release = () => {
+    active--;
+    queue.shift()?.();
+  };
+  return { acquire, release };
+}
+
+async function fetchBlobLimited(
+  url: string,
+  sem: ReturnType<typeof createSemaphore>,
+  attempts = 3
+): Promise<Blob> {
+  await sem.acquire();
+  try {
+    let lastErr: unknown;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return await resp.blob();
+      } catch (e) {
+        lastErr = e;
+        if (i < attempts - 1) await new Promise(r => setTimeout(r, 200 * (i + 1)));
+      }
+    }
+    throw lastErr;
+  } finally {
+    sem.release();
+  }
+}
+
 function openFrameDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("vipglass-hero", 1);
@@ -270,15 +314,18 @@ export default function ScrollVideoHero() {
       let db: IDBDatabase | null = null;
       try { db = await openFrameDB(); } catch { /* IDB недоступен */ }
 
-      // Phase 1: fetch all blobs in parallel (fast, network-bound),
-      // заодно проверяем поддержку AVIF — её результат нужен только
-      // при загрузке кадров переходов чуть ниже.
+      // Общий лимит одновременных fetch на все картинки/кадры — без него
+      // 500+ кадров переходов, запущенные разом, рвут пул соединений.
+      const frameSemaphore = createSemaphore(12);
+
+      // Phase 1: fetch all blobs in parallel (rate-limited), заодно
+      // проверяем поддержку AVIF — её результат нужен только при
+      // загрузке кадров переходов чуть ниже.
       const [blobs, avifOk] = await Promise.all([
         Promise.all(
           ZONES.map(async (zone) => {
             try {
-              const resp = await fetch(zone.imageSrc);
-              return await resp.blob();
+              return await fetchBlobLimited(zone.imageSrc, frameSemaphore);
             } catch {
               console.warn("Could not fetch:", zone.imageSrc);
               return null;
@@ -354,19 +401,27 @@ export default function ScrollVideoHero() {
           `/${dir}/${t.folder}/f${String(f + 1).padStart(3, "0")}.${ext}`
         );
 
-        const blobs = await Promise.all(urls.map(async (url) => {
-          const resp = await fetch(url);
-          return resp.blob();
-        }));
+        // Лимит конкурентности + ретраи на fetch, и если кадр всё равно
+        // не загрузился — пропускаем именно его, а не весь переход
+        // (раньше одна неудачная сетевая попытка валила Promise.all
+        // целиком, и переход оставался без кадров вообще).
+        const blobs = await Promise.all(
+          urls.map((url) => fetchBlobLimited(url, frameSemaphore).catch(() => null))
+        );
         if (cancelled) return;
 
-        const frames = await Promise.all(blobs.map(async (blob) => {
-          const raw = await createImageBitmap(blob);
-          const bm  = await makeBitmap(raw, raw.width, raw.height, targetW, targetH);
-          raw.close();
-          return bm;
-        }));
+        const frames: ImageBitmap[] = [];
+        for (const blob of blobs) {
+          if (!blob) continue;
+          try {
+            const raw = await createImageBitmap(blob);
+            const bm  = await makeBitmap(raw, raw.width, raw.height, targetW, targetH);
+            raw.close();
+            frames.push(bm);
+          } catch { /* нечитаемый кадр — пропускаем */ }
+        }
         if (cancelled) return;
+        if (frames.length === 0) return;
 
         if (t.reversed) frames.reverse();
         videoFramesRef.current[ti] = frames;
