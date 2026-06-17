@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
+import { Inter, JetBrains_Mono, Manrope, Outfit } from "next/font/google";
 import "./globals.css";
 import "./prod-page.css";
 
@@ -25,6 +25,14 @@ const manrope = Manrope({
   display: "swap",
   preload: true,
   variable: "--font-manrope",
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  weight: ["200", "300", "500", "600", "700"],
+  display: "swap",
+  preload: true,
+  variable: "--font-outfit",
 });
 
 export const metadata: Metadata = {
@@ -61,7 +69,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ru" className={`${inter.variable} ${jetbrainsMono.variable} ${manrope.variable}`}>
+    <html lang="ru" className={`${inter.variable} ${jetbrainsMono.variable} ${manrope.variable} ${outfit.variable}`}>
       <head>
         <meta name="google-site-verification" content="e4WnUIL3TFRyItiFvehYNoTycpzOuxlc_qKb0bv3sEQ" />
         <link rel="preload" as="image" fetchPriority="high" href="/locations/bedroom.png" />

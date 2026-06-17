@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Preloader from "./Preloader";
 
 const FPS = 30;
 const DRAG_SENSITIVITY = 1400;
 const AUTO_DELAY = 5000;
+const MIN_PRELOADER_MS = 4600; // один полный цикл анимации прелоадера
 
 const INK    = "#f4f1ec";
 const DIM    = "rgba(244,241,236,0.46)";
@@ -17,18 +19,24 @@ const ZONES = [
   { label: "Спортзал",  imageSrc: "/locations/gym.png"           },
   { label: "Бассейн",   imageSrc: "/locations/swimming-pool.png" },
   { label: "Душевая",   imageSrc: "/locations/shower.png"        },
-  { label: "Прихожая",  imageSrc: "/locations/foeroom.png"       },
   { label: "Кухня",     imageSrc: "/locations/kitchen.png"       },
+  { label: "Прихожая",  imageSrc: "/locations/foeroom.png"       },
+  { label: "Холл",      imageSrc: "/locations/hall.png"          },
   { label: "Детская",   imageSrc: "/locations/children.png"      },
   { label: "Ванная",    imageSrc: "/locations/bathroom.png"      },
 ];
 
 // transitions[i] = video between zone[i] and zone[i+1]; null = no video
 const TRANSITIONS: ({ src: string; reversed: boolean } | null)[] = [
-  { src: "/balcony-bedroom.mp4", reversed: true  }, // Спальня → Балкон
-  { src: "/balcony-gym.mp4",     reversed: false }, // Балкон → Спортзал
-  { src: "/gym-swim.mp4",        reversed: false }, // Спортзал → Бассейн
-  null, null, null, null, null,
+  { src: "/balcony-bedroom.mp4",  reversed: true  }, // Спальня → Балкон
+  { src: "/balcony-gym.mp4",      reversed: false }, // Балкон → Спортзал
+  { src: "/gym-swim.mp4",         reversed: false }, // Спортзал → Бассейн
+  { src: "/swim-shower.mp4",      reversed: false }, // Бассейн → Душевая
+  { src: "/shower-kitchen.mp4",   reversed: false }, // Душевая → Кухня
+  { src: "/kitchen-foeroom.mp4", reversed: false }, // Кухня → Прихожая
+  { src: "/foeroom-hall.mp4",    reversed: false }, // Прихожая → Холл
+  { src: "/hall-children.mp4",   reversed: false }, // Холл → Детская
+  null, // Детская → Ванная
 ];
 
 const N = ZONES.length;
@@ -61,22 +69,27 @@ const ZONE_HOTSPOTS: Hotspot[][] = [
     { left: "58%", top: "44%", label: "Душевой экран" },
     { left: "78%", top: "68%", label: "Стекло", tipLeft: true },
   ],
-  // 5 Прихожая
-  [
-    { left: "56%", top: "40%", label: "Зеркало" },
-    { left: "76%", top: "62%", label: "Подсветка", tipLeft: true },
-  ],
-  // 6 Кухня
+  // 5 Кухня
   [
     { left: "54%", top: "48%", label: "Стеклянный фасад" },
     { left: "76%", top: "28%", label: "Полки", tipLeft: true },
   ],
-  // 7 Детская
+  // 6 Прихожая
+  [
+    { left: "56%", top: "40%", label: "Зеркало" },
+    { left: "76%", top: "62%", label: "Подсветка", tipLeft: true },
+  ],
+  // 7 Холл
+  [
+    { left: "30%", top: "42%", label: "Стеклянное ограждение" },
+    { left: "82%", top: "56%", label: "Зеркало", tipLeft: true },
+  ],
+  // 8 Детская
   [
     { left: "56%", top: "44%", label: "Перегородка" },
     { left: "80%", top: "64%", label: "Стекло", tipLeft: true },
   ],
-  // 8 Ванная
+  // 9 Ванная
   [
     { left: "55%", top: "46%", label: "Душевой экран" },
     { left: "74%", top: "26%", label: "Зеркало с подсветкой", tipLeft: true },
@@ -230,26 +243,13 @@ export default function ScrollVideoHero() {
     let cancelled = false;
 
     const load = async () => {
+      const loadStart = performance.now();
       const dpr     = window.devicePixelRatio || 1;
       const targetW = window.innerWidth  * dpr;
       const targetH = window.innerHeight * dpr;
 
       let db: IDBDatabase | null = null;
       try { db = await openFrameDB(); } catch { /* IDB недоступен */ }
-
-      // Warm cache probe: если зона 0 уже в IDB — показываем canvas сразу, без лоадера
-      let warmCache = false;
-      if (db) {
-        try {
-          const key0 = `img_${ZONES[0].imageSrc}_${targetW}x${targetH}`;
-          const c0   = await idbGet(db, key0);
-          if (c0) {
-            zoneBitmapsRef.current[0] = await createImageBitmap(c0[0]);
-            warmCache = true;
-            if (!cancelled) setPhase("ready");
-          }
-        } catch { /* fall through */ }
-      }
 
       // Phase 1: fetch all blobs in parallel (fast, network-bound)
       const blobs = await Promise.all(
@@ -265,10 +265,13 @@ export default function ScrollVideoHero() {
       );
 
       // Phase 2: decode + scale bitmaps (IDB cache → fallback to decode)
+      // blob.size входит в ключ кэша, чтобы замена файла на диске сама
+      // инвалидировала старый закэшированный кадр.
       let imagesLoaded = 0;
       for (let i = 0; i < N; i++) {
         if (cancelled) return;
-        const imgKey = `img_${ZONES[i].imageSrc}_${targetW}x${targetH}`;
+        const blob   = blobs[i];
+        const imgKey = `img_${ZONES[i].imageSrc}_${blob?.size ?? 0}_${targetW}x${targetH}`;
 
         if (db) {
           try {
@@ -282,7 +285,6 @@ export default function ScrollVideoHero() {
           } catch { /* fall through to decode */ }
         }
 
-        const blob = blobs[i];
         if (blob) {
           try {
             const raw = await createImageBitmap(blob);
@@ -365,7 +367,11 @@ export default function ScrollVideoHero() {
         }
       }
 
-      if (!cancelled && !warmCache) setPhase("ready");
+      if (!cancelled) {
+        const remaining = MIN_PRELOADER_MS - (performance.now() - loadStart);
+        if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
+        if (!cancelled) setPhase("ready");
+      }
     };
 
     load();
@@ -628,6 +634,8 @@ export default function ScrollVideoHero() {
           </div>
         </>
       )}
+
+      <Preloader visible={phase === "loading"} />
 
       {/* loading bar */}
       {phase === "loading" && (
