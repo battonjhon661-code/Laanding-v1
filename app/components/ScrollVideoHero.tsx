@@ -359,20 +359,27 @@ export default function ScrollVideoHero() {
 
       // Прелоадер ждёт только первые CRITICAL_TRANSITIONS переходов —
       // их достаточно, чтобы пролистать первые несколько комнат сразу.
-      const CRITICAL_TRANSITIONS = 5;
+      // Нарезаются параллельно (а не один за другим), чтобы не суммировать
+      // время декодирования каждого видео.
+      const CRITICAL_TRANSITIONS = 3;
       const criticalCount = Math.min(CRITICAL_TRANSITIONS, TRANSITIONS.length);
 
-      for (let ti = 0; ti < criticalCount; ti++) {
-        if (cancelled) return;
-        await loadTransitionFrames(ti);
-        setLoadPct(65 + Math.round(((ti + 1) / criticalCount) * 35));
-      }
+      let criticalDone = 0;
+      await Promise.all(
+        Array.from({ length: criticalCount }, (_, ti) =>
+          loadTransitionFrames(ti).then(() => {
+            if (cancelled) return;
+            criticalDone++;
+            setLoadPct(65 + Math.round((criticalDone / criticalCount) * 35));
+          })
+        )
+      );
+      if (cancelled) return;
 
-      if (!cancelled) {
-        const remaining = MIN_PRELOADER_MS - (performance.now() - loadStart);
-        if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
-        if (!cancelled) setPhase("ready");
-      }
+      const remaining = MIN_PRELOADER_MS - (performance.now() - loadStart);
+      if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
+      if (cancelled) return;
+      setPhase("ready");
 
       // Остальные переходы догружаются в фоне, не блокируя показ сайта.
       for (let ti = criticalCount; ti < TRANSITIONS.length; ti++) {
