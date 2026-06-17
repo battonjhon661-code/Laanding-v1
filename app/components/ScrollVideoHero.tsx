@@ -27,14 +27,14 @@ const ZONES = [
 
 // transitions[i] = pre-rendered frame sequence between zone[i] and zone[i+1]; null = no transition
 const TRANSITIONS: ({ folder: string; frames: number; reversed: boolean } | null)[] = [
-  { folder: "balcony-bedroom", frames: 16, reversed: true  }, // Спальня → Балкон
-  { folder: "balcony-gym",     frames: 17, reversed: false }, // Балкон → Спортзал
-  { folder: "gym-swim",        frames: 16, reversed: false }, // Спортзал → Бассейн
-  { folder: "swim-shower",     frames: 16, reversed: false }, // Бассейн → Душевая
-  { folder: "shower-kitchen",  frames: 16, reversed: false }, // Душевая → Кухня
-  { folder: "kitchen-foeroom", frames: 16, reversed: false }, // Кухня → Прихожая
-  { folder: "foeroom-hall",    frames: 16, reversed: false }, // Прихожая → Холл
-  { folder: "hall-children",   frames: 16, reversed: false }, // Холл → Детская
+  { folder: "balcony-bedroom", frames: 32, reversed: true  }, // Спальня → Балкон
+  { folder: "balcony-gym",     frames: 33, reversed: false }, // Балкон → Спортзал
+  { folder: "gym-swim",        frames: 32, reversed: false }, // Спортзал → Бассейн
+  { folder: "swim-shower",     frames: 32, reversed: false }, // Бассейн → Душевая
+  { folder: "shower-kitchen",  frames: 32, reversed: false }, // Душевая → Кухня
+  { folder: "kitchen-foeroom", frames: 32, reversed: false }, // Кухня → Прихожая
+  { folder: "foeroom-hall",    frames: 32, reversed: false }, // Прихожая → Холл
+  { folder: "hall-children",   frames: 32, reversed: false }, // Холл → Детская
   null, // Детская → Ванная
 ];
 
@@ -308,7 +308,7 @@ export default function ScrollVideoHero() {
         const t = TRANSITIONS[ti];
         if (!t) return;
 
-        const cacheKey = `${t.folder}_${targetW}x${targetH}`;
+        const cacheKey = `${t.folder}_${t.frames}_${targetW}x${targetH}`;
 
         if (db) {
           try {
