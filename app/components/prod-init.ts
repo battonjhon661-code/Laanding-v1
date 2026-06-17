@@ -520,6 +520,44 @@ export function initProdScripts(): void {
       });
     })();
 
+    // Mat block: progressive image loading
+    // Первые 5 ячеек каждой строки уже загружены глазами (eager).
+    // Остальные подгружаются батчами по BATCH_PER_ROW штук из каждой
+    // строки за раз (а не строка за строкой целиком), пока не закончатся.
+    (function () {
+      var BATCH_PER_ROW = 2;
+
+      var queues = Array.from(document.querySelectorAll('.mat-row')).map(function (row) {
+        return Array.from(row.querySelectorAll('.mat-cell img[data-src]'));
+      });
+
+      function loadImg(img) {
+        img.src = img.getAttribute('data-src');
+        img.removeAttribute('data-src');
+      }
+
+      function schedule(fn) {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(fn, { timeout: 1000 });
+        } else {
+          setTimeout(fn, 200);
+        }
+      }
+
+      function loadNextBatch() {
+        var any = false;
+        queues.forEach(function (queue) {
+          for (var i = 0; i < BATCH_PER_ROW && queue.length; i++) {
+            loadImg(queue.shift());
+            any = true;
+          }
+        });
+        if (any) schedule(loadNextBatch);
+      }
+
+      schedule(loadNextBatch);
+    })();
+
     // Mat block: text entrance + cabinet light show on first scroll
     (function () {
       var block = document.getElementById('materials');
