@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Preloader from "./Preloader";
 
-const FPS = 30;
 const DRAG_SENSITIVITY = 1400;
 const AUTO_DELAY = 5000;
 const MIN_PRELOADER_MS = 4600; // один полный цикл анимации прелоадера
@@ -26,16 +25,16 @@ const ZONES = [
   { label: "Ванная",    imageSrc: "/locations/bathroom.webp"      },
 ];
 
-// transitions[i] = video between zone[i] and zone[i+1]; null = no video
-const TRANSITIONS: ({ src: string; reversed: boolean } | null)[] = [
-  { src: "/balcony-bedroom.webm", reversed: true  }, // Спальня → Балкон
-  { src: "/balcony-gym.webm",     reversed: false }, // Балкон → Спортзал
-  { src: "/gym-swim.webm",        reversed: false }, // Спортзал → Бассейн
-  { src: "/swim-shower.webm",     reversed: false }, // Бассейн → Душевая
-  { src: "/shower-kitchen.webm",  reversed: false }, // Душевая → Кухня
-  { src: "/kitchen-foeroom.webm", reversed: false }, // Кухня → Прихожая
-  { src: "/foeroom-hall.webm",    reversed: false }, // Прихожая → Холл
-  { src: "/hall-children.webm",  reversed: false }, // Холл → Детская
+// transitions[i] = pre-rendered frame sequence between zone[i] and zone[i+1]; null = no transition
+const TRANSITIONS: ({ folder: string; frames: number; reversed: boolean } | null)[] = [
+  { folder: "balcony-bedroom", frames: 16, reversed: true  }, // Спальня → Балкон
+  { folder: "balcony-gym",     frames: 17, reversed: false }, // Балкон → Спортзал
+  { folder: "gym-swim",        frames: 16, reversed: false }, // Спортзал → Бассейн
+  { folder: "swim-shower",     frames: 16, reversed: false }, // Бассейн → Душевая
+  { folder: "shower-kitchen",  frames: 16, reversed: false }, // Душевая → Кухня
+  { folder: "kitchen-foeroom", frames: 16, reversed: false }, // Кухня → Прихожая
+  { folder: "foeroom-hall",    frames: 16, reversed: false }, // Прихожая → Холл
+  { folder: "hall-children",   frames: 16, reversed: false }, // Холл → Детская
   null, // Детская → Ванная
 ];
 
@@ -303,12 +302,13 @@ export default function ScrollVideoHero() {
         setLoadPct(Math.round((imagesLoaded / N) * 65));
       }
 
-      // Загружает кадры одного перехода (кеш IDB → иначе нарезка видео).
+      // Загружает кадры одного перехода: кеш IDB → иначе fetch готовых
+      // .webp-кадров (нарезаны заранее ffmpeg'ом в public/hero-frames/).
       const loadTransitionFrames = async (ti: number) => {
         const t = TRANSITIONS[ti];
         if (!t) return;
 
-        const cacheKey = `${t.src}_${targetW}x${targetH}`;
+        const cacheKey = `${t.folder}_${targetW}x${targetH}`;
 
         if (db) {
           try {
@@ -320,30 +320,23 @@ export default function ScrollVideoHero() {
           } catch { /* ошибка чтения — извлекаем заново */ }
         }
 
-        const video       = document.createElement("video");
-        video.src         = t.src;
-        video.muted       = true;
-        video.playsInline = true;
-        video.preload     = "auto";
-
-        await new Promise<void>(r =>
-          video.addEventListener("loadedmetadata", () => r(), { once: true })
+        const urls = Array.from({ length: t.frames }, (_, f) =>
+          `/hero-frames/${t.folder}/f${String(f + 1).padStart(3, "0")}.webp`
         );
 
-        const { duration, videoWidth, videoHeight } = video;
-        const totalFrames = Math.round(duration * FPS);
-        const frames: ImageBitmap[] = [];
+        const blobs = await Promise.all(urls.map(async (url) => {
+          const resp = await fetch(url);
+          return resp.blob();
+        }));
+        if (cancelled) return;
 
-        for (let f = 0; f < totalFrames; f++) {
-          if (cancelled) return;
-          video.currentTime =
-            (f / Math.max(totalFrames - 1, 1)) * duration * (1 - 0.5 / totalFrames);
-          await new Promise<void>(r => {
-            video.addEventListener("seeked", () => r(), { once: true });
-            setTimeout(r, 400);
-          });
-          frames.push(await makeBitmap(video, videoWidth, videoHeight, targetW, targetH));
-        }
+        const frames = await Promise.all(blobs.map(async (blob) => {
+          const raw = await createImageBitmap(blob);
+          const bm  = await makeBitmap(raw, raw.width, raw.height, targetW, targetH);
+          raw.close();
+          return bm;
+        }));
+        if (cancelled) return;
 
         if (t.reversed) frames.reverse();
         videoFramesRef.current[ti] = frames;
