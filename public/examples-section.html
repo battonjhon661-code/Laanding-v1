@@ -210,7 +210,7 @@ function makeMosaic(seed, hr, sr, lr){
 
 /* ---------- data ---------- */
 const CATS = [
-  { id:"title", label:"Примеры работ", isTitle:true, subs:[] },
+  { id:"title", label:"Виды работ", isTitle:true, subs:[] },
   { id:"spotlight", label:"Spotlight", subs:["обзор", "что нового", "избранное"] },
   { id:"movies", label:"Movies", subs:["ещё фильмы", "библиотека фильмов", "play dvd", "поиск"] },
   { id:"music", label:"Music", subs:["ещё музыка", "музыкальная библиотека", "play all", "радио", "поиск"] },
@@ -555,7 +555,7 @@ function App(){
               ? h("div", { className: "title-card", style: { width: slotW, height: slotH } },
                   h("div", { className: "tc-inner", style: { opacity: spread ? 1 : 0, transitionDelay: spread ? "180ms" : "0ms" } },
                     h("div", { className: "tc-eyebrow" }, "/ Проекты"),
-                    h("h2", { className: "tc-h" }, "Примеры", h("br", null), "работ"),
+                    h("h2", { className: "tc-h" }, "Виды", h("br", null), "работ"),
                     h("p", { className: "tc-desc" },
                       "Реализованные проекты: зеркала, душевые перегородки, стеклянные полки и ограждения для дома и бизнеса."
                     )

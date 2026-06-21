@@ -3,9 +3,88 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Preloader from "./Preloader";
 
-const DRAG_SENSITIVITY = 1400;
-const AUTO_DELAY = 5000;
-const MIN_PRELOADER_MS = 4600; // один полный цикл анимации прелоадера
+const SWIPE_THRESHOLD_WHEEL = 60;  // px of accumulated wheel deltaX before a zone change triggers
+const SWIPE_THRESHOLD_DRAG  = 80;  // px of horizontal drag before release triggers a zone change
+const WHEEL_IDLE_RESET_MS   = 220; // reset wheel accumulator after this much silence
+const AUTO_DELAY            = 5000;
+const MIN_PRELOADER_MS      = 4600; // один полный цикл анимации прелоадера
+const TRANSITION_MS         = 950;  // целевая длительность одиночного перехода (как раньше у animateToPos)
+// Source clips run ~4s each. At the old budget (250/260) a 9-room jump squeezed
+// each leg to ~330ms, forcing ~12x playbackRate — the decoder can't keep up at
+// that speed and it reads as jerky/dropped frames. Raised so even the longest
+// chain stays closer to ~7x, which decodes smoothly.
+const STEP_INCREMENT_MS     = 500;  // доп. бюджет времени на каждую следующую комнату в цепочке прыжка
+const MIN_LEG_MS            = 380;  // пол длительности одного звена цепочки, чтобы не было совсем рывками
+const SCRUB_FALLBACK_S      = 1.2;  // assumed duration if video.duration isn't known yet
+const PREFETCH_CONCURRENCY  = 2;    // cap on simultaneous background fetch() warm-ups, so a
+                                     // long multi-leg jump doesn't flood bandwidth and starve
+                                     // the video that's actually loading right now
+
+function easeInOutCubic(p: number): number {
+  return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+}
+
+// ── Chain-wide easing: one accelerate/cruise/decelerate envelope spread
+// across the *whole* multi-leg jump, not one per leg — otherwise every leg
+// boundary dips back down to a slow speed and reads as a stop at each room.
+const FLOOR_V = 0.35; // velocity never drops below this fraction of cruise speed
+const SOLO_NORM = 1 / (FLOOR_V + (1 - FLOOR_V) * (2 / Math.PI));
+
+interface LegShape { kind: "solo" | "cruise" | "ease-in" | "ease-out"; rangeStart: number; rangeEnd: number; norm: number }
+
+// Average of `FLOOR_V + (1-FLOOR_V)*sin(p*pi/2)` over p in [a,b] — used so a
+// leg covering only part of the ease-in ramp still finishes its own clip
+// exactly on time despite running slower than cruise speed.
+function avgEaseInVelocity(a: number, b: number): number {
+  if (b - a < 1e-6) return FLOOR_V + (1 - FLOOR_V) * Math.sin(a * Math.PI / 2);
+  const k = (b - a) * Math.PI / 2;
+  const avgSin = (Math.cos(a * Math.PI / 2) - Math.cos(b * Math.PI / 2)) / k;
+  return FLOOR_V + (1 - FLOOR_V) * avgSin;
+}
+function avgEaseOutVelocity(a: number, b: number): number {
+  if (b - a < 1e-6) return FLOOR_V + (1 - FLOOR_V) * Math.cos(a * Math.PI / 2);
+  const k = (b - a) * Math.PI / 2;
+  const avgCos = (Math.sin(b * Math.PI / 2) - Math.sin(a * Math.PI / 2)) / k;
+  return FLOOR_V + (1 - FLOOR_V) * avgCos;
+}
+
+// Assigns each leg of a `steps`-leg move a role: the first/last legs (up to
+// 2 at each end, fewer for short chains) ramp in/out of cruise speed: every
+// leg in between holds flat cruise speed with zero internal deceleration —
+// so the chain feels like one continuous shot, not N separate clips.
+function computeLegShapes(steps: number): LegShape[] {
+  if (steps <= 1) return [{ kind: "solo", rangeStart: 0, rangeEnd: 1, norm: SOLO_NORM }];
+  const easeLegs = Math.min(2, Math.floor(steps / 2));
+  const shapes: LegShape[] = [];
+  for (let i = 0; i < steps; i++) {
+    if (i < easeLegs) {
+      const a = i / easeLegs, b = (i + 1) / easeLegs;
+      shapes.push({ kind: "ease-in", rangeStart: a, rangeEnd: b, norm: 1 / avgEaseInVelocity(a, b) });
+    } else if (i >= steps - easeLegs) {
+      const j = i - (steps - easeLegs);
+      const a = j / easeLegs, b = (j + 1) / easeLegs;
+      shapes.push({ kind: "ease-out", rangeStart: a, rangeEnd: b, norm: 1 / avgEaseOutVelocity(a, b) });
+    } else {
+      shapes.push({ kind: "cruise", rangeStart: 0, rangeEnd: 1, norm: 1 });
+    }
+  }
+  return shapes;
+}
+
+function legVelocity(shape: LegShape, progress: number): number {
+  switch (shape.kind) {
+    case "cruise": return 1;
+    case "solo": return FLOOR_V + (1 - FLOOR_V) * Math.sin(Math.PI * progress);
+    case "ease-in": {
+      const g = shape.rangeStart + progress * (shape.rangeEnd - shape.rangeStart);
+      return FLOOR_V + (1 - FLOOR_V) * Math.sin(g * Math.PI / 2);
+    }
+    case "ease-out": {
+      const g = shape.rangeStart + progress * (shape.rangeEnd - shape.rangeStart);
+      return FLOOR_V + (1 - FLOOR_V) * Math.cos(g * Math.PI / 2);
+    }
+  }
+}
 
 const INK    = "#f4f1ec";
 const DIM    = "rgba(244,241,236,0.46)";
@@ -25,17 +104,23 @@ const ZONES = [
   { label: "Ванная",    imageSrc: "/locations/bathroom.webp"      },
 ];
 
-// transitions[i] = pre-rendered frame sequence between zone[i] and zone[i+1]; null = no transition
-const TRANSITIONS: ({ folder: string; frames: number; reversed: boolean } | null)[] = [
-  { folder: "balcony-bedroom", frames: 65, reversed: true  }, // Спальня → Балкон
-  { folder: "balcony-gym",     frames: 66, reversed: false }, // Балкон → Спортзал
-  { folder: "gym-swim",        frames: 65, reversed: false }, // Спортзал → Бассейн
-  { folder: "swim-shower",     frames: 65, reversed: false }, // Бассейн → Душевая
-  { folder: "shower-kitchen",  frames: 65, reversed: false }, // Душевая → Кухня
-  { folder: "kitchen-foeroom", frames: 65, reversed: false }, // Кухня → Прихожая
-  { folder: "foeroom-hall",    frames: 65, reversed: false }, // Прихожая → Холл
-  { folder: "hall-children",   frames: 65, reversed: false }, // Холл → Детская
-  null, // Детская → Ванная
+// transitions[i] = video between zone[i] and zone[i+1]; null = no video.
+// `reversed: true` means the source file's natural playback direction is
+// zone[i+1] → zone[i] (so the i → i+1 direction needs the generated
+// `-rev.webm` file instead). webm is the primary format (both directions
+// available natively); mp4 only exists in the source's natural direction
+// and falls back to a manual reverse time-scrub for the other direction.
+interface TransitionDef { folder: string; reversed: boolean }
+const TRANSITIONS: (TransitionDef | null)[] = [
+  { folder: "balcony-bedroom", reversed: true  }, // Спальня ↔ Балкон
+  { folder: "balcony-gym",     reversed: false }, // Балкон ↔ Спортзал
+  { folder: "gym-swim",        reversed: false }, // Спортзал ↔ Бассейн
+  { folder: "swim-shower",     reversed: false }, // Бассейн ↔ Душевая
+  { folder: "shower-kitchen",  reversed: false }, // Душевая ↔ Кухня
+  { folder: "kitchen-foeroom", reversed: false }, // Кухня ↔ Прихожая
+  { folder: "foeroom-hall",    reversed: false }, // Прихожая ↔ Холл
+  { folder: "hall-children",   reversed: false }, // Холл ↔ Детская
+  null, // Детская ↔ Ванная
 ];
 
 const N = ZONES.length;
@@ -95,171 +180,156 @@ const ZONE_HOTSPOTS: Hotspot[][] = [
   ],
 ];
 
-async function makeBitmap(
-  source: CanvasImageSource,
-  srcW: number, srcH: number,
-  targetW: number, targetH: number
-): Promise<ImageBitmap> {
-  const sc = Math.max(targetW / srcW, targetH / srcH);
-  const bw = Math.round(srcW * sc);
-  const bh = Math.round(srcH * sc);
-  const ox = Math.round((bw - targetW) / 2);
-  const oy = Math.round((bh - targetH) / 2);
-  const off = new OffscreenCanvas(targetW, targetH);
-  const ctx = off.getContext("2d") as OffscreenCanvasRenderingContext2D;
-  ctx.drawImage(source, -ox, -oy, bw, bh);
-  return createImageBitmap(off);
+type Direction = "forward" | "backward";
+
+function detectWebmSupport(): boolean {
+  if (typeof document === "undefined") return false;
+  const v = document.createElement("video");
+  return v.canPlayType('video/webm; codecs="vp9"') !== "";
 }
 
-async function bitmapToBlob(bm: ImageBitmap): Promise<Blob> {
-  const off = new OffscreenCanvas(bm.width, bm.height);
-  (off.getContext("2d") as OffscreenCanvasRenderingContext2D).drawImage(bm, 0, 0);
-  return off.convertToBlob({ type: "image/webp", quality: 0.88 });
+// Every leg is driven by manually scrubbing `currentTime` (never native
+// `.play()`) so we get a precise, non-linear ease-in-out feel and a single
+// uniform completion mechanism. `scrubForward` says whether to walk the
+// chosen file from 0→duration or duration→0.
+interface PlayPlan { src: string; scrubForward: boolean }
+
+// Wait a couple of animation frames after a seek before revealing — one to
+// let the seek's frame actually decode and composite, one more as a safety
+// margin. `requestVideoFrameCallback` would be the precise tool for this,
+// but it proved unreliable for a `video` element sitting at `opacity: 0`
+// (registered callbacks would just never fire), so a double rAF — tied to
+// the page's regular render loop rather than the video's own compositing
+// state — is the more robust choice here.
+function onNextPaintedFrame(cb: () => void) {
+  requestAnimationFrame(() => requestAnimationFrame(cb));
 }
 
-// Однократный тест декодирования AVIF реальным файлом из набора кадров —
-// надёжнее, чем встроенная тестовая картинка, и заодно прогревает кэш браузера.
-let avifSupportPromise: Promise<boolean> | null = null;
-function detectAvifSupport(): Promise<boolean> {
-  if (!avifSupportPromise) {
-    avifSupportPromise = (async () => {
-      try {
-        const resp = await fetch(`/hero-frames-avif/${TRANSITIONS[0]!.folder}/f001.avif`);
-        const blob = await resp.blob();
-        const bm   = await createImageBitmap(blob);
-        bm.close();
-        return true;
-      } catch {
-        return false;
-      }
-    })();
+function resolvePlayPlan(t: TransitionDef, direction: Direction, webmOk: boolean): PlayPlan {
+  const nativeDirection: Direction = t.reversed ? "backward" : "forward";
+  const isNative = direction === nativeDirection;
+  if (webmOk) {
+    // Both directions have a real forward-recorded file (native + generated
+    // `-rev`) — always scrub forward through whichever one matches, which
+    // decodes more cheaply than scrubbing backward through either.
+    return { src: isNative ? `/${t.folder}.webm` : `/${t.folder}-rev.webm`, scrubForward: true };
   }
-  return avifSupportPromise;
+  // mp4: only the source's natural direction exists as a real file — the
+  // other direction has to scrub backward through it.
+  return { src: `/${t.folder}.mp4`, scrubForward: isNative };
 }
 
-// Ограничивает число одновременных fetch — без этого 500+ кадров,
-// запущенных разом через Promise.all, перегружают пул соединений и
-// часть запросов рвётся с ошибкой соединения.
-function createSemaphore(limit: number) {
-  let active = 0;
-  const queue: (() => void)[] = [];
-  const acquire = () => new Promise<void>((resolve) => {
-    const tryAcquire = () => {
-      if (active < limit) { active++; resolve(); }
-      else queue.push(tryAcquire);
-    };
-    tryAcquire();
-  });
-  const release = () => {
-    active--;
-    queue.shift()?.();
-  };
-  return { acquire, release };
-}
-
-async function fetchBlobLimited(
-  url: string,
-  sem: ReturnType<typeof createSemaphore>,
-  attempts = 3
-): Promise<Blob> {
-  await sem.acquire();
-  try {
-    let lastErr: unknown;
-    for (let i = 0; i < attempts; i++) {
-      try {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return await resp.blob();
-      } catch (e) {
-        lastErr = e;
-        if (i < attempts - 1) await new Promise(r => setTimeout(r, 200 * (i + 1)));
-      }
-    }
-    throw lastErr;
-  } finally {
-    sem.release();
-  }
-}
-
-function openFrameDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open("vipglass-hero", 1);
-    req.onupgradeneeded = () => req.result.createObjectStore("frames");
-    req.onsuccess = () => resolve(req.result);
-    req.onerror   = () => reject(req.error);
-  });
-}
-
-function idbGet(db: IDBDatabase, key: string): Promise<Blob[] | undefined> {
-  return new Promise((resolve, reject) => {
-    const req = db.transaction("frames").objectStore("frames").get(key);
-    req.onsuccess = () => resolve(req.result as Blob[] | undefined);
-    req.onerror   = () => reject(req.error);
-  });
-}
-
-function idbPut(db: IDBDatabase, key: string, blobs: Blob[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("frames", "readwrite");
-    tx.objectStore("frames").put(blobs, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror    = () => reject(tx.error);
-  });
-}
+type BufKey = "A" | "B";
 
 export default function ScrollVideoHero() {
   const wrapRef   = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoARef = useRef<HTMLVideoElement>(null);
+  const videoBRef = useRef<HTMLVideoElement>(null);
 
-  const zoneBitmapsRef  = useRef<(ImageBitmap | null)[]>(Array(N).fill(null));
-  const videoFramesRef  = useRef<(ImageBitmap[] | null)[]>(Array(N - 1).fill(null));
+  const mountedRef        = useRef(true);
+  const webmOkRef         = useRef(true);
+  const activeZoneRef     = useRef(0);
+  const transitioningRef  = useRef(false);
+  const prefetchedRef     = useRef<Set<string>>(new Set());
+  const prefetchQueueRef  = useRef<string[]>([]);
+  const prefetchActiveRef = useRef(0);
 
-  const virtualPosRef      = useRef(0);
-  const isDraggingRef      = useRef(false);
-  const dragStartXRef      = useRef(0);
-  const dragStartYRef      = useRef(0);
-  const dragStartPosRef    = useRef(0);
-  const jumpRafRef         = useRef<number | null>(null);
-  const autoTimerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleAutoRef    = useRef<() => void>(() => {});
-  const wheelEndTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hotspotTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleHsRef      = useRef<() => void>(() => {});
+  const wheelAccumRef     = useRef(0);
+  const wheelResetTiRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDraggingRef     = useRef(false);
+  const dragStartXRef     = useRef(0);
+  const dragStartYRef     = useRef(0);
+  const dragLastXRef      = useRef(0);
+  const dragIsHorizRef    = useRef(false);
 
-  const [isDragging, setIsDragging]   = useState(false);
-  const [phase, setPhase]             = useState<"loading" | "ready">("loading");
-  const [loadPct, setLoadPct]         = useState(0);
-  const [activeZone, setActiveZone]   = useState(0);
-  const [hotspotZone, setHotspotZone] = useState<number | null>(null);
+  const scrubRafRef       = useRef<number | null>(null);
+  const autoTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleAutoRef   = useRef<() => void>(() => {});
+  const hotspotTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleHsRef     = useRef<() => void>(() => {});
+  const finalTargetRef    = useRef<number | null>(null); // ultimate destination of a multi-step chain
+  // The legs of the move in progress: `legStepsRef[i]` is the zone arrived
+  // at after leg i (leg 0 starts from `startZoneRef`, leg i>0 starts from
+  // `legStepsRef[i-1]`). `legShapesRef` is the parallel chain-wide easing
+  // role per leg (see computeLegShapes). `legIdxRef` is the leg currently
+  // on screen; `armedRef` holds the *next* leg once it's already loaded and
+  // quietly playing in the background buffer, ready for an instant handoff.
+  const startZoneRef      = useRef(0);
+  const legStepsRef       = useRef<number[]>([]);
+  const legShapesRef      = useRef<LegShape[]>([]);
+  const legIdxRef         = useRef(0);
+  const legMsRef          = useRef(TRANSITION_MS); // uniform per-leg duration budget for this move
+  const armedRef          = useRef<{ buf: BufKey; video: HTMLVideoElement; legIdx: number } | null>(null);
+  // The buffer currently on top (or about to be, mid-reveal). Two <video>
+  // elements ping-pong so a multi-leg chain crossfades video→video without
+  // ever dropping back to the still image between legs — re-assigning
+  // `.src` on a single shared element blacked it out for the buffering gap.
+  const activeBufRef      = useRef<BufKey>("B");
 
-  // ── Animate virtualPos to a zone index ──────────────────────────────────────
-  const animateToPos = useCallback((target: number, duration = 1200, onDone?: () => void) => {
-    if (jumpRafRef.current !== null) { cancelAnimationFrame(jumpRafRef.current); jumpRafRef.current = null; }
-    const start = virtualPosRef.current;
-    const dist  = target - start;
-    if (Math.abs(dist) < 0.001) {
-      virtualPosRef.current = target;
-      setActiveZone(Math.round(target));
-      onDone?.();
-      return;
+  const [isDragging, setIsDragging]     = useState(false);
+  const [phase, setPhase]               = useState<"loading" | "ready">("loading");
+  const [loadPct, setLoadPct]           = useState(0);
+  const [activeZone, setActiveZone]     = useState(0);
+  // `displayZone` is what the still-image layer actually shows. It's set to
+  // the move's *final* destination up front, while that image is still
+  // hidden behind the video — so it has the whole move's duration to decode
+  // invisibly, and is already correct the instant the video is removed.
+  // `activeZone` (above) still updates per-leg for the pager/chapters/hotspots.
+  const [displayZone, setDisplayZone]   = useState(0);
+  const [videoVisible, setVideoVisible] = useState(false);
+  const [activeBuf, setActiveBuf]       = useState<BufKey>("B");
+  const [hotspotZone, setHotspotZone]   = useState<number | null>(null);
+
+  const getVideo = useCallback((key: BufKey) => (key === "A" ? videoARef.current : videoBRef.current), []);
+
+  // Writes opacity straight to the DOM, bypassing React's render cycle.
+  // Needed because revealAndRun calls prepareLeg() synchronously right after
+  // swapping the active buffer — prepareLeg immediately reassigns the
+  // *outgoing* buffer's `src`, but React's setState batching means the
+  // opacity:0 style for that buffer hasn't actually committed to the DOM
+  // yet at that point. Resetting `.src` while the element is still visibly
+  // opacity:1 makes the browser flash/reset its decode — the blink during
+  // chained legs. Setting it imperatively here closes that race; the
+  // subsequent React render then just confirms the same value.
+  const setBufOpacity = useCallback((buf: BufKey, opacity: number) => {
+    const el = getVideo(buf);
+    if (el) el.style.opacity = String(opacity);
+  }, [getVideo]);
+
+  // ── Prefetch (HTTP cache warm-up only, no decoding) for the transitions
+  // adjacent to a zone, so a real navigation finds the bytes already cached ──
+  // Queued with a concurrency cap: firing every leg of a long jump's fetch()
+  // at once (the old behavior) competed for bandwidth with the leg that's
+  // actually loading right now, which is exactly what made long jumps stutter.
+  const pumpPrefetchQueue = useCallback(() => {
+    while (prefetchActiveRef.current < PREFETCH_CONCURRENCY && prefetchQueueRef.current.length > 0) {
+      const url = prefetchQueueRef.current.shift()!;
+      prefetchActiveRef.current++;
+      fetch(url).catch(() => {}).finally(() => {
+        prefetchActiveRef.current--;
+        pumpPrefetchQueue();
+      });
     }
-    const t0   = performance.now();
-    const ease = (t: number) => 1 - Math.pow(1 - t, 3);
-    const step = (now: number) => {
-      const p = Math.min((now - t0) / duration, 1);
-      virtualPosRef.current = start + dist * ease(p);
-      setActiveZone(Math.round(virtualPosRef.current));
-      if (p < 1) {
-        jumpRafRef.current = requestAnimationFrame(step);
-      } else {
-        jumpRafRef.current = null;
-        virtualPosRef.current = target;
-        setActiveZone(Math.round(target));
-        onDone?.();
-      }
-    };
-    jumpRafRef.current = requestAnimationFrame(step);
   }, []);
+
+  const prefetchUrl = useCallback((url: string) => {
+    if (prefetchedRef.current.has(url)) return;
+    prefetchedRef.current.add(url);
+    prefetchQueueRef.current.push(url);
+    pumpPrefetchQueue();
+  }, [pumpPrefetchQueue]);
+
+  const prefetchNeighbors = useCallback((zone: number) => {
+    const webmOk = webmOkRef.current;
+    if (zone > 0) {
+      const t = TRANSITIONS[zone - 1];
+      if (t) prefetchUrl(resolvePlayPlan(t, "backward", webmOk).src);
+    }
+    if (zone < N - 1) {
+      const t = TRANSITIONS[zone];
+      if (t) prefetchUrl(resolvePlayPlan(t, "forward", webmOk).src);
+    }
+  }, [prefetchUrl]);
 
   // ── Hotspot settle/clear ────────────────────────────────────────────────────
   const clearHotspots = useCallback(() => {
@@ -270,9 +340,7 @@ export default function ScrollVideoHero() {
   const scheduleHotspots = useCallback(() => {
     if (hotspotTimerRef.current) { clearTimeout(hotspotTimerRef.current); hotspotTimerRef.current = null; }
     hotspotTimerRef.current = setTimeout(() => {
-      const v = virtualPosRef.current;
-      const r = Math.round(v);
-      if (Math.abs(v - r) < 0.05) setHotspotZone(r);
+      setHotspotZone(activeZoneRef.current);
     }, 500);
   }, []);
 
@@ -283,246 +351,398 @@ export default function ScrollVideoHero() {
     if (autoTimerRef.current) { clearTimeout(autoTimerRef.current); autoTimerRef.current = null; }
   }, []);
 
+  // ── Settle on a zone with no transition playing (snap) ──────────────────────
+  // `schedule: false` is used for the intermediate legs of a chained
+  // multi-step jump — only the leg that actually finishes the chain should
+  // restart the auto-advance/hotspot timers.
+  const settleAt = useCallback((target: number, schedule = true) => {
+    activeZoneRef.current = target;
+    setActiveZone(target);
+    prefetchNeighbors(target);
+    if (schedule) {
+      scheduleAutoRef.current();
+      scheduleHsRef.current();
+    }
+  }, [prefetchNeighbors]);
+
+  const startFreshLegRef = useRef<(idx: number) => void>(() => {});
+  const revealAndRunRef  = useRef<(idx: number, stepTarget: number, video: HTMLVideoElement, buf: BufKey) => void>(() => {});
+
+  // ── Finish leg `idx` (which just settled at `justFinishedTarget`) and move
+  // the chain on. If the next leg is already armed (loaded + quietly playing
+  // in the background, see prepareLeg), hand off to it instantly with zero
+  // gap; otherwise fall back to loading it fresh now.
+  const advanceChain = useCallback((idx: number, justFinishedTarget: number) => {
+    const isLast = idx + 1 >= legStepsRef.current.length;
+    settleAt(justFinishedTarget, isLast);
+
+    if (isLast) {
+      transitioningRef.current = false;
+      finalTargetRef.current = null;
+      armedRef.current = null;
+      setVideoVisible(false);
+      return;
+    }
+
+    const nextIdx = idx + 1;
+    legIdxRef.current = nextIdx;
+    const nextStepTarget = legStepsRef.current[nextIdx];
+    const armed = armedRef.current;
+    if (armed && armed.legIdx === nextIdx) {
+      armedRef.current = null;
+      revealAndRunRef.current(nextIdx, nextStepTarget, armed.video, armed.buf);
+    } else {
+      startFreshLegRef.current(nextIdx);
+    }
+  }, [settleAt]);
+
+  // ── Quietly load + start playing the *next* leg in the background buffer,
+  // well before the current leg needs it, so advanceChain can hard-cut to it
+  // with no loading gap. Only for the common native-play path — the rare
+  // mp4-backward fallback and no-video legs just load on demand as before.
+  const prepareLeg = useCallback((idx: number) => {
+    if (idx >= legStepsRef.current.length) return;
+    if (armedRef.current && armedRef.current.legIdx === idx) return;
+    const current = idx === 0 ? startZoneRef.current : legStepsRef.current[idx - 1];
+    const stepTarget = legStepsRef.current[idx];
+    const direction: Direction = stepTarget > current ? "forward" : "backward";
+    const ti = direction === "forward" ? current : stepTarget;
+    const t = TRANSITIONS[ti];
+    if (!t) return;
+
+    const plan = resolvePlayPlan(t, direction, webmOkRef.current);
+    if (!plan.scrubForward) return;
+
+    const backBuf = activeBufRef.current === "A" ? "B" : "A";
+    const video = getVideo(backBuf);
+    if (!video) return;
+
+    video.onended = null;
+    video.onloadedmetadata = null;
+    video.onplaying = null;
+    video.onseeked = null;
+    video.onerror = null;
+    video.pause();
+    video.src = plan.src;
+
+    const start = () => {
+      video.currentTime = 0;
+      video.playbackRate = 1; // overwritten by revealAndRun's rate loop once it takes over
+      video.onplaying = () => {
+        video.onplaying = null;
+        onNextPaintedFrame(() => {
+          if (!mountedRef.current) return;
+          armedRef.current = { buf: backBuf, video, legIdx: idx };
+        });
+      };
+      video.play().catch(() => {});
+    };
+    if (video.readyState >= 1) start();
+    else video.onloadedmetadata = start;
+  }, [getVideo]);
+
+  // ── Reveal a leg's video (already playing — either just started, or
+  // handed off from prepareLeg) and drive its playbackRate for the rest of
+  // its duration, following this leg's chain-wide easing role.
+  const revealAndRun = useCallback((idx: number, stepTarget: number, video: HTMLVideoElement, buf: BufKey) => {
+    if (!mountedRef.current) return;
+    // Only safe to touch now — the video already covers the screen, so
+    // swapping the still image underneath it is invisible.
+    setDisplayZone(finalTargetRef.current ?? stepTarget);
+    activeBufRef.current = buf;
+    setActiveBuf(buf);
+    setVideoVisible(true);
+    setBufOpacity(buf, 1);
+    setBufOpacity(buf === "A" ? "B" : "A", 0);
+
+    if (idx + 1 < legStepsRef.current.length) prepareLeg(idx + 1);
+
+    const shape = legShapesRef.current[idx] ?? { kind: "cruise" as const, rangeStart: 0, rangeEnd: 1, norm: 1 };
+    const transitionS = legMsRef.current / 1000;
+    const duration = video.duration > 0 ? video.duration : SCRUB_FALLBACK_S;
+    const baseRate = duration / transitionS;
+    const t0 = performance.now();
+
+    const rateStep = (now: number) => {
+      if (!mountedRef.current) return;
+      const elapsed = (now - t0) / 1000;
+      const progress = Math.min(elapsed / transitionS, 1);
+      if (progress >= 1) {
+        scrubRafRef.current = null;
+        advanceChain(idx, stepTarget);
+        return;
+      }
+      const v = legVelocity(shape, progress);
+      video.playbackRate = Math.min(Math.max(baseRate * v * shape.norm, 0.05), 16);
+      scrubRafRef.current = requestAnimationFrame(rateStep);
+    };
+    scrubRafRef.current = requestAnimationFrame(rateStep);
+  }, [advanceChain, prepareLeg, setBufOpacity]);
+
+  useEffect(() => { revealAndRunRef.current = revealAndRun; }, [revealAndRun]);
+
+  // ── Load leg `idx` completely from scratch (no pre-arming) and reveal it
+  // once ready. Used for the first leg of any move, and as a fallback if a
+  // later leg's background preparation hasn't finished in time.
+  const startFreshLeg = useCallback((idx: number) => {
+    const current = idx === 0 ? startZoneRef.current : legStepsRef.current[idx - 1];
+    const stepTarget = legStepsRef.current[idx];
+    const direction: Direction = stepTarget > current ? "forward" : "backward";
+    const ti = direction === "forward" ? current : stepTarget;
+    const t  = TRANSITIONS[ti];
+
+    if (!t) {
+      // No video for this hop — snap. If nothing has been revealed yet this
+      // move (e.g. this is the very first leg), the image needs to update
+      // immediately since there's no video covering it.
+      setDisplayZone(finalTargetRef.current ?? stepTarget);
+      advanceChain(idx, stepTarget);
+      return;
+    }
+
+    const backBuf = activeBufRef.current === "A" ? "B" : "A";
+    const video = getVideo(backBuf);
+    if (!video) { advanceChain(idx, stepTarget); return; }
+
+    const plan = resolvePlayPlan(t, direction, webmOkRef.current);
+    transitioningRef.current = true; // lock interactions right away
+
+    const onError = () => advanceChain(idx, stepTarget);
+    video.onended = null;
+    video.onloadedmetadata = null;
+    video.onloadeddata = null;
+    video.onplaying = null;
+    video.onseeked = null;
+    video.onerror = onError;
+    video.pause();
+    video.src = plan.src;
+
+    if (plan.scrubForward) {
+      const startPlayback = () => {
+        video.currentTime = 0;
+        video.playbackRate = 1; // overwritten by revealAndRun's rate loop
+        video.onplaying = () => {
+          video.onplaying = null;
+          onNextPaintedFrame(() => revealAndRun(idx, stepTarget, video, backBuf));
+        };
+        video.play().catch(onError);
+      };
+      if (video.readyState >= 1) startPlayback();
+      else video.onloadedmetadata = startPlayback;
+    } else {
+      // mp4-only fallback for the direction with no generated reverse file —
+      // native playback can't run backward, so this still has to manually
+      // scrub `currentTime`. Rare path: only non-webm browsers hit it, and
+      // only for one of the two directions per transition. Not pre-armable,
+      // so it drives its own loop independently rather than via revealAndRun.
+      const runScrub = () => {
+        const duration = video.duration > 0 ? video.duration : SCRUB_FALLBACK_S;
+        const transitionS = legMsRef.current / 1000;
+        let seeking = false;
+        let started = false;
+        let t0 = 0;
+        const step = (now: number) => {
+          if (!mountedRef.current) return;
+          const elapsed = (now - t0) / 1000;
+          const rawProgress = Math.min(elapsed / transitionS, 1);
+          const eased = easeInOutCubic(rawProgress);
+          const ct = duration * (1 - eased);
+          if (rawProgress >= 1) {
+            scrubRafRef.current = null;
+            advanceChain(idx, stepTarget);
+            return;
+          }
+          if (!seeking) { seeking = true; video.currentTime = ct; }
+          scrubRafRef.current = requestAnimationFrame(step);
+        };
+        video.onseeked = () => {
+          seeking = false;
+          if (started) return;
+          started = true;
+          onNextPaintedFrame(() => {
+            t0 = performance.now();
+            setDisplayZone(finalTargetRef.current ?? stepTarget);
+            activeBufRef.current = backBuf;
+            setActiveBuf(backBuf);
+            setVideoVisible(true);
+            scrubRafRef.current = requestAnimationFrame(step);
+          });
+        };
+        seeking = true;
+        video.currentTime = duration;
+      };
+      if (video.readyState >= 1) runScrub();
+      else video.onloadedmetadata = runScrub;
+    }
+  }, [advanceChain, getVideo, revealAndRun]);
+
+  useEffect(() => { startFreshLegRef.current = startFreshLeg; }, [startFreshLeg]);
+
+  const goToZoneRef = useRef<(target: number) => void>(() => {});
+
+  // ── Move to an adjacent (or distant) zone ───────────────────────────────────
+  // Distant jumps (e.g. clicking a far chapter thumbnail) chain through every
+  // intermediate transition video one leg at a time, exactly like a real
+  // scroll/swipe through each zone in between.
+  const goToZone = useCallback((target: number) => {
+    if (transitioningRef.current) return;
+    const clamped = Math.max(0, Math.min(N - 1, target));
+    const current = activeZoneRef.current;
+    if (clamped === current) return;
+
+    cancelAutoAdvance();
+    clearHotspots();
+
+    // Note: the still image's `displayZone` is intentionally *not* touched
+    // here — it only gets pre-set to the move's final zone once a video is
+    // already covering the screen (see revealAndRun/startFreshLeg), so the
+    // swap is always invisible instead of flashing the new photo before the
+    // video appears.
+
+    const steps = Math.abs(clamped - current);
+    const dir = clamped > current ? 1 : -1;
+    startZoneRef.current = current;
+    legStepsRef.current = Array.from({ length: steps }, (_, i) => current + dir * (i + 1));
+    legShapesRef.current = computeLegShapes(steps);
+    legIdxRef.current = 0;
+    armedRef.current = null;
+    finalTargetRef.current = steps > 1 ? clamped : null;
+
+    // The more rooms a single jump skips, the faster the chain plays overall
+    // — total time grows only a little per extra room instead of linearly.
+    const totalMs = TRANSITION_MS + (steps - 1) * STEP_INCREMENT_MS;
+    legMsRef.current = Math.max(MIN_LEG_MS, totalMs / steps);
+
+    if (steps > 1) {
+      // Queue background warm-ups for every later leg, nearest-needed first,
+      // throttled by pumpPrefetchQueue's concurrency cap. Leg 0 is skipped —
+      // startFreshLeg(0) below loads it directly, so prefetching it too would
+      // only contend bandwidth with its own real load, which is what made
+      // long jumps stutter when every leg's fetch() fired at once.
+      const direction: Direction = dir > 0 ? "forward" : "backward";
+      for (let idx = 1; idx < steps; idx++) {
+        const ti = direction === "forward" ? current + idx : current - (idx + 1);
+        const tt = TRANSITIONS[ti];
+        if (tt) prefetchUrl(resolvePlayPlan(tt, direction, webmOkRef.current).src);
+      }
+    }
+
+    startFreshLeg(0);
+  }, [cancelAutoAdvance, clearHotspots, prefetchUrl, startFreshLeg]);
+
+  useEffect(() => { goToZoneRef.current = goToZone; }, [goToZone]);
+
   const scheduleAutoAdvance = useCallback(() => {
     cancelAutoAdvance();
     autoTimerRef.current = setTimeout(() => {
-      const curZone  = Math.round(virtualPosRef.current);
-      const nextZone = (curZone + 1) % N;
-      if (nextZone === 0) {
-        virtualPosRef.current = 0;
-        setActiveZone(0);
-        scheduleAutoRef.current();
-        scheduleHsRef.current();
+      const cur  = activeZoneRef.current;
+      const next = (cur + 1) % N;
+      if (next === 0) {
+        setDisplayZone(0); // pure snap, no video — image must update immediately
+        settleAt(0);
       } else {
-        animateToPos(nextZone, 1200, () => { scheduleAutoRef.current(); scheduleHsRef.current(); });
+        goToZoneRef.current(next);
       }
     }, AUTO_DELAY);
-  }, [cancelAutoAdvance, animateToPos]);
+  }, [cancelAutoAdvance, settleAt]);
 
   useEffect(() => { scheduleAutoRef.current = scheduleAutoAdvance; }, [scheduleAutoAdvance]);
 
-  // ── Loading: images then video transitions ──────────────────────────────────
+  // ── Loading: just the 10 stills, no video bytes fetched upfront ─────────────
   useEffect(() => {
     let cancelled = false;
+    mountedRef.current = true;
+    const loadStart = performance.now();
 
-    const load = async () => {
-      const loadStart = performance.now();
-      const dpr     = window.devicePixelRatio || 1;
-      const targetW = window.innerWidth  * dpr;
-      const targetH = window.innerHeight * dpr;
+    webmOkRef.current = detectWebmSupport();
 
-      let db: IDBDatabase | null = null;
-      try { db = await openFrameDB(); } catch { /* IDB недоступен */ }
-
-      // Общий лимит одновременных fetch на все картинки/кадры — без него
-      // 500+ кадров переходов, запущенные разом, рвут пул соединений.
-      const frameSemaphore = createSemaphore(12);
-
-      // Phase 1: fetch all blobs in parallel (rate-limited), заодно
-      // проверяем поддержку AVIF — её результат нужен только при
-      // загрузке кадров переходов чуть ниже.
-      const [blobs, avifOk] = await Promise.all([
-        Promise.all(
-          ZONES.map(async (zone) => {
-            try {
-              return await fetchBlobLimited(zone.imageSrc, frameSemaphore);
-            } catch {
-              console.warn("Could not fetch:", zone.imageSrc);
-              return null;
-            }
-          })
-        ),
-        detectAvifSupport(),
-      ]);
-
-      // Phase 2: decode + scale bitmaps (IDB cache → fallback to decode)
-      // blob.size входит в ключ кэша, чтобы замена файла на диске сама
-      // инвалидировала старый закэшированный кадр.
-      let imagesLoaded = 0;
-      for (let i = 0; i < N; i++) {
-        if (cancelled) return;
-        const blob   = blobs[i];
-        const imgKey = `img_${ZONES[i].imageSrc}_${blob?.size ?? 0}_${targetW}x${targetH}`;
-
-        if (db) {
-          try {
-            const cached = await idbGet(db, imgKey);
-            if (cached) {
-              zoneBitmapsRef.current[i] = await createImageBitmap(cached[0]);
-              imagesLoaded++;
-              setLoadPct(Math.round((imagesLoaded / N) * 65));
-              continue;
-            }
-          } catch { /* fall through to decode */ }
-        }
-
-        if (blob) {
-          try {
-            const raw = await createImageBitmap(blob);
-            const bm  = await makeBitmap(raw, raw.width, raw.height, targetW, targetH);
-            raw.close();
-            zoneBitmapsRef.current[i] = bm;
-            if (db) {
-              const dbRef = db;
-              bitmapToBlob(bm).then(b => idbPut(dbRef, imgKey, [b])).catch(() => {});
-            }
-          } catch {
-            console.warn("Could not decode:", ZONES[i].imageSrc);
-          }
-        }
-        imagesLoaded++;
-        setLoadPct(Math.round((imagesLoaded / N) * 65));
-      }
-
-      // Загружает кадры одного перехода: кеш IDB → иначе fetch готовых
-      // кадров (нарезаны заранее ffmpeg'ом). AVIF — основной формат для
-      // браузеров, что его поддерживают (легче почти на треть), WebP —
-      // фолбэк для остальных.
-      const dir = avifOk ? "hero-frames-avif" : "hero-frames";
-      const ext = avifOk ? "avif" : "webp";
-
-      const loadTransitionFrames = async (ti: number) => {
-        const t = TRANSITIONS[ti];
-        if (!t) return;
-
-        const cacheKey = `${t.folder}_${t.frames}_${ext}_${targetW}x${targetH}`;
-
-        if (db) {
-          try {
-            const cached = await idbGet(db, cacheKey);
-            if (cached) {
-              videoFramesRef.current[ti] = await Promise.all(cached.map(b => createImageBitmap(b)));
-              return;
-            }
-          } catch { /* ошибка чтения — извлекаем заново */ }
-        }
-
-        const urls = Array.from({ length: t.frames }, (_, f) =>
-          `/${dir}/${t.folder}/f${String(f + 1).padStart(3, "0")}.${ext}`
-        );
-
-        // Лимит конкурентности + ретраи на fetch, и если кадр всё равно
-        // не загрузился — пропускаем именно его, а не весь переход
-        // (раньше одна неудачная сетевая попытка валила Promise.all
-        // целиком, и переход оставался без кадров вообще).
-        const blobs = await Promise.all(
-          urls.map((url) => fetchBlobLimited(url, frameSemaphore).catch(() => null))
-        );
-        if (cancelled) return;
-
-        const frames: ImageBitmap[] = [];
-        for (const blob of blobs) {
-          if (!blob) continue;
-          try {
-            const raw = await createImageBitmap(blob);
-            const bm  = await makeBitmap(raw, raw.width, raw.height, targetW, targetH);
-            raw.close();
-            frames.push(bm);
-          } catch { /* нечитаемый кадр — пропускаем */ }
-        }
-        if (cancelled) return;
-        if (frames.length === 0) return;
-
-        if (t.reversed) frames.reverse();
-        videoFramesRef.current[ti] = frames;
-
-        // Сохраняем в кеш асинхронно, не блокируя рендер
-        if (db) {
-          const dbRef = db;
-          Promise.all(frames.map(bitmapToBlob))
-            .then(blobs => idbPut(dbRef, cacheKey, blobs))
-            .catch(() => {});
-        }
+    let loaded = 0;
+    const promises = ZONES.map((zone) => new Promise<void>((resolve) => {
+      const img = new window.Image();
+      const done = () => {
+        loaded++;
+        if (!cancelled) setLoadPct(Math.round((loaded / N) * 100));
+        resolve();
       };
+      img.onload = done;
+      img.onerror = done;
+      img.src = zone.imageSrc;
+    }));
 
-      // Все переходы нарезаются параллельно во время прелоада — ничего
-      // не остаётся на фон, чтобы не конкурировать с пользователем за
-      // главный поток сразу после показа сайта.
-      const total = TRANSITIONS.length;
-
-      let doneCount = 0;
-      await Promise.all(
-        Array.from({ length: total }, (_, ti) =>
-          loadTransitionFrames(ti).then(() => {
-            if (cancelled) return;
-            doneCount++;
-            setLoadPct(65 + Math.round((doneCount / total) * 35));
-          })
-        )
-      );
+    Promise.all(promises).then(async () => {
       if (cancelled) return;
-
       const remaining = MIN_PRELOADER_MS - (performance.now() - loadStart);
-      if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
+      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
       if (cancelled) return;
       setPhase("ready");
-    };
+    });
 
-    load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      mountedRef.current = false;
+    };
   }, []);
 
-  // Start auto-advance once loaded
+  // Start auto-advance + prefetch neighbors once loaded
   useEffect(() => {
-    if (phase === "ready") { scheduleAutoAdvance(); scheduleHsRef.current(); }
+    if (phase === "ready") {
+      prefetchNeighbors(0);
+      scheduleAutoAdvance();
+      scheduleHsRef.current();
+    }
     return cancelAutoAdvance;
-  }, [phase, scheduleAutoAdvance, cancelAutoAdvance]);
+  }, [phase, scheduleAutoAdvance, cancelAutoAdvance, prefetchNeighbors]);
 
-
-  // ── Interaction: wheel + drag ────────────────────────────────────────────────
+  // ── Interaction: wheel + drag, both as swipe triggers (no scrubbing) ────────
   useEffect(() => {
-    const cancelJump = () => {
-      if (jumpRafRef.current !== null) { cancelAnimationFrame(jumpRafRef.current); jumpRafRef.current = null; }
-    };
+    const resetWheelAccum = () => { wheelAccumRef.current = 0; };
 
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) < 3 && Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 0.4) return;
       e.preventDefault();
-      cancelJump();
-      cancelAutoAdvance();
-      clearHotspots();
-      virtualPosRef.current = Math.max(0, Math.min(N - 1,
-        virtualPosRef.current + e.deltaX / DRAG_SENSITIVITY
-      ));
-      setActiveZone(Math.round(virtualPosRef.current));
-      if (wheelEndTimerRef.current) clearTimeout(wheelEndTimerRef.current);
-      wheelEndTimerRef.current = setTimeout(() => { scheduleAutoRef.current(); scheduleHsRef.current(); }, 200);
+      if (wheelResetTiRef.current) clearTimeout(wheelResetTiRef.current);
+      wheelResetTiRef.current = setTimeout(resetWheelAccum, WHEEL_IDLE_RESET_MS);
+
+      if (transitioningRef.current) return; // ignore new scroll while a transition plays
+
+      wheelAccumRef.current += e.deltaX;
+      if (Math.abs(wheelAccumRef.current) >= SWIPE_THRESHOLD_WHEEL) {
+        const dir = wheelAccumRef.current > 0 ? 1 : -1;
+        wheelAccumRef.current = 0;
+        goToZone(activeZoneRef.current + dir);
+      }
     };
 
     const onMouseDown = (e: MouseEvent) => {
-      cancelJump();
-      cancelAutoAdvance();
-      clearHotspots();
-      isDraggingRef.current   = true;
-      dragStartXRef.current   = e.clientX;
-      dragStartPosRef.current = virtualPosRef.current;
+      if (transitioningRef.current) return;
+      isDraggingRef.current = true;
+      dragStartXRef.current = e.clientX;
+      dragLastXRef.current  = e.clientX;
       setIsDragging(true);
     };
 
     const onMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
-      virtualPosRef.current = Math.max(0, Math.min(N - 1,
-        dragStartPosRef.current + (dragStartXRef.current - e.clientX) / DRAG_SENSITIVITY
-      ));
-      setActiveZone(Math.round(virtualPosRef.current));
+      dragLastXRef.current = e.clientX;
     };
 
     const onMouseUp = () => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
       setIsDragging(false);
-      scheduleAutoRef.current();
-      scheduleHsRef.current();
+      const delta = dragStartXRef.current - dragLastXRef.current;
+      if (Math.abs(delta) >= SWIPE_THRESHOLD_DRAG) {
+        goToZone(activeZoneRef.current + (delta > 0 ? 1 : -1));
+      }
     };
 
     const onTouchStart = (e: TouchEvent) => {
-      cancelJump();
-      cancelAutoAdvance();
-      clearHotspots();
-      isDraggingRef.current   = true;
-      dragStartXRef.current   = e.touches[0].clientX;
-      dragStartYRef.current   = e.touches[0].clientY;
-      dragStartPosRef.current = virtualPosRef.current;
+      if (transitioningRef.current) return;
+      isDraggingRef.current = true;
+      dragIsHorizRef.current = false;
+      dragStartXRef.current = e.touches[0].clientX;
+      dragStartYRef.current = e.touches[0].clientY;
+      dragLastXRef.current  = e.touches[0].clientX;
       setIsDragging(true);
     };
 
@@ -530,22 +750,25 @@ export default function ScrollVideoHero() {
       if (!isDraggingRef.current) return;
       const dx = dragStartXRef.current - e.touches[0].clientX;
       const dy = dragStartYRef.current - e.touches[0].clientY;
-      // Let vertical scroll pass through; only handle clearly horizontal swipes
-      if (Math.abs(dy) > Math.abs(dx) * 0.8) return;
-      if (Math.abs(dx) < 6) return;
+      // Let vertical scroll pass through; only claim clearly horizontal swipes
+      if (!dragIsHorizRef.current) {
+        if (Math.abs(dy) > Math.abs(dx) * 0.8) return;
+        if (Math.abs(dx) < 6) return;
+        dragIsHorizRef.current = true;
+      }
       e.preventDefault();
-      virtualPosRef.current = Math.max(0, Math.min(N - 1,
-        dragStartPosRef.current + dx / DRAG_SENSITIVITY
-      ));
-      setActiveZone(Math.round(virtualPosRef.current));
+      dragLastXRef.current = e.touches[0].clientX;
     };
 
     const onTouchEnd = () => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
       setIsDragging(false);
-      scheduleAutoRef.current();
-      scheduleHsRef.current();
+      if (!dragIsHorizRef.current) return;
+      const delta = dragStartXRef.current - dragLastXRef.current;
+      if (Math.abs(delta) >= SWIPE_THRESHOLD_DRAG) {
+        goToZone(activeZoneRef.current + (delta > 0 ? 1 : -1));
+      }
     };
 
     const wrap = wrapRef.current;
@@ -565,73 +788,14 @@ export default function ScrollVideoHero() {
       wrap.removeEventListener("touchstart", onTouchStart);
       wrap.removeEventListener("touchmove", onTouchMove);
       wrap.removeEventListener("touchend", onTouchEnd);
-      if (wheelEndTimerRef.current) { clearTimeout(wheelEndTimerRef.current); wheelEndTimerRef.current = null; }
+      if (wheelResetTiRef.current) { clearTimeout(wheelResetTiRef.current); wheelResetTiRef.current = null; }
     };
-  }, [cancelAutoAdvance, clearHotspots]);
+  }, [goToZone]);
 
-  // ── RAF: draw frame — pauses automatically when hero is off-screen ──────────
-  useEffect(() => {
-    if (phase !== "ready") return;
-
-    const canvas = canvasRef.current;
-    const wrap   = wrapRef.current;
-    if (!canvas || !wrap) return;
-
-    const dpr     = window.devicePixelRatio || 1;
-    canvas.width  = window.innerWidth  * dpr;
-    canvas.height = window.innerHeight * dpr;
-    const ctx     = canvas.getContext("2d")!;
-
-    let prevBitmap: ImageBitmap | null = null;
-    let raf: number | null = null;
-    let visible = true;
-
-    const tick = () => {
-      const pos       = virtualPosRef.current;
-      const zoneFloor = Math.min(Math.floor(pos), N - 2);
-      const frac      = pos - Math.floor(pos);
-
-      let bitmap: ImageBitmap | null = null;
-
-      if (pos >= N - 1) {
-        bitmap = zoneBitmapsRef.current[N - 1];
-      } else if (frac > 0 && TRANSITIONS[zoneFloor] !== null) {
-        const frames = videoFramesRef.current[zoneFloor];
-        if (frames && frames.length > 0) {
-          const fi = Math.min(Math.round(frac * (frames.length - 1)), frames.length - 1);
-          bitmap = frames[fi];
-        } else {
-          bitmap = zoneBitmapsRef.current[zoneFloor];
-        }
-      } else {
-        const snapIdx = frac >= 0.5 ? zoneFloor + 1 : zoneFloor;
-        bitmap = zoneBitmapsRef.current[Math.min(snapIdx, N - 1)];
-      }
-
-      if (bitmap && bitmap !== prevBitmap) {
-        ctx.drawImage(bitmap, 0, 0);
-        prevBitmap = bitmap;
-      }
-
-      raf = visible ? requestAnimationFrame(tick) : null;
-    };
-
-    const startTick = () => {
-      if (raf === null) raf = requestAnimationFrame(tick);
-    };
-
-    const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-      if (visible) startTick();
-    }, { threshold: 0 });
-    observer.observe(wrap);
-    startTick();
-
-    return () => {
-      if (raf !== null) cancelAnimationFrame(raf);
-      observer.disconnect();
-    };
-  }, [phase]);
+  // ── Cleanup rAF on unmount ────────────────────────────────────────────────
+  useEffect(() => () => {
+    if (scrubRafRef.current !== null) cancelAnimationFrame(scrubRafRef.current);
+  }, []);
 
   return (
     <div
@@ -645,7 +809,7 @@ export default function ScrollVideoHero() {
         fontFamily: "'Manrope', sans-serif",
       }}
     >
-      {/* LCP placeholder — visible immediately before canvas loads */}
+      {/* LCP placeholder — visible immediately before assets load */}
       <img
         src="/locations/bedroom.webp"
         alt=""
@@ -659,25 +823,68 @@ export default function ScrollVideoHero() {
         }}
       />
 
-      {/* canvas */}
-      <canvas ref={canvasRef} style={{
-        position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-        zIndex: 2,
-        opacity: phase === "ready" ? 1 : 0,
-        transition: "opacity 0.5s ease",
-      }} />
+      {/* current zone still — sits *under* the video layer. Shows
+          `displayZone`, which is already pre-set to the move's destination
+          (see goToZone), so there's nothing to decode at reveal time. */}
+      {phase === "ready" && (
+        <img
+          src={ZONES[displayZone].imageSrc}
+          alt=""
+          style={{
+            position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+            objectFit: "cover", zIndex: 2,
+            opacity: videoVisible ? 0 : 1,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* two video buffers ping-pong so chained legs crossfade video→video
+          without ever dropping back to the still image in between. Sits
+          above the still image and only ever appears once a leg's first
+          frame is confirmed painted (see onNextPaintedFrame in startFreshLeg) —
+          opacity is a hard cut, not a fade, so there's never a partial-
+          blend window where the wrapper's background could show through. */}
+      {phase === "ready" && (
+        <>
+          <video
+            ref={videoARef}
+            muted
+            playsInline
+            preload="auto"
+            style={{
+              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+              objectFit: "cover", zIndex: 3,
+              opacity: videoVisible && activeBuf === "A" ? 1 : 0,
+              pointerEvents: "none",
+            }}
+          />
+          <video
+            ref={videoBRef}
+            muted
+            playsInline
+            preload="auto"
+            style={{
+              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+              objectFit: "cover", zIndex: 3,
+              opacity: videoVisible && activeBuf === "B" ? 1 : 0,
+              pointerEvents: "none",
+            }}
+          />
+        </>
+      )}
 
       {/* legibility veils */}
       <div style={{
-        position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none",
+        position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
         background: "linear-gradient(100deg, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0.30) 26%, rgba(10,11,10,0) 52%)",
       }} />
       <div style={{
-        position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none",
+        position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
         background: "linear-gradient(to top, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0) 38%)",
       }} />
       <div style={{
-        position: "absolute", inset: 0, zIndex: 3, pointerEvents: "none",
+        position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
         background: "linear-gradient(to bottom, rgba(10,11,10,0.40) 0%, rgba(10,11,10,0) 16%)",
       }} />
 
@@ -685,11 +892,7 @@ export default function ScrollVideoHero() {
         <>
           <Chapters
             activeZone={activeZone}
-            onJump={(i) => {
-              cancelAutoAdvance();
-              clearHotspots();
-              animateToPos(i, 1200, () => { scheduleAutoRef.current(); scheduleHsRef.current(); });
-            }}
+            onJump={(i) => goToZone(i)}
           />
 
           <HeroText />
