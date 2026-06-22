@@ -121,7 +121,7 @@ const TRANSITIONS: (TransitionDef | null)[] = [
   { folder: "kitchen-foeroom", reversed: false }, // Кухня ↔ Прихожая
   { folder: "foeroom-hall",    reversed: false }, // Прихожая ↔ Холл
   { folder: "hall-children",   reversed: false }, // Холл ↔ Детская
-  null, // Детская ↔ Ванная
+  { folder: "children-bathroom", reversed: false }, // Детская ↔ Ванная
 ];
 
 const N = ZONES.length;
