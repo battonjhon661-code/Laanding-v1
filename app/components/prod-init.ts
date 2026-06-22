@@ -889,28 +889,43 @@ export function initProdScripts(): void {
       });
     })();
 
-    // mat-cell hover video — only for cells with data-hover-video
+    // mat-cell hover video — only for cells with data-hover-video. All clips
+    // together are only a few MB now (re-encoded, see wardrobe animations),
+    // so every cell's <video> is created and preloaded as soon as the
+    // Materials section nears the viewport, instead of on first hover —
+    // hovering then just plays an already-buffered element, no wait.
     (function () {
       var probe = document.createElement('video');
       var webmOk = probe.canPlayType('video/webm; codecs="vp9"') !== '';
-      document.querySelectorAll('.mat-cell[data-hover-video]').forEach(function (cell) {
+      var cells = document.querySelectorAll('.mat-cell[data-hover-video]');
+      if (!cells.length) return;
+
+      function ensureVideo(cell, bg, src) {
+        var vid = cell._hoverVid;
+        if (!vid) {
+          vid = document.createElement('video');
+          vid.muted = true; vid.loop = true; vid.playsInline = true;
+          vid.preload = 'auto';
+          vid.src = src;
+          bg.appendChild(vid);
+          cell._hoverVid = vid;
+        }
+        return vid;
+      }
+
+      cells.forEach(function (cell) {
         var base = cell.dataset.hoverVideo;
         var bg = cell.querySelector('.mat-cell-bg');
         if (!bg || !base) return;
         var src = base + (webmOk ? '.webm' : '.mp4');
-        var vid = null;
         var playProm = null;
         cell.addEventListener('mouseenter', function () {
-          if (!vid) {
-            vid = document.createElement('video');
-            vid.muted = true; vid.loop = true; vid.playsInline = true;
-            vid.src = src;
-            bg.appendChild(vid);
-          }
+          var vid = ensureVideo(cell, bg, src);
           playProm = vid.play();
           if (playProm) playProm.catch(function () {});
         });
         cell.addEventListener('mouseleave', function () {
+          var vid = cell._hoverVid;
           if (!vid) return;
           if (playProm) {
             playProm.then(function () { vid.pause(); vid.currentTime = 0; }).catch(function () {});
@@ -920,6 +935,29 @@ export function initProdScripts(): void {
           }
         });
       });
+
+      var section = document.getElementById('materials');
+      var preloaded = false;
+      function preloadAll() {
+        if (preloaded) return;
+        preloaded = true;
+        cells.forEach(function (cell) {
+          var base = cell.dataset.hoverVideo;
+          var bg = cell.querySelector('.mat-cell-bg');
+          if (!bg || !base) return;
+          ensureVideo(cell, bg, base + (webmOk ? '.webm' : '.mp4'));
+        });
+      }
+      if (section && 'IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) { preloadAll(); io.disconnect(); }
+          });
+        }, { rootMargin: '800px 0px' });
+        io.observe(section);
+      } else {
+        preloadAll();
+      }
     })();
 
   // Block examples iframe vertical interaction until fully in view,

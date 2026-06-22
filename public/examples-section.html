@@ -221,8 +221,17 @@ const CATS = [
 ];
 const DEFAULT_CAT = 0;
 const N = CATS.length;
-const TRIPLE = [...CATS, ...CATS, ...CATS];
-const DEFAULT_AI = N + DEFAULT_CAT;
+// Rendered as several repeated copies of CATS so the rail always has real
+// slots to slide into in either direction; `ai` (the absolute index into
+// this array) periodically gets recentered back into the middle copy once
+// scrolling settles (see resetRef below), so it never has to grow without
+// bound. COPIES=5 gives a wide buffer (2*N steps either way) so even a fast
+// continuous scroll burst can't outrun the recenter and run off the rendered
+// array — which is what made the carousel appear to "disappear".
+const COPIES = 5;
+const MID = Math.floor(COPIES / 2);
+const RAIL_CATS = Array.from({ length: COPIES }, () => CATS).flat();
+const DEFAULT_AI = MID * N + DEFAULT_CAT;
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 function ringOffset(i, pos, n){ let d = ((i - pos) % n + n) % n; if(d > n/2) d -= n; return d; }
@@ -341,18 +350,26 @@ function App(){
     setShift(Math.round(dim.w / 2 - sw / 2 - ai * (sw + gapPx)));
   }, [ai, dim, u]);
 
+  // Recenters `ai` back into the middle copy once the slide transition has
+  // settled. Deliberately scheduled only once per "burst" (not reset on
+  // every step) — resetting on each step meant fast continuous scrolling
+  // (steps less than 570ms apart) postponed this forever, letting `ai` drift
+  // past the rendered RAIL_CATS array entirely. The recenter target is also
+  // computed with a full modulo wrap so it self-corrects regardless of how
+  // far `ai` drifted before this got to run, not just by a single ±N shift.
   const resetRef = useRef(null);
   useEffect(() => {
-    clearTimeout(resetRef.current);
+    if (resetRef.current) return;
     resetRef.current = setTimeout(() => {
+      resetRef.current = null;
       const cur = aiRef.current;
-      if (cur < N || cur >= 2 * N) {
+      if (cur < MID * N || cur >= (MID + 1) * N) {
         setInstant(true);
-        setAi(v => v < N ? v + N : v - N);
+        setAi(MID * N + wrap(cur, N));
       }
     }, 570);
-    return () => clearTimeout(resetRef.current);
   }, [ai]);
+  useEffect(() => () => clearTimeout(resetRef.current), []);
 
   useEffect(() => {
     if (!instant) return;
@@ -512,7 +529,7 @@ function App(){
           instant ? { transition: "none" } : {}
         )
       },
-        ...TRIPLE.map(function(c, tripleI) {
+        ...RAIL_CATS.map(function(c, tripleI) {
           const realI = tripleI % N;
           const focused = tripleI === ai;
           const coverPhoto = c.isTitle ? null : PHOTOS[(realI * 7 + (selMap[realI] || 0)) % PHOTOS.length];
@@ -585,7 +602,7 @@ function App(){
         return h("div", {
           key: ci,
           className: "auto-strip" + (ci === realAi ? " active" : ""),
-          onClick: () => { setAi(N + ci); onUserInteract(); }
+          onClick: () => { setAi(MID * N + ci); onUserInteract(); }
         },
           ci === realAi && autoEnabled && visible
             ? h("div", { key: animKey, className: "auto-strip-fill", onAnimationEnd: onStripEnd })
