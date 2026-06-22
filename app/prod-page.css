@@ -93,10 +93,31 @@
     .nav-wrap.collapsed .nav__links,
     .nav-wrap.collapsed .nav__phone {
       opacity: 0;
+      pointer-events: none;
       transition: opacity .18s ease;
     }
     .nav-wrap.collapsed .nav__logo  { transform: translateX(-12px); }
     .nav-wrap.collapsed .nav__phone { transform: translateX(12px); }
+    /* Full bar → small round button, fixed bottom-right. This geometry was
+       missing entirely — only the fade-out above and the burger icon (below)
+       existed, so "collapsed" never actually shrank or moved `.nav`, leaving
+       the (invisible but still click-intercepting, fixed above) logo sitting
+       on top of the burger the whole time. `.nav-sheet__card` already
+       expects this exact circle position (see --nav-circle-size/--nav-margin
+       usage), confirming it's the missing piece rather than a deliberate gap. */
+    .nav-wrap.collapsed .nav {
+      position: fixed;
+      left: auto; top: auto;
+      right: var(--nav-margin);
+      bottom: var(--nav-margin);
+      width: var(--nav-circle-size);
+      height: var(--nav-circle-size);
+      padding: 0;
+      border-radius: 50%;
+      background: rgba(20,20,20,0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
     /* 3 полоски / гамбургер — появляются после морфа */
     .nav__burger {
       position: absolute;
@@ -109,6 +130,7 @@
     }
     .nav-wrap.collapsed .nav__burger {
       opacity: 1;
+      pointer-events: auto;
       transition: opacity .3s ease .45s;
     }
     .nav__burger i {
@@ -2186,5 +2208,92 @@
     height: 100%;
     border: none;
     display: block;
+  }
+
+  /* ─── Mobile (≤768px) ────────────────────────────────────── */
+  @media (max-width: 768px) {
+
+    /* Materials block — desktop lays this out as an absolutely-positioned
+       1920×1080 canvas scaled down via JS `zoom` (see prod-init.ts fitMat).
+       On mobile that JS clears the zoom and this takes over instead: a
+       natural-flow phone layout, text on top (~1/4 screen), cabinet
+       filling the rest full-width. */
+    .mat-stage { width: 100%; height: auto; }
+    .mat-page {
+      width: 100%; height: auto; min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+    .mat-hero-slot, .mat-cabinet-shadow { display: none; }
+
+    .mat-left-col {
+      position: relative;
+      width: 100%; height: auto;
+      flex: 0 0 auto;
+      padding: 100px 20px 24px;
+      display: flex; flex-direction: column; justify-content: flex-start;
+    }
+    .mat-h1 { font-size: clamp(26px, 8vw, 36px); }
+    .mat-lead { max-width: 100%; margin-top: 16px; font-size: 14px; }
+    .mat-hint { display: none; } /* "наведите курсор" — irrelevant on touch */
+
+    .mat-cabinet {
+      position: relative;
+      top: auto; right: auto; bottom: auto; left: auto;
+      width: 100%; min-height: 75vh;
+      flex: 1 1 auto;
+      padding: 0 14px 28px;
+      gap: 14px;
+    }
+    .mat-cabinet::before, .mat-cabinet::after { left: 6px; right: 6px; }
+
+    .mat-row {
+      display: grid;
+      grid-template-columns: 34px 1fr 34px;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "label label label"
+        "prev  track  next";
+      gap: 8px 8px;
+    }
+    .mat-row-label  { grid-area: label; padding-right: 0; }
+    .mat-row-arrow.prev { grid-area: prev; width: 34px; height: 34px; }
+    .mat-row-arrow.next { grid-area: next; width: 34px; height: 34px; }
+    .mat-track-viewport { grid-area: track; }
+    .mat-track { padding: 0 8px; }
+    .mat-cell { flex: 0 0 72%; max-width: 220px; }
+
+    /* Mirror section — desktop reserves 220px on the left for the (absent
+       on mobile) cabinet imagery; collapse to a normal centered block. */
+    .mirror-inner { padding: 90px 24px; }
+    .mirror-text { max-width: 100%; }
+
+    /* Footer — two side-by-side rows (contacts+FAQ, brand+nav+meta) each
+       stack vertically instead of overflowing. */
+    .site-footer__inner { padding: 48px 20px; }
+    .site-footer__upper {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 32px;
+    }
+    .footer-faq { max-width: 100%; }
+    .footer-faq__item.is-open .footer-faq__body { height: 92px; }
+    .site-footer__lower {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    .site-footer__nav { justify-content: flex-start; gap: 16px 24px; }
+    .footer-meta { align-items: flex-start; }
+
+    /* Before/After full-width slider — title was a fixed nowrap line sized
+       for desktop width and ran off both edges of the screen. */
+    .ba-title { width: 88vw; }
+    .ba-title__h {
+      font-size: clamp(20px, 6.5vw, 28px);
+      white-space: normal;
+    }
+
+    /* Card Scatter — fixed 260×320px tiles sized for desktop scatter radius */
+    .cstack-tile { width: 160px; height: 200px; }
   }
 

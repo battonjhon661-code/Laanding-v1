@@ -469,7 +469,6 @@ export function initProdScripts(): void {
 
     // Mat block: row carousels
     (function(){
-      var VISIBLE = 5;
       var GAP = 14;
       var DUR = 550;
 
@@ -481,9 +480,12 @@ export function initProdScripts(): void {
         if (!track || !viewport || !prev || !next) return;
         var busy = false;
 
+        // Step by exactly one cell's actual rendered width, not a count
+        // assumed to fit the viewport — keeps prev/next correct whether 5
+        // cells are visible (desktop) or ~2 (mobile, see prod-page.css).
         function step() {
-          var vw = viewport.clientWidth - 52;
-          return (vw - GAP * (VISIBLE - 1)) / VISIBLE + GAP;
+          var cell = track.querySelector('.mat-cell');
+          return cell ? cell.getBoundingClientRect().width + GAP : 0;
         }
         function lock() { busy = true; setTimeout(function(){ busy = false; }, DUR + 30); }
 
@@ -596,11 +598,18 @@ export function initProdScripts(): void {
     })();
 
 
-    // Materials block scale-to-fit
+    // Materials block scale-to-fit — desktop only. Below 768px the block
+    // switches to its own natural-flow mobile layout (see prod-page.css),
+    // so the 1920px-canvas zoom must be cleared rather than shrinking that
+    // layout down to a tiny scaled copy of the desktop one.
     (function(){
       const stage = document.getElementById('mat-stage');
       if (!stage) return;
       function fitMat(){
+        if (window.innerWidth <= 768) {
+          stage.style.zoom = '';
+          return;
+        }
         const s = stage.parentElement.offsetWidth / 1920;
         stage.style.zoom = s;
       }
@@ -815,8 +824,7 @@ export function initProdScripts(): void {
       var navWrap = document.getElementById('navWrap');
       var nav     = document.getElementById('nav');
       var sheet   = document.getElementById('navSheet');
-      var hero    = document.getElementById('hero');
-      if (!navWrap || !nav || !sheet || !hero) return;
+      if (!navWrap || !nav || !sheet) return;
 
       var CIRCLE = 60, MARGIN = 28;
 

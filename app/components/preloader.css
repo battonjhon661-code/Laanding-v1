@@ -54,6 +54,14 @@
   color: #f4f5f7;
 }
 
+@media (max-width: 768px) {
+  .vg-stage { gap: 16px; }
+  .vg-vp { font-size: 80px; }
+  .vg-bar { height: 70px; }
+  .vg-word { height: 70px; }
+  .vg-word span { font-size: 26px; }
+}
+
 @keyframes vg-bar {
   0%   { transform: scaleY(0); opacity: 0; }
   10%  { transform: scaleY(1); opacity: 1; }

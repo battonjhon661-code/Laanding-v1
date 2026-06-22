@@ -189,6 +189,24 @@ function detectWebmSupport(): boolean {
   return v.canPlayType('video/webm; codecs="vp9"') !== "";
 }
 
+// Chapters/HeroText are positioned with inline styles (no CSS classes), so
+// the mobile layout switch (thumbnails to a bottom row instead of a right
+// column) is driven by this matchMedia hook rather than a media query.
+const MOBILE_BREAKPOINT = 768;
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= MOBILE_BREAKPOINT
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return isMobile;
+}
+
 // Every leg is driven by manually scrubbing `currentTime` (never native
 // `.play()`) so we get a precise, non-linear ease-in-out feel and a single
 // uniform completion mechanism. `scrubForward` says whether to walk the
@@ -223,6 +241,7 @@ function resolvePlayPlan(t: TransitionDef, direction: Direction, webmOk: boolean
 type BufKey = "A" | "B";
 
 export default function ScrollVideoHero() {
+  const isMobile  = useIsMobile();
   const wrapRef   = useRef<HTMLDivElement>(null);
   const videoARef = useRef<HTMLVideoElement>(null);
   const videoBRef = useRef<HTMLVideoElement>(null);
@@ -943,23 +962,27 @@ export default function ScrollVideoHero() {
             <ZoneHotspots key={hotspotZone} zone={hotspotZone} />
           )}
 
-          {/* pager */}
-          <div style={{
-            position: "absolute",
-            right: "clamp(28px, 3.2vw, 58px)",
-            bottom: "clamp(26px, 3vh, 40px)",
-            fontSize: "clamp(13px, 1vw, 17px)" as string,
-            fontWeight: 500,
-            letterSpacing: ".18em",
-            color: DIMMER,
-            zIndex: 30,
-          } as React.CSSProperties}>
-            <b style={{ fontWeight: 600, color: INK }}>
-              {String(activeZone + 1).padStart(2, "0")}
-            </b>
-            {" "}
-            <span style={{ opacity: 0.6 }}>/ {String(N).padStart(2, "0")}</span>
-          </div>
+          {/* pager — redundant with the visible active thumbnail in the
+              mobile bottom row, and would collide with it there, so it's
+              desktop-only */}
+          {!isMobile && (
+            <div style={{
+              position: "absolute",
+              right: "clamp(28px, 3.2vw, 58px)",
+              bottom: "clamp(26px, 3vh, 40px)",
+              fontSize: "clamp(13px, 1vw, 17px)" as string,
+              fontWeight: 500,
+              letterSpacing: ".18em",
+              color: DIMMER,
+              zIndex: 30,
+            } as React.CSSProperties}>
+              <b style={{ fontWeight: 600, color: INK }}>
+                {String(activeZone + 1).padStart(2, "0")}
+              </b>
+              {" "}
+              <span style={{ opacity: 0.6 }}>/ {String(N).padStart(2, "0")}</span>
+            </div>
+          )}
         </>
       )}
 
@@ -1000,20 +1023,45 @@ function Chapters({
   onJump: (i: number) => void;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const isMobile = useIsMobile();
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  // On mobile the row scrolls horizontally — keep the active thumbnail in view
+  // as the user jumps zones via swipe/auto-advance, not just direct taps.
+  useEffect(() => {
+    if (!isMobile) return;
+    const row = rowRef.current;
+    const btn = row?.children[activeZone] as HTMLElement | undefined;
+    btn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [isMobile, activeZone]);
 
   return (
-    <div style={{
-      position: "absolute",
-      right: "clamp(20px, 2.2vw, 38px)" as string,
-      top: "50%",
-      transform: "translateY(-50%)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: "clamp(5px, 0.65vh, 8px)" as string,
-      padding: "10px",
-      zIndex: 30,
-    } as React.CSSProperties}>
+    <div
+      ref={rowRef}
+      style={(isMobile ? {
+        position: "absolute",
+        left: 0, right: 0, bottom: 0, top: "auto", transform: "none",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: "8px",
+        padding: "10px 14px calc(10px + env(safe-area-inset-bottom, 0px))",
+        overflowX: "auto",
+        background: "linear-gradient(to top, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0) 100%)",
+        zIndex: 30,
+      } : {
+        position: "absolute",
+        right: "clamp(20px, 2.2vw, 38px)",
+        top: "50%",
+        transform: "translateY(-50%)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "clamp(5px, 0.65vh, 8px)",
+        padding: "10px",
+        zIndex: 30,
+      }) as React.CSSProperties}
+    >
 
 {ZONES.map((zone, i) => {
         const active = activeZone === i;
@@ -1026,7 +1074,7 @@ function Chapters({
             onMouseLeave={() => setHovered(null)}
             style={{
               position: "relative",
-              width: "clamp(90px, 8vw, 124px)" as string,
+              width: isMobile ? "68px" : ("clamp(90px, 8vw, 124px)" as string),
               aspectRatio: "16/9",
               flexShrink: 0,
               border: "none",
@@ -1079,34 +1127,41 @@ function Chapters({
 
 // ── HeroText: overline + h1 + paragraph + CTA ────────────────────────────────
 function HeroText() {
+  const isMobile = useIsMobile();
   return (
-    <div style={{
+    <div style={(isMobile ? {
       position: "absolute",
-      left:   "clamp(28px, 3.2vw, 58px)" as string,
-      bottom: "clamp(74px, 10vh, 108px)" as string,
-      maxWidth: "min(56vw, 740px)" as string,
+      left: "20px", right: "20px",
+      top: "clamp(84px, 13vh, 112px)",
+      maxWidth: "none",
       zIndex: 30,
-    } as React.CSSProperties}>
+    } : {
+      position: "absolute",
+      left: "clamp(28px, 3.2vw, 58px)",
+      bottom: "clamp(74px, 10vh, 108px)",
+      maxWidth: "min(56vw, 740px)",
+      zIndex: 30,
+    }) as React.CSSProperties}>
 
       <div style={{
-        fontSize: "clamp(10px, .74vw, 12.5px)" as string,
+        fontSize: isMobile ? "10.5px" : ("clamp(10px, .74vw, 12.5px)" as string),
         fontWeight: 500,
         letterSpacing: ".34em",
         textTransform: "uppercase",
         color: DIM,
-        marginBottom: "clamp(16px, 2vh, 26px)" as string,
+        marginBottom: isMobile ? "14px" : ("clamp(16px, 2vh, 26px)" as string),
       } as React.CSSProperties}>
         Стекло в архитектуре
       </div>
 
       <h1 style={{
         margin: 0,
-        fontSize: "clamp(26px, 2.55vw, 43px)" as string,
+        fontSize: isMobile ? "clamp(26px, 8vw, 36px)" : ("clamp(26px, 2.55vw, 43px)" as string),
         fontWeight: 400,
         lineHeight: 1.16,
         letterSpacing: ".005em",
         textTransform: "uppercase",
-        whiteSpace: "nowrap",
+        whiteSpace: isMobile ? "normal" : "nowrap",
         color: INK,
       } as React.CSSProperties}>
         Прозрачность,<br />которая создаёт пространство
@@ -1114,22 +1169,22 @@ function HeroText() {
 
       <p style={{
         margin: 0,
-        marginTop: "clamp(16px, 2vh, 24px)" as string,
-        fontSize: "clamp(13px, 1vw, 16px)" as string,
+        marginTop: isMobile ? "12px" : ("clamp(16px, 2vh, 24px)" as string),
+        fontSize: isMobile ? "13px" : ("clamp(13px, 1vw, 16px)" as string),
         fontWeight: 300,
-        lineHeight: 1.6,
+        lineHeight: 1.5,
         color: "rgba(244,241,236,0.74)",
-        maxWidth: "30em",
+        maxWidth: isMobile ? "100%" : "30em",
       } as React.CSSProperties}>
         Интерьерное стекло премиум-качества для архитектуры,<br />в которой важна каждая деталь.
       </p>
 
       <button style={{
-        marginTop: "clamp(22px, 3vh, 36px)" as string,
+        marginTop: isMobile ? "20px" : ("clamp(22px, 3vh, 36px)" as string),
         display: "inline-flex",
         alignItems: "center",
-        gap: "clamp(28px, 3vw, 48px)" as string,
-        padding: "clamp(13px, 1.5vh, 18px) clamp(22px, 2vw, 30px)" as string,
+        gap: isMobile ? "20px" : ("clamp(28px, 3vw, 48px)" as string),
+        padding: isMobile ? "12px 20px" : ("clamp(13px, 1.5vh, 18px) clamp(22px, 2vw, 30px)" as string),
         border: `1px solid ${LINE}`,
         borderRadius: 100,
         background: "rgba(244,241,236,0.02)",
@@ -1137,7 +1192,7 @@ function HeroText() {
         color: INK,
         cursor: "pointer",
         fontFamily: "inherit",
-        fontSize: "clamp(10px, .74vw, 12.5px)" as string,
+        fontSize: isMobile ? "10px" : ("clamp(10px, .74vw, 12.5px)" as string),
         fontWeight: 500,
         letterSpacing: ".22em",
         textTransform: "uppercase",
