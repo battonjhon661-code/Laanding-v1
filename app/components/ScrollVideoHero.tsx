@@ -9,6 +9,7 @@ const WHEEL_IDLE_RESET_MS   = 220; // reset wheel accumulator after this much si
 const AUTO_DELAY            = 5000;
 const MIN_PRELOADER_MS      = 4600; // один полный цикл анимации прелоадера
 const TRANSITION_MS         = 950;  // целевая длительность одиночного перехода (как раньше у animateToPos)
+const SNAP_FADE_MS          = 150;  // half-duration of the cross-fade used for distant (2+ zone) jumps — no video
 // Source clips run ~4s each. At the old budget (250/260) a 9-room jump squeezed
 // each leg to ~330ms, forcing ~12x playbackRate — the decoder can't keep up at
 // that speed and it reads as jerky/dropped frames. Raised so even the longest
@@ -279,6 +280,13 @@ export default function ScrollVideoHero() {
   const [videoVisible, setVideoVisible] = useState(false);
   const [activeBuf, setActiveBuf]       = useState<BufKey>("B");
   const [hotspotZone, setHotspotZone]   = useState<number | null>(null);
+  // Distant jumps (2+ zones, e.g. clicking a far chapter thumbnail) skip the
+  // video chain entirely and just cross-fade the still image straight to the
+  // destination — see snapToZone. `snapFading` only enables the CSS
+  // transition while a snap is in flight, so it never affects the normal
+  // video-reveal hard-cut (see setBufOpacity above).
+  const [snapOpacity, setSnapOpacity]   = useState(1);
+  const [snapFading, setSnapFading]     = useState(false);
 
   const getVideo = useCallback((key: BufKey) => (key === "A" ? videoARef.current : videoBRef.current), []);
 
@@ -364,6 +372,28 @@ export default function ScrollVideoHero() {
       scheduleHsRef.current();
     }
   }, [prefetchNeighbors]);
+
+  // ── Distant jump (2+ zones away): no transition video at all, just a quick
+  // cross-fade of the still image straight to the destination. Used instead
+  // of the per-leg video chain below for far chapter-thumbnail clicks.
+  const snapToZone = useCallback((target: number) => {
+    cancelAutoAdvance();
+    clearHotspots();
+    transitioningRef.current = true;
+    setSnapFading(true);
+    setSnapOpacity(0);
+    window.setTimeout(() => {
+      if (!mountedRef.current) return;
+      setDisplayZone(target);
+      setSnapOpacity(1);
+      window.setTimeout(() => {
+        if (!mountedRef.current) return;
+        setSnapFading(false);
+        transitioningRef.current = false;
+        settleAt(target);
+      }, SNAP_FADE_MS);
+    }, SNAP_FADE_MS);
+  }, [cancelAutoAdvance, clearHotspots, settleAt]);
 
   const startFreshLegRef = useRef<(idx: number) => void>(() => {});
   const revealAndRunRef  = useRef<(idx: number, stepTarget: number, video: HTMLVideoElement, buf: BufKey) => void>(() => {});
@@ -581,14 +611,20 @@ export default function ScrollVideoHero() {
   const goToZoneRef = useRef<(target: number) => void>(() => {});
 
   // ── Move to an adjacent (or distant) zone ───────────────────────────────────
-  // Distant jumps (e.g. clicking a far chapter thumbnail) chain through every
-  // intermediate transition video one leg at a time, exactly like a real
-  // scroll/swipe through each zone in between.
+  // Adjacent jumps (1 zone) play the real transition video. Distant jumps
+  // (2+ zones, e.g. clicking a far chapter thumbnail) skip video entirely —
+  // see snapToZone — rather than chaining through every intermediate clip.
   const goToZone = useCallback((target: number) => {
     if (transitioningRef.current) return;
     const clamped = Math.max(0, Math.min(N - 1, target));
     const current = activeZoneRef.current;
     if (clamped === current) return;
+
+    const steps = Math.abs(clamped - current);
+    if (steps >= 2) {
+      snapToZone(clamped);
+      return;
+    }
 
     cancelAutoAdvance();
     clearHotspots();
@@ -599,7 +635,6 @@ export default function ScrollVideoHero() {
     // swap is always invisible instead of flashing the new photo before the
     // video appears.
 
-    const steps = Math.abs(clamped - current);
     const dir = clamped > current ? 1 : -1;
     startZoneRef.current = current;
     legStepsRef.current = Array.from({ length: steps }, (_, i) => current + dir * (i + 1));
@@ -628,7 +663,7 @@ export default function ScrollVideoHero() {
     }
 
     startFreshLeg(0);
-  }, [cancelAutoAdvance, clearHotspots, prefetchUrl, startFreshLeg]);
+  }, [cancelAutoAdvance, clearHotspots, prefetchUrl, startFreshLeg, snapToZone]);
 
   useEffect(() => { goToZoneRef.current = goToZone; }, [goToZone]);
 
@@ -825,7 +860,12 @@ export default function ScrollVideoHero() {
 
       {/* current zone still — sits *under* the video layer. Shows
           `displayZone`, which is already pre-set to the move's destination
-          (see goToZone), so there's nothing to decode at reveal time. */}
+          (see goToZone), so there's nothing to decode at reveal time. For a
+          distant snap jump (see snapToZone) there's no video to hide behind,
+          so `snapOpacity` drives a short cross-fade of this same element
+          instead — `snapFading` only attaches the CSS transition while that
+          fade is in flight, so the normal video-reveal hard-cut elsewhere is
+          untouched. */}
       {phase === "ready" && (
         <img
           src={ZONES[displayZone].imageSrc}
@@ -833,7 +873,8 @@ export default function ScrollVideoHero() {
           style={{
             position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
             objectFit: "cover", zIndex: 2,
-            opacity: videoVisible ? 0 : 1,
+            opacity: videoVisible ? 0 : snapOpacity,
+            transition: snapFading ? `opacity ${SNAP_FADE_MS}ms ease` : undefined,
             pointerEvents: "none",
           }}
         />

@@ -219,25 +219,13 @@
 
     .nav__logo {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      align-items: center;
       line-height: 1;
     }
-    .nav__logo-mark {
-      font-family: 'Manrope', sans-serif;
-      font-weight: 500;
-      font-size: 24px;
-      letter-spacing: .34em;
-      color: var(--fg-warm);
-      white-space: nowrap;
-    }
-    .nav__logo-sub {
-      font-family: 'Manrope', sans-serif;
-      font-size: 9px;
-      letter-spacing: .32em;
-      color: var(--fg-warm-dim);
-      text-transform: uppercase;
-      white-space: nowrap;
+    .nav__logo-img {
+      height: 38px;
+      width: auto;
+      display: block;
     }
     .nav__links {
       position: relative;
@@ -1715,21 +1703,10 @@
     gap: 40px;
   }
   .site-footer__brand { flex-shrink: 0; }
-  .site-footer__logo-mark {
-    font-family: 'Manrope', sans-serif;
-    font-weight: 300;
-    font-size: 18px;
-    letter-spacing: .4em;
-    color: #f5f3ef;
-    text-transform: uppercase;
-  }
-  .site-footer__logo-sub {
-    font-family: 'Manrope', sans-serif;
-    font-size: 10px;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: #5a5854;
-    margin-top: 5px;
+  .site-footer__logo-img {
+    height: 32px;
+    width: auto;
+    display: block;
   }
   /* FAQ */
   .footer-faq {

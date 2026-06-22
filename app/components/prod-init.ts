@@ -891,10 +891,13 @@ export function initProdScripts(): void {
 
     // mat-cell hover video — only for cells with data-hover-video
     (function () {
+      var probe = document.createElement('video');
+      var webmOk = probe.canPlayType('video/webm; codecs="vp9"') !== '';
       document.querySelectorAll('.mat-cell[data-hover-video]').forEach(function (cell) {
-        var src = cell.dataset.hoverVideo;
+        var base = cell.dataset.hoverVideo;
         var bg = cell.querySelector('.mat-cell-bg');
-        if (!bg || !src) return;
+        if (!bg || !base) return;
+        var src = base + (webmOk ? '.webm' : '.mp4');
         var vid = null;
         var playProm = null;
         cell.addEventListener('mouseenter', function () {
