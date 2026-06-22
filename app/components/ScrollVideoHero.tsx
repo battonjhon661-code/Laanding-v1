@@ -7,7 +7,7 @@ const SWIPE_THRESHOLD_WHEEL = 60;  // px of accumulated wheel deltaX before a zo
 const SWIPE_THRESHOLD_DRAG  = 80;  // px of horizontal drag before release triggers a zone change
 const WHEEL_IDLE_RESET_MS   = 220; // reset wheel accumulator after this much silence
 const AUTO_DELAY            = 5000;
-const MIN_PRELOADER_MS      = 4600; // один полный цикл анимации прелоадера
+const MIN_PRELOADER_MS      = 300; // just enough to avoid a flash-of-loader on instant/cached loads
 const TRANSITION_MS         = 950;  // целевая длительность одиночного перехода (как раньше у animateToPos)
 const SNAP_FADE_MS          = 150;  // half-duration of the cross-fade used for distant (2+ zone) jumps — no video
 // Source clips run ~4s each. At the old budget (250/260) a 9-room jump squeezed
@@ -986,28 +986,7 @@ export default function ScrollVideoHero() {
         </>
       )}
 
-      <Preloader visible={phase === "loading"} />
-
-      {/* loading bar */}
-      {phase === "loading" && (
-        <>
-          <div style={{
-            position: "absolute", bottom: 0, left: 0, width: "100%", height: "2px",
-            zIndex: 10, background: "rgba(255,255,255,0.08)",
-          }}>
-            <div style={{
-              height: "100%", width: `${loadPct}%`,
-              background: "rgba(255,255,255,0.45)", transition: "width 0.15s linear",
-            }} />
-          </div>
-          <div style={{
-            position: "absolute", bottom: 12, right: 14, zIndex: 11,
-            color: "rgba(255,255,255,0.35)", fontSize: "11px", fontFamily: "monospace",
-          }}>
-            {loadPct}%
-          </div>
-        </>
-      )}
+      <Preloader visible={phase === "loading"} loadPct={loadPct} />
     </div>
   );
 }

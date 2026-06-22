@@ -111,19 +111,21 @@
     border-radius: 8px; overflow: hidden; cursor: pointer;
     border: 1px solid rgba(255,255,255,0.26);
     box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-    transition: height 0.45s cubic-bezier(0.25,0.7,0.25,1);
+    transition: height 0.45s cubic-bezier(0.25,0.7,0.25,1), filter 0.35s ease;
     transform:
       translate(-50%, -50%)
       translateY(calc(var(--R) * sin(var(--ang))))
       translateZ(calc(var(--R) * (var(--c) - 1)))
       scale(calc(0.79 + 0.21 * ((var(--c) + 1) / 2)));
     opacity: clamp(0.16, calc(0.22 + 0.42 * (var(--c) + 1)), 1);
+    filter: brightness(0.4);
     will-change: transform, opacity;
   }
   .citem.center {
     height: var(--citem-ch);
     border-color: rgba(255,255,255,0.82);
     box-shadow: 0 0 0 1px rgba(0,0,0,0.3), 0 16px 42px rgba(0,0,0,0.58), 0 0 32px rgba(130,190,255,0.5);
+    filter: brightness(1);
   }
   .citem .cap {
     position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 10px 7px;
@@ -148,6 +150,20 @@
   .nav-arrow.nav-prev { left: 12px; }
   .nav-arrow.nav-next { right: 12px; }
   .nav-arrow svg { width: 20px; height: 20px; }
+
+  /* vertical sub-carousel pager — sits over the center card's corners */
+  .csub-arrow {
+    position: absolute; z-index: 100;
+    border-radius: 50%;
+    background: rgba(10,24,40,0.55); border: 1px solid rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: rgba(255,255,255,0.8);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+    user-select: none; pointer-events: auto;
+  }
+  .csub-arrow:hover { background: rgba(30,60,90,0.75); border-color: rgba(255,255,255,0.4); }
+  .csub-arrow svg { width: 55%; height: 55%; }
 
   /* autoplay strips */
   .auto-strips {
@@ -211,6 +227,23 @@ function makeMosaic(seed, hr, sr, lr){
 /* ---------- data ---------- */
 const CATS = [
   { id:"title", label:"Виды работ", isTitle:true, subs:[] },
+  { id:"shower", label:"Душевые", subs:[
+      "Тёмно-серое стекло · золото", "Бронзовое стекло · хром", "Матовое стекло · хром",
+      "Серое стекло · чёрная фурнитура", "Зелёное стекло · хром", "Рифлёное стекло · бронза",
+      "Тёмно-серое стекло · хром", "Стекло-интим · хром",
+    ], photos: [
+    "assets/examples/shower_room/1_dark_grey_gold.webp",
+    "assets/examples/shower_room/2_bronze_chrome.webp",
+    "assets/examples/shower_room/3_matte_clear_chrome.webp",
+    "assets/examples/shower_room/4_grey_black.webp",
+    "assets/examples/shower_room/5_green_clear_chrome.webp",
+    "assets/examples/shower_room/6_ribbed_bronze.webp",
+    "assets/examples/shower_room/7_dark_grey_chrome.webp",
+    "assets/examples/shower_room/8_privacy_chrome.webp",
+  ] },
+  { id:"mirrors_light", label:"Зеркала с подсветкой", subs:["Квадратное"], photos: [
+    "assets/examples/mirrors_light/1_square.webp",
+  ] },
   { id:"spotlight", label:"Spotlight", subs:["обзор", "что нового", "избранное"] },
   { id:"movies", label:"Movies", subs:["ещё фильмы", "библиотека фильмов", "play dvd", "поиск"] },
   { id:"music", label:"Music", subs:["ещё музыка", "музыкальная библиотека", "play all", "радио", "поиск"] },
@@ -245,6 +278,11 @@ const RADIUS = 326;
 const GAP = 90;
 
 const PHOTOS = Array.from({ length: 42 }, (_, i) => `https://picsum.photos/seed/${i + 20}/470/600`);
+function catPhoto(ci, subIdx){
+  const cat = CATS[ci];
+  if (cat.photos && cat.photos.length) return cat.photos[subIdx % cat.photos.length];
+  return PHOTOS[(ci * 7 + subIdx) % PHOTOS.length];
+}
 
 const Mosaic = React.memo(function Mosaic({ src }){
   return h("div", { className: "mosaic-wrap" },
@@ -264,13 +302,15 @@ const CItem = React.memo(function CItem({ c, isC, tw, capSize, sub, src, onPick 
   );
 });
 
-function Carousel({ ci, posAccum, u, onPick }){
+function Carousel({ ci, posAccum, u, onPick, onStepSub }){
   const subs = CATS[ci].subs, n = subs.length;
   const M = ringSize(n);
   const step = (2 * Math.PI) / M;
   const center = wrap(Math.round(posAccum), M);
   const tw = TILE_W * u, R = RADIUS * u;
   const capSize = 17.5 * u;
+  const btnSize = 46 * u, inset = 8 * u;
+  const halfW = tw / 2, halfH = (CENTER_H * u) / 2;
   return h("div", {
     className: "carousel",
     style: {
@@ -286,9 +326,37 @@ function Carousel({ ci, posAccum, u, onPick }){
         key: c,
         c: c, isC: c === center, tw: tw, capSize: capSize,
         sub: subs[c % n],
-        src: PHOTOS[(ci * 7 + (c % n)) % PHOTOS.length],
+        src: catPhoto(ci, c % n),
         onPick: onPick
       })
+    ),
+    n > 1 && h("div", {
+      className: "csub-arrow csub-up",
+      style: {
+        width: btnSize, height: btnSize,
+        left: "50%", top: "50%",
+        transform: "translate(calc(-50% + " + (halfW - inset) + "px), calc(-50% - " + (halfH - inset) + "px))",
+      },
+      onClick: (e) => { e.stopPropagation(); onStepSub(-1); },
+      "aria-label": "Предыдущий пункт",
+    },
+      h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+        h("polyline", { points: "6 15 12 9 18 15" })
+      )
+    ),
+    n > 1 && h("div", {
+      className: "csub-arrow csub-down",
+      style: {
+        width: btnSize, height: btnSize,
+        left: "50%", top: "50%",
+        transform: "translate(calc(-50% + " + (halfW - inset) + "px), calc(-50% + " + (halfH - inset) + "px))",
+      },
+      onClick: (e) => { e.stopPropagation(); onStepSub(1); },
+      "aria-label": "Следующий пункт",
+    },
+      h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+        h("polyline", { points: "6 9 12 15 18 9" })
+      )
     )
   );
 }
@@ -397,6 +465,8 @@ function App(){
     posRef.current = np; setPosAccum(np);
     setSelMap(m => ({ ...m, [a]: wrap(np, n) }));
   }, []);
+
+  const stepSubUI = useCallback((dir) => { stepSub(dir); onUserInteract(); }, [stepSub, onUserInteract]);
 
   const pickSub = useCallback((cell) => {
     const a = aiRef.current % N, n = CATS[a].subs.length;
@@ -532,7 +602,7 @@ function App(){
         ...RAIL_CATS.map(function(c, tripleI) {
           const realI = tripleI % N;
           const focused = tripleI === ai;
-          const coverPhoto = c.isTitle ? null : PHOTOS[(realI * 7 + (selMap[realI] || 0)) % PHOTOS.length];
+          const coverPhoto = c.isTitle ? null : catPhoto(realI, selMap[realI] || 0);
           const dist = Math.abs(tripleI - DEFAULT_AI);
 
           let slotTransform, slotOpacity, slotDelay;
@@ -584,7 +654,7 @@ function App(){
                     h("div", { className: "tile-glow" }),
                     h("div", { className: "tile-scrim" })
                   ),
-                  focused ? h(Carousel, { key: "car-" + c.id + "-" + tripleI, ci: realI, posAccum: posAccum, u: u, onPick: pickSub }) : null,
+                  focused ? h(Carousel, { key: "car-" + c.id + "-" + tripleI, ci: realI, posAccum: posAccum, u: u, onPick: pickSub, onStepSub: stepSubUI }) : null,
                   h("div", {
                     className: "cat-name" + (focused ? " under" : ""),
                     style: {

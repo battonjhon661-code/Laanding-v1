@@ -2,19 +2,18 @@
 
 import "./preloader.css";
 
-export default function Preloader({ visible }: { visible: boolean }) {
+export default function Preloader({ visible, loadPct }: { visible: boolean; loadPct: number }) {
   return (
     <div
       className="vg-preloader"
       style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? "auto" : "none" }}
     >
-      <div className="vg-stage">
-        <div className="vg-vp">VP</div>
-        <div className="vg-bar" />
-        <div className="vg-word">
-          <span>Vip</span>
-          <span>Glass</span>
+      <div className="vg-logo-stack">
+        <img src="/logo.png" alt="VIP GLASS" className="vg-logo-img" />
+        <div className="vg-progress-track">
+          <div className="vg-progress-fill" style={{ width: `${loadPct}%` }} />
         </div>
+        <div className="vg-progress-pct">{loadPct}%</div>
       </div>
     </div>
   );

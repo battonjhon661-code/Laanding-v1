@@ -607,11 +607,18 @@ export function initProdScripts(): void {
       if (!stage) return;
       function fitMat(){
         if (window.innerWidth <= 768) {
-          stage.style.zoom = '';
+          stage.style.transform = '';
+          stage.parentElement.style.height = '';
           return;
         }
+        // transform (GPU-composited), not zoom — zoom forces raster <img>
+        // content through a layout-level rescale that looks visibly
+        // blockier than the compositor scaling video already gets, even
+        // at identical effective size. transform doesn't affect layout
+        // size, so the parent's height is set to match explicitly.
         const s = stage.parentElement.offsetWidth / 1920;
-        stage.style.zoom = s;
+        stage.style.transform = 'scale(' + s + ')';
+        stage.parentElement.style.height = (1080 * s) + 'px';
       }
       fitMat();
       window.addEventListener('resize', fitMat);
@@ -819,53 +826,19 @@ export function initProdScripts(): void {
       }, { threshold: 0.35 }).observe(stage);
     })();
 
-    // ── Nav morph: full bar → circle in corner ──────────────────
+    // ── Nav: mobile sheet-menu toggle ────────────────────────────
+    // Nav stays a full strip always (never collapses to a circle, see
+    // CLAUDE.md) — hide-on-scroll-down/show-on-scroll-up and the dark
+    // backdrop past the hero both live in ProdScripts.tsx instead, since
+    // that file isn't regenerated from index-prod.html and knows about
+    // ScrollVideoHero's height. This block only wires up the mobile
+    // hamburger (.nav__burger, visible ≤900px) to open/close #navSheet,
+    // the only way to reach nav links once .nav__links is display:none.
     (function () {
       var navWrap = document.getElementById('navWrap');
-      var nav     = document.getElementById('nav');
+      var burger  = document.querySelector('.nav__burger');
       var sheet   = document.getElementById('navSheet');
-      if (!navWrap || !nav || !sheet) return;
-
-      var CIRCLE = 60, MARGIN = 28;
-
-      function recomputeTarget() {
-        var halfW  = window.innerWidth / 2;
-        var tx     = halfW - MARGIN - CIRCLE / 2;
-        var ty     = window.innerHeight - MARGIN - CIRCLE;
-        document.documentElement.style.setProperty('--tx', tx + 'px');
-        document.documentElement.style.setProperty('--ty', ty + 'px');
-      }
-      recomputeTarget();
-      window.addEventListener('resize', recomputeTarget, { passive: true });
-
-      var wasCollapsed = false;
-      var lastScrollY  = window.scrollY;
-
-      function onScroll() {
-        var y          = window.scrollY;
-        var trigger    = 1;
-        var collapsed  = y > trigger;
-        if (collapsed !== wasCollapsed) {
-          wasCollapsed = collapsed;
-          navWrap.classList.toggle('collapsed', collapsed);
-          if (collapsed) {
-            navWrap.classList.add('just-collapsed');
-            setTimeout(function () { navWrap.classList.remove('just-collapsed'); }, 1700);
-          } else {
-            closeSheet();
-          }
-        }
-        if (y < 40) {
-          navWrap.classList.remove('hidden');
-        } else if (y > lastScrollY) {
-          navWrap.classList.add('hidden');
-        } else {
-          navWrap.classList.remove('hidden');
-        }
-        lastScrollY = y;
-      }
-      window.addEventListener('scroll', onScroll, { passive: true });
-      onScroll();
+      if (!navWrap || !burger || !sheet) return;
 
       function openSheet() {
         navWrap.classList.add('nav-open');
@@ -876,9 +849,7 @@ export function initProdScripts(): void {
         sheet.classList.remove('show');
       }
 
-      nav.addEventListener('click', function (e) {
-        if (!navWrap.classList.contains('collapsed')) return;
-        if (e.target.closest('a')) return;
+      burger.addEventListener('click', function () {
         if (navWrap.classList.contains('nav-open')) closeSheet();
         else openSheet();
       });
