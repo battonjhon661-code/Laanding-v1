@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Media Center</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&display=swap" media="print" onload="this.media='all'">
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
@@ -206,6 +206,120 @@
     background: rgba(255,255,255,0.06); color: rgba(232,242,255,0.8);
   }
   .hint .sep { opacity: 0.4; margin: 0 3px; }
+
+  /* ===== MOBILE CARD LAYOUT (≤768px) ===== */
+  @media (max-width: 768px) {
+    body { background: #ffffff; overflow: auto; }
+    #root { height: auto; min-height: 100vh; }
+    .m-view {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 18px 16px 44px; font-family: 'Manrope', sans-serif;
+      color: #222222;
+    }
+    .m-title { text-align: center; margin-bottom: 20px; }
+    .m-title h2 {
+      font-size: clamp(24px, 7vw, 32px); line-height: 1.08; font-weight: 400;
+      letter-spacing: 0.01em; text-transform: uppercase; margin: 0 0 12px; color: #111;
+    }
+    .m-title p {
+      font-size: clamp(13px, 3.6vw, 15px); line-height: 1.55; font-weight: 300;
+      color: rgba(0,0,0,0.45); max-width: 320px; margin: 0 auto;
+    }
+    /* card stack */
+    .wm-stack {
+      position: relative;
+      width: 406px; max-width: calc(100vw - 32px);
+      height: 455px; margin: 0;
+    }
+    .wm-stack::before, .wm-stack::after {
+      content: ""; position: absolute;
+      top: 9px; left: 14px;
+      width: 380px; max-width: 100%;
+      height: 437px; border-radius: 22px;
+      background: #ffffff; box-shadow: 0 5px 17px rgba(0,0,0,0.2);
+    }
+    .wm-stack::after { top: 23px; left: 28px; height: 409px; opacity: 0.82; }
+    .wm-card {
+      position: relative; z-index: 2;
+      width: 380px; max-width: 100%; height: 455px;
+      padding: 28px 24px 18px 20px;
+      border-radius: 21px; background: #ffffff;
+      box-shadow: 0 5px 16px rgba(0,0,0,0.23);
+    }
+    /* photo frame */
+    .wm-photo {
+      position: relative; height: 409px;
+      overflow: visible; border-radius: 11px;
+      background-image:
+        linear-gradient(90deg,rgba(0,0,0,0.18),rgba(0,0,0,0.02) 45%,rgba(0,0,0,0.22)),
+        var(--wm-img);
+      background-position: center, center;
+      background-size: cover, 100% 100%;
+      background-repeat: no-repeat;
+    }
+    .wm-photo::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      background: linear-gradient(180deg,rgba(0,0,0,0) 56%,rgba(0,0,0,0.45) 100%);
+      pointer-events: none;
+    }
+    /* tab badge */
+    .wm-tab {
+      position: absolute; z-index: 5;
+      top: -20px; left: 50%; transform: translateX(-50%);
+      width: auto; padding: 0 22px; height: 46px;
+      display: grid; place-items: center; white-space: nowrap;
+      border: 4px solid #ffffff; border-radius: 10px;
+      background: #1f1f1f; background-clip: padding-box;
+      color: #ffffff; font-size: 16px; line-height: 1;
+      font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+      box-shadow: 0 2px 3px rgba(0,0,0,0.16);
+    }
+    /* vertical thumb strip */
+    .wm-thumbs { position: absolute; z-index: 4; top: 8px; right: 13px; width: 60px; }
+    .wm-thumb-vp { width: 60px; height: 327px; overflow: hidden; border-radius: 10px; }
+    .wm-thumb-track {
+      display: grid; gap: 8px;
+      transition: transform 0.28s ease; will-change: transform;
+    }
+    .wm-thumb {
+      position: relative; width: 60px; height: 59px;
+      padding: 0; overflow: hidden;
+      border: 3px solid rgba(221,221,216,0.72); border-radius: 10px;
+      -webkit-appearance: none; appearance: none;
+      background: var(--wm-tp) center / cover no-repeat;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.26), inset 0 0 0 1px rgba(255,255,255,0.18);
+      cursor: pointer; flex-shrink: 0;
+    }
+    .wm-thumb::after {
+      content: ""; position: absolute; inset: 0;
+      background: rgba(0,0,0,0.04); transition: background 0.2s ease;
+    }
+    .wm-thumb.is-active {
+      border-color: #ffffff;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.28);
+    }
+    .wm-counter {
+      margin-top: 8px; border-color: rgba(88,88,88,0.82);
+      display: grid; place-items: center;
+      color: #ffffff; font-size: 18px; font-weight: 500;
+    }
+    .wm-counter::after { background: rgba(0,0,0,0.55); }
+    .wm-counter span { position: relative; z-index: 1; }
+    /* caption */
+    .wm-caption {
+      position: absolute; z-index: 4; left: 8px; bottom: 13px; margin: 0;
+      color: #ffffff; font-size: 20px; line-height: 1.1;
+      font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.58);
+    }
+    /* category dots */
+    .m-dots { display: flex; gap: 6px; margin-top: 18px; align-items: center; }
+    .m-dot {
+      height: 6px; width: 6px; border-radius: 3px; background: rgba(0,0,0,0.2);
+      cursor: pointer; border: none; padding: 0;
+      transition: background 0.2s, width 0.25s cubic-bezier(0.22,1,0.36,1);
+    }
+    .m-dot.active { background: #111; width: 20px; }
+  }
 </style>
 </head>
 <body>
@@ -228,21 +342,32 @@ function makeMosaic(seed, hr, sr, lr){
 const CATS = [
   { id:"title", label:"Виды работ", isTitle:true, subs:[] },
   { id:"shower", label:"Душевые", subs:[
-      "Тёмно-серое стекло · золото", "Бронзовое стекло · хром", "Матовое стекло · хром",
-      "Серое стекло · чёрная фурнитура", "Зелёное стекло · хром", "Рифлёное стекло · бронза",
-      "Тёмно-серое стекло · хром", "Стекло-интим · хром",
+      "Дверь (1 полотно)", "Угловая (2 стекла)", "Угловая (3 стекла)",
+      "Складная", "Трапециевидная", "Т-образная",
     ], photos: [
-    "assets/examples/shower_room/1_dark_grey_gold.webp",
-    "assets/examples/shower_room/2_bronze_chrome.webp",
-    "assets/examples/shower_room/3_matte_clear_chrome.webp",
-    "assets/examples/shower_room/4_grey_black.webp",
-    "assets/examples/shower_room/5_green_clear_chrome.webp",
-    "assets/examples/shower_room/6_ribbed_bronze.webp",
-    "assets/examples/shower_room/7_dark_grey_chrome.webp",
-    "assets/examples/shower_room/8_privacy_chrome.webp",
+    "assets/examples/shower_room/1_door.png",
+    "assets/examples/shower_room/2_angle_2.png",
+    "assets/examples/shower_room/3_angle_3.png",
+    "assets/examples/shower_room/4_collapsible.png",
+    "assets/examples/shower_room/5_trapezoid.png",
+    "assets/examples/shower_room/6_T-type.png",
   ] },
-  { id:"mirrors_light", label:"Зеркала с подсветкой", subs:["Квадратное"], photos: [
-    "assets/examples/mirrors_light/1_square.webp",
+  { id:"mirrors_light", label:"Зеркала с подсветкой", subs:[
+      "Круглая", "Р-образная", "Овальная", "Эллипс", "Квадратная", "Арочная",
+    ], photos: [
+    "assets/examples/mirrors_light/1_circle.png",
+    "assets/examples/mirrors_light/2_R-type.png",
+    "assets/examples/mirrors_light/3_oval.png",
+    "assets/examples/mirrors_light/4_ellipse.png",
+    "assets/examples/mirrors_light/5_square.png",
+    "assets/examples/mirrors_light/6_arch.png",
+  ] },
+  { id:"stairs", label:"Лестницы", subs:[
+      "На точечных опорах", "На стойках", "Профильная",
+    ], photos: [
+    "assets/examples/stairs/1_points.png",
+    "assets/examples/stairs/2_racks.png",
+    "assets/examples/stairs/3_profile.png",
   ] },
   { id:"spotlight", label:"Spotlight", subs:["обзор", "что нового", "избранное"] },
   { id:"movies", label:"Movies", subs:["ещё фильмы", "библиотека фильмов", "play dvd", "поиск"] },
@@ -694,7 +819,134 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(h(App, null));
+/* ===== MOBILE COMPONENTS ===== */
+function MobileCard({ cat }) {
+  const VISIBLE = 5;
+  const STEP    = 67; // 59px thumb + 8px gap
+
+  const photos   = cat.photos || [];
+  const captions = cat.subs   || [];
+
+  const [activeIdx,    setActiveIdx]    = useState(0);
+  const [firstVisible, setFirstVisible] = useState(0);
+
+  const maxFirst = Math.max(0, photos.length - VISIBLE);
+
+  const moveThumbs = useCallback((dir) => {
+    setFirstVisible(v => Math.max(0, Math.min(maxFirst, v + dir)));
+  }, [maxFirst]);
+
+  const thumbsRef = useRef(null);
+  useEffect(() => {
+    const el = thumbsRef.current;
+    if (!el) return;
+    const handler = (e) => { e.preventDefault(); moveThumbs(e.deltaY > 0 ? 1 : -1); };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [moveThumbs]);
+
+  const touchStartY = useRef(null);
+  const onThumbTouchStart = (e) => { touchStartY.current = e.touches[0].clientY; };
+  const onThumbTouchEnd = (e) => {
+    if (touchStartY.current == null) return;
+    const dist = touchStartY.current - e.changedTouches[0].clientY;
+    touchStartY.current = null;
+    if (Math.abs(dist) > 24) { e.stopPropagation(); moveThumbs(dist > 0 ? 1 : -1); }
+  };
+
+  const mainPhoto   = photos[activeIdx]   || photos[0]   || '';
+  const caption     = captions[activeIdx] || captions[0] || cat.label;
+  const hiddenBelow = photos.length - (firstVisible + VISIBLE);
+  const counterSrc  = photos[firstVisible + VISIBLE] || '';
+
+  return h("div", { className: "wm-stack" },
+    h("div", { className: "wm-card" },
+      h("div", { className: "wm-photo", style: { '--wm-img': mainPhoto ? `url("${mainPhoto}")` : 'none' } },
+        h("div", { className: "wm-tab" }, cat.label),
+        photos.length > 0
+          ? h("div", { className: "wm-thumbs", ref: thumbsRef,
+              onTouchStart: onThumbTouchStart, onTouchEnd: onThumbTouchEnd },
+              h("div", { className: "wm-thumb-vp" },
+                h("div", { className: "wm-thumb-track",
+                    style: { transform: `translateY(-${firstVisible * STEP}px)` } },
+                  ...photos.map((src, i) =>
+                    h("button", {
+                      key: i,
+                      className: "wm-thumb" + (i === activeIdx ? " is-active" : ""),
+                      style: { '--wm-tp': `url("${src}")` },
+                      tabIndex: i >= firstVisible && i < firstVisible + VISIBLE ? 0 : -1,
+                      "aria-pressed": String(i === activeIdx),
+                      onClick: () => setActiveIdx(i)
+                    })
+                  )
+                )
+              ),
+              hiddenBelow > 0
+                ? h("button", {
+                    className: "wm-thumb wm-counter",
+                    style: { '--wm-tp': counterSrc ? `url("${counterSrc}")` : 'none' },
+                    onClick: () => moveThumbs(1)
+                  }, h("span", null, "+" + hiddenBelow))
+                : null
+            )
+          : null,
+        h("p", { className: "wm-caption" }, caption)
+      )
+    )
+  );
+}
+
+function MobileView() {
+  const cats = CATS.filter(c => !c.isTitle && c.photos && c.photos.length > 0);
+  const [catIdx, setCatIdx] = useState(0);
+  const touchX = useRef(null);
+
+  const onTouchStart = useCallback((e) => {
+    touchX.current = e.touches[0].clientX;
+  }, []);
+
+  const onTouchEnd = useCallback((e) => {
+    if (touchX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    if (Math.abs(dx) < 45) return;
+    setCatIdx(i => dx < 0 ? Math.min(i + 1, cats.length - 1) : Math.max(i - 1, 0));
+  }, [cats.length]);
+
+  if (!cats.length) return null;
+
+  return h("div", { className: "m-view", onTouchStart: onTouchStart, onTouchEnd: onTouchEnd },
+    h("div", { className: "m-title" },
+      h("h2", null, "Виды работ"),
+      h("p", null, "Реализованные проекты: зеркала, душевые перегородки, стеклянные полки и ограждения для дома и бизнеса.")
+    ),
+    h(MobileCard, { key: cats[catIdx].id, cat: cats[catIdx] }),
+    cats.length > 1
+      ? h("div", { className: "m-dots" },
+          ...cats.map((_, i) =>
+            h("button", {
+              key: i,
+              className: "m-dot" + (i === catIdx ? " active" : ""),
+              onClick: () => setCatIdx(i)
+            })
+          )
+        )
+      : null
+  );
+}
+
+function RootApp() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile ? h(MobileView, null) : h(App, null);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(RootApp, null));
 </script>
 </body>
 </html>
