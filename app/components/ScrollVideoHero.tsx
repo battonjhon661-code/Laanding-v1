@@ -952,20 +952,6 @@ export default function ScrollVideoHero() {
               <Chapters activeZone={activeZone} onJump={(i) => goToZone(i)} variant="flow" />
             )}
 
-            {/* hero text in dark section */}
-            {phase === "ready" && (
-              <div style={{
-                padding: "14px 20px 22px",
-                fontFamily: "'Manrope', sans-serif",
-                fontSize: "19px",
-                fontWeight: 600,
-                lineHeight: 1.22,
-                letterSpacing: "-0.01em",
-                color: "rgba(244,241,236,0.92)",
-              }}>
-                Прозрачность, которая создаёт пространство
-              </div>
-            )}
           </div>
 
           {/* ── white section: text + CTA ── */}
@@ -1055,7 +1041,9 @@ function Chapters({
     if (!isMobile && !isFlow) return;
     const row = rowRef.current;
     const btn = row?.children[activeZone] as HTMLElement | undefined;
-    btn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    if (!row || !btn) return;
+    const target = (btn as HTMLElement).offsetLeft - (row.offsetWidth - (btn as HTMLElement).offsetWidth) / 2;
+    row.scrollTo({ left: target, behavior: "smooth" });
   }, [isMobile, isFlow, activeZone]);
 
   return (
