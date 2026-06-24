@@ -140,7 +140,7 @@ export default function WardrobeSection() {
       }} />
 
       {/* Header */}
-      <div style={{ padding: "40px 20px 0", position: "relative", zIndex: 1, textAlign: "center" }}>
+      <div style={{ padding: "60px 20px 0", position: "relative", zIndex: 1, textAlign: "center" }}>
         <h2 style={{
           margin: 0,
           fontFamily: "'Manrope', sans-serif",

@@ -1217,7 +1217,7 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
 
       <h1 style={{
         margin: 0,
-        fontSize: isBlock ? "clamp(22px, 6.5vw, 30px)" : isMobile ? "clamp(26px, 8vw, 36px)" : ("clamp(26px, 2.55vw, 43px)" as string),
+        fontSize: isBlock ? "clamp(19px, 5.6vw, 27px)" : isMobile ? "clamp(26px, 8vw, 36px)" : ("clamp(26px, 2.55vw, 43px)" as string),
         fontWeight: 400,
         lineHeight: 1.16,
         letterSpacing: ".005em",
@@ -1226,7 +1226,7 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
         color: textInk,
       } as React.CSSProperties}>
         {isBlock ? (
-          <>наше Стекло<br />создаёт<br />пространство и уют.</>
+          <>наше Стекло создаёт<br />пространство и уют.</>
         ) : (
           <>Прозрачность,<br />которая создаёт пространство</>
         )}
