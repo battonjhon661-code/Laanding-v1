@@ -954,25 +954,16 @@ export default function ScrollVideoHero() {
 
             {/* hero text in dark section */}
             {phase === "ready" && (
-              <div style={{ padding: "14px 20px 22px", fontFamily: "'Manrope', sans-serif" }}>
-                <div style={{
-                  fontSize: "19px",
-                  fontWeight: 600,
-                  lineHeight: 1.22,
-                  letterSpacing: "-0.01em",
-                  color: "rgba(244,241,236,0.92)",
-                  marginBottom: "8px",
-                }}>
-                  Прозрачность, которая создаёт пространство
-                </div>
-                <div style={{
-                  fontSize: "13px",
-                  fontWeight: 300,
-                  lineHeight: 1.55,
-                  color: "rgba(244,241,236,0.55)",
-                }}>
-                  Интерьерное стекло премиум-качества для архитектуры, в которой важна каждая деталь.
-                </div>
+              <div style={{
+                padding: "14px 20px 22px",
+                fontFamily: "'Manrope', sans-serif",
+                fontSize: "19px",
+                fontWeight: 600,
+                lineHeight: 1.22,
+                letterSpacing: "-0.01em",
+                color: "rgba(244,241,236,0.92)",
+              }}>
+                Прозрачность, которая создаёт пространство
               </div>
             )}
           </div>
