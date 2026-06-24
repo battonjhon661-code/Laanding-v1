@@ -851,137 +851,189 @@ export default function ScrollVideoHero() {
     if (scrubRafRef.current !== null) cancelAnimationFrame(scrubRafRef.current);
   }, []);
 
+  // ── Shared image/video layers (reused in both mobile and desktop branches) ──
+  const lcpPlaceholder = (
+    <img
+      src="/locations/bedroom.webp"
+      alt=""
+      fetchPriority="high"
+      style={{
+        position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+        objectFit: "cover", zIndex: 1,
+        opacity: phase === "ready" ? 0 : 1,
+        transition: "opacity 0.5s ease",
+        pointerEvents: "none",
+      }}
+    />
+  );
+
+  const stillImage = phase === "ready" && (
+    <img
+      src={ZONES[displayZone].imageSrc}
+      alt=""
+      style={{
+        position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+        objectFit: "cover", zIndex: 2,
+        opacity: videoVisible ? 0 : snapOpacity,
+        transition: snapFading ? `opacity ${SNAP_FADE_MS}ms ease` : undefined,
+        pointerEvents: "none",
+      }}
+    />
+  );
+
+  const videoBuffers = phase === "ready" && (
+    <>
+      <video
+        ref={videoARef}
+        muted playsInline preload="auto"
+        style={{
+          position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+          objectFit: "cover", zIndex: 3,
+          opacity: videoVisible && activeBuf === "A" ? 1 : 0,
+          pointerEvents: "none",
+        }}
+      />
+      <video
+        ref={videoBRef}
+        muted playsInline preload="auto"
+        style={{
+          position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+          objectFit: "cover", zIndex: 3,
+          opacity: videoVisible && activeBuf === "B" ? 1 : 0,
+          pointerEvents: "none",
+        }}
+      />
+    </>
+  );
+
   return (
     <div
       ref={wrapRef}
       style={{
         position: "relative",
         height: "100vh", width: "100%",
-        overflow: "hidden", background: "#0d0e0d",
-        cursor: isDragging ? "grabbing" : "ew-resize",
+        overflow: "hidden", background: isMobile ? "#fff" : "#0d0e0d",
+        cursor: isDragging ? "grabbing" : isMobile ? "default" : "ew-resize",
         userSelect: "none",
         fontFamily: "'Manrope', sans-serif",
-      }}
+        ...(isMobile && { display: "flex", flexDirection: "column" }),
+      } as React.CSSProperties}
     >
-      {/* LCP placeholder — visible immediately before assets load */}
-      <img
-        src="/locations/bedroom.webp"
-        alt=""
-        fetchPriority="high"
-        style={{
-          position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-          objectFit: "cover", zIndex: 1,
-          opacity: phase === "ready" ? 0 : 1,
-          transition: "opacity 0.5s ease",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* current zone still — sits *under* the video layer. Shows
-          `displayZone`, which is already pre-set to the move's destination
-          (see goToZone), so there's nothing to decode at reveal time. For a
-          distant snap jump (see snapToZone) there's no video to hide behind,
-          so `snapOpacity` drives a short cross-fade of this same element
-          instead — `snapFading` only attaches the CSS transition while that
-          fade is in flight, so the normal video-reveal hard-cut elsewhere is
-          untouched. */}
-      {phase === "ready" && (
-        <img
-          src={ZONES[displayZone].imageSrc}
-          alt=""
-          style={{
-            position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-            objectFit: "cover", zIndex: 2,
-            opacity: videoVisible ? 0 : snapOpacity,
-            transition: snapFading ? `opacity ${SNAP_FADE_MS}ms ease` : undefined,
-            pointerEvents: "none",
-          }}
-        />
-      )}
-
-      {/* two video buffers ping-pong so chained legs crossfade video→video
-          without ever dropping back to the still image in between. Sits
-          above the still image and only ever appears once a leg's first
-          frame is confirmed painted (see onNextPaintedFrame in startFreshLeg) —
-          opacity is a hard cut, not a fade, so there's never a partial-
-          blend window where the wrapper's background could show through. */}
-      {phase === "ready" && (
+      {isMobile ? (
+        // ── Mobile: dark card (photo + thumbs + label) → white text/CTA ───────
         <>
-          <video
-            ref={videoARef}
-            muted
-            playsInline
-            preload="auto"
-            style={{
-              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-              objectFit: "cover", zIndex: 3,
-              opacity: videoVisible && activeBuf === "A" ? 1 : 0,
-              pointerEvents: "none",
-            }}
-          />
-          <video
-            ref={videoBRef}
-            muted
-            playsInline
-            preload="auto"
-            style={{
-              position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-              objectFit: "cover", zIndex: 3,
-              opacity: videoVisible && activeBuf === "B" ? 1 : 0,
-              pointerEvents: "none",
-            }}
-          />
-        </>
-      )}
-
-      {/* legibility veils */}
-      <div style={{
-        position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
-        background: "linear-gradient(100deg, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0.30) 26%, rgba(10,11,10,0) 52%)",
-      }} />
-      <div style={{
-        position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
-        background: "linear-gradient(to top, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0) 38%)",
-      }} />
-      <div style={{
-        position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
-        background: "linear-gradient(to bottom, rgba(10,11,10,0.40) 0%, rgba(10,11,10,0) 16%)",
-      }} />
-
-      {phase === "ready" && (
-        <>
-          <Chapters
-            activeZone={activeZone}
-            onJump={(i) => goToZone(i)}
-          />
-
-          <HeroText />
-
-          {/* zone hotspots */}
-          {hotspotZone !== null && (
-            <ZoneHotspots key={hotspotZone} zone={hotspotZone} />
-          )}
-
-          {/* pager — redundant with the visible active thumbnail in the
-              mobile bottom row, and would collide with it there, so it's
-              desktop-only */}
-          {!isMobile && (
-            <div style={{
-              position: "absolute",
-              right: "clamp(28px, 3.2vw, 58px)",
-              bottom: "clamp(26px, 3vh, 40px)",
-              fontSize: "clamp(13px, 1vw, 17px)" as string,
-              fontWeight: 500,
-              letterSpacing: ".18em",
-              color: DIMMER,
-              zIndex: 30,
-            } as React.CSSProperties}>
-              <b style={{ fontWeight: 600, color: INK }}>
-                {String(activeZone + 1).padStart(2, "0")}
-              </b>
-              {" "}
-              <span style={{ opacity: 0.6 }}>/ {String(N).padStart(2, "0")}</span>
+          {/* ── dark card: rounded bottom corners blend into white section ── */}
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            background: "#0d0e0d",
+            borderRadius: "0 0 24px 24px",
+            overflow: "hidden",
+          }}>
+            {/* photo area — 16:9 based on viewport width */}
+            <div style={{ flex: "0 0 56.25vw", position: "relative", overflow: "hidden" }}>
+              {lcpPlaceholder}
+              {stillImage}
+              {videoBuffers}
+              {/* top veil */}
+              <div style={{
+                position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
+                background: "linear-gradient(to bottom, rgba(10,11,10,0.40) 0%, rgba(10,11,10,0) 18%)",
+              }} />
+              {/* bottom fade into dark bg — multi-stop for smooth blend */}
+              <div style={{
+                position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
+                background: "linear-gradient(to top, rgba(10,11,10,1) 0%, rgba(10,11,10,0.7) 18%, rgba(10,11,10,0.25) 38%, rgba(10,11,10,0) 58%)",
+              }} />
             </div>
+
+            {/* thumbnail row — horizontal scroll */}
+            {phase === "ready" && (
+              <Chapters activeZone={activeZone} onJump={(i) => goToZone(i)} variant="flow" />
+            )}
+
+            {/* hero text in dark section */}
+            {phase === "ready" && (
+              <div style={{ padding: "14px 20px 22px", fontFamily: "'Manrope', sans-serif" }}>
+                <div style={{
+                  fontSize: "19px",
+                  fontWeight: 600,
+                  lineHeight: 1.22,
+                  letterSpacing: "-0.01em",
+                  color: "rgba(244,241,236,0.92)",
+                  marginBottom: "8px",
+                }}>
+                  Прозрачность, которая создаёт пространство
+                </div>
+                <div style={{
+                  fontSize: "13px",
+                  fontWeight: 300,
+                  lineHeight: 1.55,
+                  color: "rgba(244,241,236,0.55)",
+                }}>
+                  Интерьерное стекло премиум-качества для архитектуры, в которой важна каждая деталь.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── white section: text + CTA ── */}
+          <div style={{
+            flex: 1,
+            background: "#fff",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: "0 22px calc(env(safe-area-inset-bottom, 12px) + 8px)",
+          }}>
+            {phase === "ready" && <HeroText variant="block" />}
+          </div>
+        </>
+      ) : (
+        // ── Desktop: full-screen overlay ─────────────────────────────────────
+        <>
+          {lcpPlaceholder}
+          {stillImage}
+          {videoBuffers}
+
+          {/* legibility veils */}
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
+            background: "linear-gradient(100deg, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0.30) 26%, rgba(10,11,10,0) 52%)",
+          }} />
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
+            background: "linear-gradient(to top, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0) 38%)",
+          }} />
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
+            background: "linear-gradient(to bottom, rgba(10,11,10,0.40) 0%, rgba(10,11,10,0) 16%)",
+          }} />
+
+          {phase === "ready" && (
+            <>
+              <Chapters activeZone={activeZone} onJump={(i) => goToZone(i)} />
+              <HeroText />
+              {hotspotZone !== null && (
+                <ZoneHotspots key={hotspotZone} zone={hotspotZone} />
+              )}
+              <div style={{
+                position: "absolute",
+                right: "clamp(28px, 3.2vw, 58px)",
+                bottom: "clamp(26px, 3vh, 40px)",
+                fontSize: "clamp(13px, 1vw, 17px)" as string,
+                fontWeight: 500,
+                letterSpacing: ".18em",
+                color: DIMMER,
+                zIndex: 30,
+              } as React.CSSProperties}>
+                <b style={{ fontWeight: 600, color: INK }}>
+                  {String(activeZone + 1).padStart(2, "0")}
+                </b>
+                {" "}
+                <span style={{ opacity: 0.6 }}>/ {String(N).padStart(2, "0")}</span>
+              </div>
+            </>
           )}
         </>
       )}
@@ -997,118 +1049,141 @@ const THUMB_EASE = "cubic-bezier(.2,.8,.2,1)";
 function Chapters({
   activeZone,
   onJump,
+  variant,
 }: {
   activeZone: number;
   onJump: (i: number) => void;
+  variant?: "flow";
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const isMobile = useIsMobile();
   const rowRef = useRef<HTMLDivElement>(null);
+  const isFlow = variant === "flow";
 
-  // On mobile the row scrolls horizontally — keep the active thumbnail in view
-  // as the user jumps zones via swipe/auto-advance, not just direct taps.
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile && !isFlow) return;
     const row = rowRef.current;
     const btn = row?.children[activeZone] as HTMLElement | undefined;
     btn?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  }, [isMobile, activeZone]);
+  }, [isMobile, isFlow, activeZone]);
 
   return (
-    <div
-      ref={rowRef}
-      style={(isMobile ? {
-        position: "absolute",
-        left: 0, right: 0, bottom: 0, top: "auto", transform: "none",
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "center",
-        gap: "8px",
-        padding: "10px 14px calc(10px + env(safe-area-inset-bottom, 0px))",
-        overflowX: "auto",
-        background: "linear-gradient(to top, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0) 100%)",
-        zIndex: 30,
-      } : {
-        position: "absolute",
-        right: "clamp(20px, 2.2vw, 38px)",
-        top: "50%",
-        transform: "translateY(-50%)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "clamp(5px, 0.65vh, 8px)",
-        padding: "10px",
-        zIndex: 30,
-      }) as React.CSSProperties}
-    >
-
-{ZONES.map((zone, i) => {
-        const active = activeZone === i;
-        const hot    = hovered === i;
-        return (
-          <button
-            key={i}
-            onClick={() => onJump(i)}
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered(null)}
-            style={{
-              position: "relative",
-              width: isMobile ? "68px" : ("clamp(90px, 8vw, 124px)" as string),
-              aspectRatio: "16/9",
-              flexShrink: 0,
-              border: "none",
-              padding: 0,
-              borderRadius: 10,
-              overflow: "hidden",
-              cursor: "pointer",
-              background: "#111",
-              boxShadow: active
-                ? "0 0 0 2px rgba(244,241,236,0.88), 0 16px 40px rgba(0,0,0,.6)"
-                : "0 6px 20px rgba(0,0,0,.4)",
-              opacity: active ? 1 : hot ? 0.85 : 0.44,
-              transform: active ? "scale(1.1)" : hot ? "scale(0.93)" : "scale(0.82)",
-              filter: active
-                ? "saturate(1.1) brightness(1.05)"
-                : hot ? "saturate(0.95) brightness(0.9)" : "saturate(0.6) brightness(0.65)",
-              transition: `opacity .35s ${THUMB_EASE}, transform .35s ${THUMB_EASE}, filter .35s ${THUMB_EASE}, box-shadow .35s ${THUMB_EASE}`,
-              fontFamily: "inherit",
-            } as React.CSSProperties}
-          >
-            <img
-              src={zone.imageSrc}
-              alt={zone.label}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            />
-            <span style={{
-              position: "absolute",
-              left: 0, right: 0, bottom: 0,
-              padding: "14px 3px 4px",
-              color: "#fff",
-              fontSize: "7px",
-              lineHeight: 1.1,
-              letterSpacing: ".05em",
-              textAlign: "center",
-              textTransform: "uppercase",
-              background: "linear-gradient(transparent, rgba(0,0,0,.8))",
-              opacity: active || hot ? 1 : 0,
-              transform: active || hot ? "translateY(0)" : "translateY(5px)",
-              transition: `.22s ${THUMB_EASE}`,
-              pointerEvents: "none",
-            } as React.CSSProperties}>
-              {zone.label}
-            </span>
-          </button>
-        );
-      })}
-    </div>
+    <>
+      {isFlow && (
+        <style>{`.hero-thumb-row::-webkit-scrollbar { display: none; }`}</style>
+      )}
+      <div
+        ref={rowRef}
+        className={isFlow ? "hero-thumb-row" : undefined}
+        style={(isFlow ? {
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: "8px",
+          padding: "10px 14px",
+          overflowX: "auto",
+          background: "#0d0e0d",
+          msOverflowStyle: "none",
+          scrollbarWidth: "none",
+        } : isMobile ? {
+          position: "absolute",
+          left: 0, right: 0, bottom: 0, top: "auto", transform: "none",
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: "8px",
+          padding: "10px 14px calc(10px + env(safe-area-inset-bottom, 0px))",
+          overflowX: "auto",
+          background: "linear-gradient(to top, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0) 100%)",
+          zIndex: 30,
+        } : {
+          position: "absolute",
+          right: "clamp(20px, 2.2vw, 38px)",
+          top: "50%",
+          transform: "translateY(-50%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "clamp(5px, 0.65vh, 8px)",
+          padding: "10px",
+          zIndex: 30,
+        }) as React.CSSProperties}
+      >
+        {ZONES.map((zone, i) => {
+          const active = activeZone === i;
+          const hot    = hovered === i;
+          const thumbWidth = isFlow ? "72px" : isMobile ? "68px" : ("clamp(90px, 8vw, 124px)" as string);
+          return (
+            <button
+              key={i}
+              onClick={() => onJump(i)}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                position: "relative",
+                width: thumbWidth,
+                aspectRatio: isFlow ? "1/1" : "16/9",
+                flexShrink: 0,
+                border: "none",
+                padding: 0,
+                borderRadius: 10,
+                overflow: "hidden",
+                cursor: "pointer",
+                background: "#111",
+                boxShadow: active
+                  ? "0 0 0 2px rgba(244,241,236,0.88), 0 16px 40px rgba(0,0,0,.6)"
+                  : "0 6px 20px rgba(0,0,0,.4)",
+                opacity: active ? 1 : hot ? 0.85 : 0.44,
+                transform: active ? "scale(1.1)" : hot ? "scale(0.93)" : "scale(0.82)",
+                filter: active
+                  ? "saturate(1.1) brightness(1.05)"
+                  : hot ? "saturate(0.95) brightness(0.9)" : "saturate(0.6) brightness(0.65)",
+                transition: `opacity .35s ${THUMB_EASE}, transform .35s ${THUMB_EASE}, filter .35s ${THUMB_EASE}, box-shadow .35s ${THUMB_EASE}`,
+                fontFamily: "inherit",
+              } as React.CSSProperties}
+            >
+              <img
+                src={zone.imageSrc}
+                alt={zone.label}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+              <span style={{
+                position: "absolute",
+                left: 0, right: 0, bottom: 0,
+                padding: "14px 3px 4px",
+                color: "#fff",
+                fontSize: "7px",
+                lineHeight: 1.1,
+                letterSpacing: ".05em",
+                textAlign: "center",
+                textTransform: "uppercase",
+                background: "linear-gradient(transparent, rgba(0,0,0,.8))",
+                opacity: active || hot ? 1 : 0,
+                transform: active || hot ? "translateY(0)" : "translateY(5px)",
+                transition: `.22s ${THUMB_EASE}`,
+                pointerEvents: "none",
+              } as React.CSSProperties}>
+                {zone.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
 // ── HeroText: overline + h1 + paragraph + CTA ────────────────────────────────
-function HeroText() {
+function HeroText({ variant }: { variant?: "block" } = {}) {
   const isMobile = useIsMobile();
+  const isBlock = variant === "block";
+  const textInk  = isBlock ? "#1a1917"               : INK;
+  const textDim  = isBlock ? "rgba(26,25,23,0.52)"   : DIM;
+  const textLine = isBlock ? "rgba(26,25,23,0.22)"   : LINE;
   return (
-    <div style={(isMobile ? {
+    <div style={(isBlock ? {
+      // flow block — no absolute positioning, used in mobile stacked layout
+    } : isMobile ? {
       position: "absolute",
       left: "20px", right: "20px",
       top: "clamp(84px, 13vh, 112px)",
@@ -1127,7 +1202,7 @@ function HeroText() {
         fontWeight: 500,
         letterSpacing: ".34em",
         textTransform: "uppercase",
-        color: DIM,
+        color: textDim,
         marginBottom: isMobile ? "14px" : ("clamp(16px, 2vh, 26px)" as string),
       } as React.CSSProperties}>
         Стекло в архитектуре
@@ -1135,15 +1210,19 @@ function HeroText() {
 
       <h1 style={{
         margin: 0,
-        fontSize: isMobile ? "clamp(26px, 8vw, 36px)" : ("clamp(26px, 2.55vw, 43px)" as string),
+        fontSize: isBlock ? "clamp(22px, 6.5vw, 30px)" : isMobile ? "clamp(26px, 8vw, 36px)" : ("clamp(26px, 2.55vw, 43px)" as string),
         fontWeight: 400,
         lineHeight: 1.16,
         letterSpacing: ".005em",
         textTransform: "uppercase",
         whiteSpace: isMobile ? "normal" : "nowrap",
-        color: INK,
+        color: textInk,
       } as React.CSSProperties}>
-        Прозрачность,<br />которая создаёт пространство
+        {isBlock ? (
+          <>наше Стекло<br />создаёт<br />пространство и уют.</>
+        ) : (
+          <>Прозрачность,<br />которая создаёт пространство</>
+        )}
       </h1>
 
       <p style={{
@@ -1152,10 +1231,14 @@ function HeroText() {
         fontSize: isMobile ? "13px" : ("clamp(13px, 1vw, 16px)" as string),
         fontWeight: 300,
         lineHeight: 1.5,
-        color: "rgba(244,241,236,0.74)",
+        color: isBlock ? "rgba(26,25,23,0.65)" : "rgba(244,241,236,0.74)",
         maxWidth: isMobile ? "100%" : "30em",
       } as React.CSSProperties}>
-        Интерьерное стекло премиум-качества для архитектуры,<br />в которой важна каждая деталь.
+        {isBlock ? (
+          <>Современные решения из стекла, заполняющие интерьер светом, воздухом и чистотой.</>
+        ) : (
+          <>Интерьерное стекло премиум-качества для архитектуры,<br />в которой важна каждая деталь.</>
+        )}
       </p>
 
       <button style={{
@@ -1164,11 +1247,11 @@ function HeroText() {
         alignItems: "center",
         gap: isMobile ? "20px" : ("clamp(28px, 3vw, 48px)" as string),
         padding: isMobile ? "12px 20px" : ("clamp(13px, 1.5vh, 18px) clamp(22px, 2vw, 30px)" as string),
-        border: `1px solid ${LINE}`,
+        border: `1px solid ${isBlock ? "#1a1917" : textLine}`,
         borderRadius: 100,
-        background: "rgba(244,241,236,0.02)",
-        backdropFilter: "blur(2px)",
-        color: INK,
+        background: isBlock ? "#1a1917" : "rgba(244,241,236,0.02)",
+        backdropFilter: isBlock ? undefined : "blur(2px)",
+        color: isBlock ? "#fff" : textInk,
         cursor: "pointer",
         fontFamily: "inherit",
         fontSize: isMobile ? "10px" : ("clamp(10px, .74vw, 12.5px)" as string),
