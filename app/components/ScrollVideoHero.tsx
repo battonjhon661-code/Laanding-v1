@@ -122,6 +122,7 @@ const TRANSITIONS: (TransitionDef | null)[] = [
   { folder: "foeroom-hall",    reversed: false }, // Прихожая ↔ Холл
   { folder: "hall-children",   reversed: false }, // Холл ↔ Детская
   { folder: "children-bathroom", reversed: false }, // Детская ↔ Ванная
+  { folder: "bathroom-bedroom",  reversed: false }, // Ванная ↔ Спальня (circular)
 ];
 
 const N = ZONES.length;
@@ -348,14 +349,10 @@ export default function ScrollVideoHero() {
 
   const prefetchNeighbors = useCallback((zone: number) => {
     const webmOk = webmOkRef.current;
-    if (zone > 0) {
-      const t = TRANSITIONS[zone - 1];
-      if (t) prefetchUrl(resolvePlayPlan(t, "backward", webmOk).src);
-    }
-    if (zone < N - 1) {
-      const t = TRANSITIONS[zone];
-      if (t) prefetchUrl(resolvePlayPlan(t, "forward", webmOk).src);
-    }
+    const tPrev = TRANSITIONS[(zone - 1 + N) % N];
+    if (tPrev) prefetchUrl(resolvePlayPlan(tPrev, "backward", webmOk).src);
+    const tNext = TRANSITIONS[zone];
+    if (tNext) prefetchUrl(resolvePlayPlan(tNext, "forward", webmOk).src);
   }, [prefetchUrl]);
 
   // ── Hotspot settle/clear ────────────────────────────────────────────────────
@@ -383,9 +380,10 @@ export default function ScrollVideoHero() {
   // multi-step jump — only the leg that actually finishes the chain should
   // restart the auto-advance/hotspot timers.
   const settleAt = useCallback((target: number, schedule = true) => {
-    activeZoneRef.current = target;
-    setActiveZone(target);
-    prefetchNeighbors(target);
+    const actual = ((target % N) + N) % N;
+    activeZoneRef.current = actual;
+    setActiveZone(actual);
+    prefetchNeighbors(actual);
     if (schedule) {
       scheduleAutoRef.current();
       scheduleHsRef.current();
@@ -455,7 +453,7 @@ export default function ScrollVideoHero() {
     const current = idx === 0 ? startZoneRef.current : legStepsRef.current[idx - 1];
     const stepTarget = legStepsRef.current[idx];
     const direction: Direction = stepTarget > current ? "forward" : "backward";
-    const ti = direction === "forward" ? current : stepTarget;
+    const ti = ((direction === "forward" ? current : stepTarget) + N * N) % N;
     const t = TRANSITIONS[ti];
     if (!t) return;
 
@@ -497,7 +495,7 @@ export default function ScrollVideoHero() {
     if (!mountedRef.current) return;
     // Only safe to touch now — the video already covers the screen, so
     // swapping the still image underneath it is invisible.
-    setDisplayZone(finalTargetRef.current ?? stepTarget);
+    setDisplayZone(finalTargetRef.current ?? (((stepTarget % N) + N) % N));
     activeBufRef.current = buf;
     setActiveBuf(buf);
     setVideoVisible(true);
@@ -537,14 +535,14 @@ export default function ScrollVideoHero() {
     const current = idx === 0 ? startZoneRef.current : legStepsRef.current[idx - 1];
     const stepTarget = legStepsRef.current[idx];
     const direction: Direction = stepTarget > current ? "forward" : "backward";
-    const ti = direction === "forward" ? current : stepTarget;
+    const ti = ((direction === "forward" ? current : stepTarget) + N * N) % N;
     const t  = TRANSITIONS[ti];
 
     if (!t) {
       // No video for this hop — snap. If nothing has been revealed yet this
       // move (e.g. this is the very first leg), the image needs to update
       // immediately since there's no video covering it.
-      setDisplayZone(finalTargetRef.current ?? stepTarget);
+      setDisplayZone(finalTargetRef.current ?? (((stepTarget % N) + N) % N));
       advanceChain(idx, stepTarget);
       return;
     }
@@ -610,7 +608,7 @@ export default function ScrollVideoHero() {
           started = true;
           onNextPaintedFrame(() => {
             t0 = performance.now();
-            setDisplayZone(finalTargetRef.current ?? stepTarget);
+            setDisplayZone(finalTargetRef.current ?? (((stepTarget % N) + N) % N));
             activeBufRef.current = backBuf;
             setActiveBuf(backBuf);
             setVideoVisible(true);
@@ -635,15 +633,21 @@ export default function ScrollVideoHero() {
   // see snapToZone — rather than chaining through every intermediate clip.
   const goToZone = useCallback((target: number) => {
     if (transitioningRef.current) return;
-    const clamped = Math.max(0, Math.min(N - 1, target));
+    const actual = ((target % N) + N) % N;
     const current = activeZoneRef.current;
-    if (clamped === current) return;
+    if (actual === current) return;
 
-    const steps = Math.abs(clamped - current);
+    // Circular distance — prefer the shorter path around the loop.
+    const fwdDist = ((actual - current) + N) % N;
+    const bwdDist = N - fwdDist;
+    const steps = Math.min(fwdDist, bwdDist);
+
     if (steps >= 2) {
-      snapToZone(clamped);
+      snapToZone(actual);
       return;
     }
+
+    const dir = fwdDist === 1 ? 1 : -1;
 
     cancelAutoAdvance();
     clearHotspots();
@@ -654,35 +658,19 @@ export default function ScrollVideoHero() {
     // swap is always invisible instead of flashing the new photo before the
     // video appears.
 
-    const dir = clamped > current ? 1 : -1;
+    // Virtual target may exceed [0,N-1] for the circular wrap (zone 9→10 or
+    // zone 0→-1); startFreshLeg uses the sign to derive direction, and
+    // settleAt/setDisplayZone normalise it back to an actual zone index.
     startZoneRef.current = current;
-    legStepsRef.current = Array.from({ length: steps }, (_, i) => current + dir * (i + 1));
-    legShapesRef.current = computeLegShapes(steps);
+    legStepsRef.current = [current + dir];
+    legShapesRef.current = computeLegShapes(1);
     legIdxRef.current = 0;
     armedRef.current = null;
-    finalTargetRef.current = steps > 1 ? clamped : null;
-
-    // The more rooms a single jump skips, the faster the chain plays overall
-    // — total time grows only a little per extra room instead of linearly.
-    const totalMs = TRANSITION_MS + (steps - 1) * STEP_INCREMENT_MS;
-    legMsRef.current = Math.max(MIN_LEG_MS, totalMs / steps);
-
-    if (steps > 1) {
-      // Queue background warm-ups for every later leg, nearest-needed first,
-      // throttled by pumpPrefetchQueue's concurrency cap. Leg 0 is skipped —
-      // startFreshLeg(0) below loads it directly, so prefetching it too would
-      // only contend bandwidth with its own real load, which is what made
-      // long jumps stutter when every leg's fetch() fired at once.
-      const direction: Direction = dir > 0 ? "forward" : "backward";
-      for (let idx = 1; idx < steps; idx++) {
-        const ti = direction === "forward" ? current + idx : current - (idx + 1);
-        const tt = TRANSITIONS[ti];
-        if (tt) prefetchUrl(resolvePlayPlan(tt, direction, webmOkRef.current).src);
-      }
-    }
+    finalTargetRef.current = null;
+    legMsRef.current = TRANSITION_MS;
 
     startFreshLeg(0);
-  }, [cancelAutoAdvance, clearHotspots, prefetchUrl, startFreshLeg, snapToZone]);
+  }, [cancelAutoAdvance, clearHotspots, startFreshLeg, snapToZone]);
 
   useEffect(() => { goToZoneRef.current = goToZone; }, [goToZone]);
 
@@ -691,14 +679,9 @@ export default function ScrollVideoHero() {
     autoTimerRef.current = setTimeout(() => {
       const cur  = activeZoneRef.current;
       const next = (cur + 1) % N;
-      if (next === 0) {
-        setDisplayZone(0); // pure snap, no video — image must update immediately
-        settleAt(0);
-      } else {
-        goToZoneRef.current(next);
-      }
+      goToZoneRef.current(next);
     }, AUTO_DELAY);
-  }, [cancelAutoAdvance, settleAt]);
+  }, [cancelAutoAdvance]);
 
   useEffect(() => { scheduleAutoRef.current = scheduleAutoAdvance; }, [scheduleAutoAdvance]);
 
@@ -911,58 +894,116 @@ export default function ScrollVideoHero() {
       ref={wrapRef}
       style={{
         position: "relative",
-        height: "100vh", width: "100%",
-        overflow: "hidden", background: isMobile ? "#fff" : "#0d0e0d",
+        height: isMobile ? "auto" : "100vh",
+        width: "100%",
+        overflow: isMobile ? "visible" : "hidden",
+        background: isMobile ? "transparent" : "#0d0e0d",
         cursor: isDragging ? "grabbing" : isMobile ? "default" : "ew-resize",
         userSelect: "none",
         fontFamily: "'Manrope', sans-serif",
-        ...(isMobile && { display: "flex", flexDirection: "column" }),
+        zIndex: 1,
       } as React.CSSProperties}
     >
       {isMobile ? (
-        // ── Mobile: dark card (photo + thumbs + label) → white text/CTA ───────
+        // ── Mobile: 16:9 video at top + white card below in flow ────────────
         <>
-          {/* ── dark card: rounded bottom corners blend into white section ── */}
+          {/* 16:9 video/image area */}
           <div style={{
-            display: "flex",
-            flexDirection: "column",
-            background: "#0d0e0d",
-            borderRadius: "0 0 24px 24px",
+            position: "relative",
+            width: "100%",
+            aspectRatio: "16/9",
             overflow: "hidden",
+            background: "#0d0e0d",
           }}>
-            {/* photo area — 16:9 based on viewport width */}
-            <div style={{ flex: "0 0 56.25vw", position: "relative", overflow: "hidden" }}>
-              {lcpPlaceholder}
-              {stillImage}
-              {videoBuffers}
-              {/* top veil */}
-              <div style={{
-                position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
-                background: "linear-gradient(to bottom, rgba(10,11,10,0.40) 0%, rgba(10,11,10,0) 18%)",
-              }} />
-              {/* bottom fade into dark bg — multi-stop for smooth blend */}
-              <div style={{
-                position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none",
-                background: "linear-gradient(to top, rgba(10,11,10,1) 0%, rgba(10,11,10,0.7) 18%, rgba(10,11,10,0.25) 38%, rgba(10,11,10,0) 58%)",
-              }} />
+            {lcpPlaceholder}
+            {stillImage}
+            {videoBuffers}
+
+            {/* Top gradient for logo readability */}
+            <div style={{
+              position: "absolute", top: 0, left: 0, right: 0, zIndex: 4,
+              height: "60%", pointerEvents: "none",
+              background: "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%)",
+            }} />
+
+            {/* Logo */}
+            <div style={{
+              position: "absolute", top: 0, left: 0, zIndex: 10,
+              padding: "12px 16px",
+              pointerEvents: "none",
+            }}>
+              <img src="/logo.png" alt="VIP GLASS" style={{ height: 28, width: "auto", display: "block" }} />
             </div>
 
-            {/* thumbnail row — horizontal scroll */}
-            {phase === "ready" && (
-              <Chapters activeZone={activeZone} onJump={(i) => goToZone(i)} variant="flow" />
-            )}
-
+            {/* Dark fill at bottom — shows through white card's top border-radius gaps */}
+            <div style={{
+              position: "absolute",
+              bottom: 0, left: 0, right: 0,
+              height: 36,
+              background: "linear-gradient(to top, #080908 0%, transparent 100%)",
+              zIndex: 5,
+              pointerEvents: "none",
+            }} />
           </div>
 
-          {/* ── white section: text + CTA ── */}
+          {/* White card — normal flow below video */}
           <div style={{
-            flex: 1,
             background: "#fff",
+            borderRadius: "18px 18px 10px 10px",
+            overflow: "hidden",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "center",
-            padding: "0 22px calc(env(safe-area-inset-bottom, 12px) + 8px)",
           }}>
+            {/* Thumbnail row — stop propagation so it doesn't conflict with zone-swipe */}
+            {phase === "ready" && (
+              <div
+                onTouchStart={e => e.stopPropagation()}
+                onTouchMove={e => e.stopPropagation()}
+                onTouchEnd={e => e.stopPropagation()}
+              >
+                <Chapters activeZone={activeZone} onJump={(i) => goToZone(i)} variant="flow" />
+              </div>
+            )}
+
+            {/* Active zone label */}
+            {phase === "ready" && (
+              <div style={{ display: "flex", justifyContent: "center", padding: "0 0 8px" }}>
+                <span style={{
+                  background: "#1a1917",
+                  color: "#fff",
+                  borderRadius: 100,
+                  padding: "4px 14px",
+                  fontSize: "10px",
+                  fontWeight: 500,
+                  letterSpacing: ".14em",
+                  textTransform: "uppercase",
+                  fontFamily: "inherit",
+                  transition: "opacity 0.3s ease",
+                }}>
+                  {ZONES[activeZone].label}
+                </span>
+              </div>
+            )}
+
+            {/* Pagination dots */}
+            {phase === "ready" && (
+              <div style={{
+                display: "flex", justifyContent: "center", alignItems: "center",
+                gap: "4px", padding: "0 0 10px",
+              }}>
+                {ZONES.map((_, i) => (
+                  <div key={i} style={{
+                    width: activeZone === i ? "14px" : "5px",
+                    height: "5px",
+                    borderRadius: "3px",
+                    background: activeZone === i ? "#1a1917" : "rgba(26,25,23,0.18)",
+                    transition: "width 0.3s ease, background 0.3s ease",
+                  }} />
+                ))}
+              </div>
+            )}
+
+            {/* Text + CTA */}
             {phase === "ready" && <HeroText variant="block" />}
           </div>
         </>
@@ -1059,9 +1100,9 @@ function Chapters({
           flexDirection: "row",
           alignItems: "center",
           gap: "8px",
-          padding: "10px 14px",
+          padding: "16px 14px 8px",
           overflowX: "auto",
-          background: "#0d0e0d",
+          background: "transparent",
           msOverflowStyle: "none",
           scrollbarWidth: "none",
         } : isMobile ? {
@@ -1110,8 +1151,12 @@ function Chapters({
                 cursor: "pointer",
                 background: "#111",
                 boxShadow: active
-                  ? "0 0 0 2px rgba(244,241,236,0.88), 0 16px 40px rgba(0,0,0,.6)"
-                  : "0 6px 20px rgba(0,0,0,.4)",
+                  ? isFlow
+                    ? "0 0 0 2px rgba(26,25,23,0.75), 0 4px 16px rgba(0,0,0,.18)"
+                    : "0 0 0 2px rgba(244,241,236,0.88), 0 16px 40px rgba(0,0,0,.6)"
+                  : isFlow
+                    ? "0 2px 6px rgba(0,0,0,.1)"
+                    : "0 6px 20px rgba(0,0,0,.4)",
                 opacity: active ? 1 : hot ? 0.85 : 0.44,
                 transform: active ? "scale(1.1)" : hot ? "scale(0.93)" : "scale(0.82)",
                 filter: active
@@ -1126,24 +1171,26 @@ function Chapters({
                 alt={zone.label}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
-              <span style={{
-                position: "absolute",
-                left: 0, right: 0, bottom: 0,
-                padding: "14px 3px 4px",
-                color: "#fff",
-                fontSize: "7px",
-                lineHeight: 1.1,
-                letterSpacing: ".05em",
-                textAlign: "center",
-                textTransform: "uppercase",
-                background: "linear-gradient(transparent, rgba(0,0,0,.8))",
-                opacity: active || hot ? 1 : 0,
-                transform: active || hot ? "translateY(0)" : "translateY(5px)",
-                transition: `.22s ${THUMB_EASE}`,
-                pointerEvents: "none",
-              } as React.CSSProperties}>
-                {zone.label}
-              </span>
+              {!isFlow && (
+                <span style={{
+                  position: "absolute",
+                  left: 0, right: 0, bottom: 0,
+                  padding: "14px 3px 4px",
+                  color: "#fff",
+                  fontSize: "7px",
+                  lineHeight: 1.1,
+                  letterSpacing: ".05em",
+                  textAlign: "center",
+                  textTransform: "uppercase",
+                  background: "linear-gradient(transparent, rgba(0,0,0,.8))",
+                  opacity: active || hot ? 1 : 0,
+                  transform: active || hot ? "translateY(0)" : "translateY(5px)",
+                  transition: `.22s ${THUMB_EASE}`,
+                  pointerEvents: "none",
+                } as React.CSSProperties}>
+                  {zone.label}
+                </span>
+              )}
             </button>
           );
         })}
@@ -1161,7 +1208,8 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
   const textLine = isBlock ? "rgba(26,25,23,0.22)"   : LINE;
   return (
     <div style={(isBlock ? {
-      // flow block — no absolute positioning, used in mobile stacked layout
+      padding: "14px 20px calc(env(safe-area-inset-bottom,0px) + 18px)",
+      textAlign: "center",
     } : isMobile ? {
       position: "absolute",
       left: "20px", right: "20px",
@@ -1221,11 +1269,13 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
       </p>
 
       <button style={{
-        marginTop: isMobile ? "20px" : ("clamp(22px, 3vh, 36px)" as string),
-        display: "inline-flex",
+        marginTop: isMobile ? "16px" : ("clamp(22px, 3vh, 36px)" as string),
+        display: isBlock ? "flex" : "inline-flex",
+        width: isBlock ? "100%" : undefined,
         alignItems: "center",
-        gap: isMobile ? "20px" : ("clamp(28px, 3vw, 48px)" as string),
-        padding: isMobile ? "12px 20px" : ("clamp(13px, 1.5vh, 18px) clamp(22px, 2vw, 30px)" as string),
+        justifyContent: isBlock ? "center" : undefined,
+        gap: isBlock ? "16px" : isMobile ? "20px" : ("clamp(28px, 3vw, 48px)" as string),
+        padding: isBlock ? "14px 20px" : isMobile ? "12px 20px" : ("clamp(13px, 1.5vh, 18px) clamp(22px, 2vw, 30px)" as string),
         border: `1px solid ${isBlock ? "#1a1917" : textLine}`,
         borderRadius: 100,
         background: isBlock ? "#1a1917" : "rgba(244,241,236,0.02)",

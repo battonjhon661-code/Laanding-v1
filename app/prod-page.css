@@ -1258,6 +1258,13 @@
       .ps-carousel      { padding: 0 24px 16px; }
       .ps-card          { width: 82vw; height: calc(82vw * 9 / 16); }
       .ps-foot-row      { padding: 20px 24px 40px; }
+
+      /* Compact nav on mobile: logo tight to top-left */
+      .nav              { padding: 10px 16px; gap: 12px; }
+      .nav__logo-img    { max-width: 96px; height: auto; }
+
+      /* Slide2 is redundant on mobile (content merged into hero) */
+      #slide2           { display: none; }
     }
     @media (max-width: 1200px) {
       .ps-card { width: 440px; height: 248px; }
@@ -2174,6 +2181,9 @@
 
   /* ─── Mobile (≤768px) ────────────────────────────────────── */
   @media (max-width: 768px) {
+
+    /* Desktop materials/cabinet block hidden on mobile — replaced by WardrobeSection */
+    .mat-block { display: none; }
 
     /* Materials block — desktop lays this out as an absolutely-positioned
        1920×1080 canvas scaled down via JS `zoom` (see prod-init.ts fitMat).
