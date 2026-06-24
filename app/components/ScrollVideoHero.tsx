@@ -965,25 +965,6 @@ export default function ScrollVideoHero() {
               </div>
             )}
 
-            {/* Active zone label */}
-            {phase === "ready" && (
-              <div style={{ display: "flex", justifyContent: "center", padding: "0 0 8px" }}>
-                <span style={{
-                  background: "#1a1917",
-                  color: "#fff",
-                  borderRadius: 100,
-                  padding: "4px 14px",
-                  fontSize: "10px",
-                  fontWeight: 500,
-                  letterSpacing: ".14em",
-                  textTransform: "uppercase",
-                  fontFamily: "inherit",
-                  transition: "opacity 0.3s ease",
-                }}>
-                  {ZONES[activeZone].label}
-                </span>
-              </div>
-            )}
 
             {/* Pagination dots */}
             {phase === "ready" && (
@@ -1171,26 +1152,25 @@ function Chapters({
                 alt={zone.label}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
-              {!isFlow && (
-                <span style={{
-                  position: "absolute",
-                  left: 0, right: 0, bottom: 0,
-                  padding: "14px 3px 4px",
-                  color: "#fff",
-                  fontSize: "7px",
-                  lineHeight: 1.1,
-                  letterSpacing: ".05em",
-                  textAlign: "center",
-                  textTransform: "uppercase",
-                  background: "linear-gradient(transparent, rgba(0,0,0,.8))",
-                  opacity: active || hot ? 1 : 0,
-                  transform: active || hot ? "translateY(0)" : "translateY(5px)",
-                  transition: `.22s ${THUMB_EASE}`,
-                  pointerEvents: "none",
-                } as React.CSSProperties}>
-                  {zone.label}
-                </span>
-              )}
+              <span style={{
+                position: "absolute",
+                left: 0, right: 0, bottom: 0,
+                padding: isFlow ? "18px 4px 5px" : "14px 3px 4px",
+                color: "#fff",
+                fontSize: isFlow ? "8px" : "7px",
+                lineHeight: 1.1,
+                letterSpacing: ".08em",
+                textAlign: "center",
+                textTransform: "uppercase",
+                fontWeight: 500,
+                background: "linear-gradient(transparent, rgba(0,0,0,.82))",
+                opacity: isFlow ? 1 : (active || hot ? 1 : 0),
+                transform: !isFlow && !(active || hot) ? "translateY(5px)" : "translateY(0)",
+                transition: `.22s ${THUMB_EASE}`,
+                pointerEvents: "none",
+              } as React.CSSProperties}>
+                {zone.label}
+              </span>
             </button>
           );
         })}
