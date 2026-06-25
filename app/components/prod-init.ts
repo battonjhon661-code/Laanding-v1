@@ -599,9 +599,9 @@ export function initProdScripts(): void {
 
 
     // Materials block scale-to-fit — desktop only. Below 768px the block
-    // switches to its own natural-flow mobile layout (see prod-page.css),
-    // so the 1920px-canvas zoom must be cleared rather than shrinking that
-    // layout down to a tiny scaled copy of the desktop one.
+    // switches to its own natural-flow mobile layout (see CSS), so the
+    // 1920px-canvas zoom must be cleared rather than shrinking that layout
+    // down to a tiny scaled copy of the desktop one.
     (function(){
       const stage = document.getElementById('mat-stage');
       if (!stage) return;

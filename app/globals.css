@@ -12,12 +12,7 @@ html, body {
   /* No overflow override — let the browser's natural page scroll drive sticky */
 }
 
-/* Mobile-only wrapper: visible ≤768px, hidden on desktop */
+/* Wardrobe section — visible on all screen sizes */
 .wardrobe-mobile-only {
   display: block;
-}
-@media (min-width: 769px) {
-  .wardrobe-mobile-only {
-    display: none;
-  }
 }

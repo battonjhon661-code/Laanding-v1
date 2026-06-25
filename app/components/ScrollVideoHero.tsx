@@ -706,7 +706,8 @@ export default function ScrollVideoHero() {
       img.src = zone.imageSrc;
     }));
 
-    Promise.all(promises).then(async () => {
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 8000));
+    Promise.race([Promise.all(promises), timeout]).then(async () => {
       if (cancelled) return;
       const remaining = MIN_PRELOADER_MS - (performance.now() - loadStart);
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
