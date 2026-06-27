@@ -515,7 +515,7 @@
       position: relative;
       overflow: hidden;
       z-index: 1;
-      box-shadow: 0 -20px 50px rgba(0,0,0,.28);
+      box-shadow: 0 -20px 50px rgba(0,0,0,.28), 0 20px 60px rgba(0,0,0,.45);
     }
     #slide2::before {
       content: '';
@@ -2287,15 +2287,19 @@
   }
 
   /* ── Examples section — Catalog Slider ──────────────────── */
-  .exs-section {
-    position: relative;
+  .exs-prod-section {
     width: 100vw;
     height: 100vh;
     margin-left: calc(50% - 50vw);
-    overflow: hidden;
-    background: #fff;
   }
-  .exs-stage { position: absolute; inset: 0; }
+  @media (max-width: 768px) {
+    .exs-prod-section {
+      width: 100%;
+      margin-left: 0;
+      height: 65vh;
+      touch-action: none;
+    }
+  }
 
   .exs-photo-item {
     position: absolute; inset: 0;
@@ -2307,15 +2311,6 @@
   .exs-photo-item.state-current { transform: translateY(0); opacity: 1; }
   .exs-photo-item.state-above   { transform: translateY(-100%); opacity: 0; }
   .exs-photo-item.state-below   { transform: translateY(100%); opacity: 0; }
-
-  .exs-nav, .exs-hint { display: none; }
-
-  .exs-mobile { display: none; padding: 28px 16px 52px; font-family: 'Manrope', sans-serif; }
-  @media (max-width: 768px) {
-    .exs-section { height: auto; overflow: visible; }
-    .exs-stage { display: none; }
-    .exs-mobile { display: block; }
-  }
 
   /* ─── Mobile (≤768px) ────────────────────────────────────── */
   @media (max-width: 768px) {

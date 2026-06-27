@@ -52,7 +52,12 @@ export default function ProductSlide() {
     if (!stage || !section) return;
     while (stage.firstChild) stage.removeChild(stage.firstChild);
 
-    const STEP = 540, VSTEP = 310, WIN = 2, BUCKET = 5;
+    const mob = window.innerWidth <= 768;
+
+    // параметры — мобильные в ~0.3× от десктопа чтобы полоска ≈ 50vw
+    const STEP  = mob ? 160 : 540;
+    const VSTEP = mob ? 200 : 310;
+    const WIN = 2, BUCKET = 5;
     const N = CATS.length;
     const state = { active: 0, sub: 0 };
     let locked = false;
@@ -77,23 +82,58 @@ export default function ProductSlide() {
       css(slotEl, { position:'absolute', top:'0', height:'100%', width: STEP+'px' });
 
       const innerEl = ce('div');
-      css(innerEl, { position:'absolute', left:'50%', top:'50%', transform:'translate(-50%,-50%)', width:'600px', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' });
+      css(innerEl, {
+        position:'absolute', left:'50%', top:'50%',
+        transform:'translate(-50%,-50%)',
+        width: mob ? '240px' : '600px',
+        height:'100%',
+        display:'flex', alignItems:'center', justifyContent:'center',
+      });
       slotEl.appendChild(innerEl);
 
       const compactEl = ce('div');
-      css(compactEl, { position:'absolute', width:'340px', height:'440px', borderRadius:'20px', overflow:'hidden', background:'transparent', backgroundSize:'cover', backgroundPosition:'center', cursor:'pointer' });
+      css(compactEl, {
+        position:'absolute',
+        width: mob ? '100px' : '340px',
+        height: mob ? '136px' : '440px',
+        borderRadius: mob ? '14px' : '20px',
+        overflow:'hidden', background:'transparent',
+        backgroundSize:'cover', backgroundPosition:'center', cursor:'pointer',
+      });
       const compactLbl = ce('span');
-      css(compactLbl, { position:'absolute', top:'50%', left:'0', right:'0', transform:'translateY(-50%)', textAlign:'center', fontFamily:'Manrope,sans-serif', fontSize:'12px', letterSpacing:'.22em', textTransform:'uppercase', fontWeight:'600', color:'#fff', textShadow:'0 1px 6px rgba(0,0,0,.5)', pointerEvents:'none' });
+      css(compactLbl, {
+        position:'absolute', top:'50%', left:'0', right:'0',
+        transform:'translateY(-50%)', textAlign:'center',
+        fontFamily:'Manrope,sans-serif',
+        fontSize: mob ? '9px' : '12px',
+        letterSpacing: mob ? '.18em' : '.22em',
+        textTransform:'uppercase', fontWeight:'600', color:'#fff',
+        textShadow:'0 1px 6px rgba(0,0,0,.5)', pointerEvents:'none',
+      });
       compactEl.appendChild(compactLbl);
       innerEl.appendChild(compactEl);
 
       const stripEl = ce('div');
-      css(stripEl, { position:'absolute', width:'640px', height:'100%', transformOrigin:'center' });
+      css(stripEl, {
+        position:'absolute',
+        width: mob ? '200px' : '640px',
+        height:'100%', transformOrigin:'center',
+      });
       const pillEl = ce('div');
-      css(pillEl, { position:'absolute', top:'36px', bottom:'36px', left:'0', right:'0', background:'#f4f4f3', borderRadius:'34px' });
+      css(pillEl, {
+        position:'absolute',
+        top: mob ? '10px' : '36px',
+        bottom: mob ? '10px' : '36px',
+        left:'0', right:'0',
+        background:'transparent',
+        borderRadius: mob ? '16px' : '34px',
+      });
       stripEl.appendChild(pillEl);
       const colEl = ce('div');
-      css(colEl, { position:'absolute', left:'0', right:'0', top:'50%', height:'0', transition:'transform .5s cubic-bezier(.2,.8,.2,1)' });
+      css(colEl, {
+        position:'absolute', left:'0', right:'0', top:'50%', height:'0',
+        transition:'transform .5s cubic-bezier(.2,.8,.2,1)',
+      });
       stripEl.appendChild(colEl);
       innerEl.appendChild(stripEl);
       rowEl.appendChild(slotEl);
@@ -104,40 +144,100 @@ export default function ProductSlide() {
         css(cellEl, { position:'absolute', left:'50%', width:'0', height:'0' });
 
         const miniEl = ce('div');
-        css(miniEl, { position:'absolute', left:'0', top:'0', width:'452px', height:'112px', background:'#fff', borderRadius:'20px', boxShadow:'0 16px 38px rgba(0,0,0,.10)', display:'flex', alignItems:'center', gap:'18px', padding:'16px', transition:TR, zIndex:'1', cursor:'pointer' });
+        css(miniEl, {
+          position:'absolute', left:'0', top:'0',
+          width: mob ? '188px' : '452px',
+          height: mob ? '72px' : '112px',
+          background:'#fff',
+          borderRadius: mob ? '14px' : '20px',
+          boxShadow:'0 16px 38px rgba(0,0,0,.10)',
+          display:'flex', alignItems:'center',
+          gap: mob ? '10px' : '18px',
+          padding: mob ? '10px' : '16px',
+          transition:TR, zIndex:'1', cursor:'pointer',
+        });
         const miniImgEl = ce('div');
-        css(miniImgEl, { width:'96px', height:'80px', borderRadius:'13px', flexShrink:'0', backgroundSize:'cover', backgroundPosition:'center' });
+        css(miniImgEl, {
+          width: mob ? '52px' : '96px',
+          height: mob ? '46px' : '80px',
+          borderRadius: mob ? '8px' : '13px',
+          flexShrink:'0', backgroundSize:'cover', backgroundPosition:'center',
+        });
         const miniTextEl = ce('div');
-        css(miniTextEl, { flex:'1', minWidth:'0', display:'flex', flexDirection:'column', gap:'7px' });
+        css(miniTextEl, { flex:'1', minWidth:'0', display:'flex', flexDirection:'column', gap: mob ? '4px' : '7px' });
         const miniTopEl = ce('div');
-        css(miniTopEl, { display:'flex', alignItems:'center', gap:'8px' });
+        css(miniTopEl, { display:'flex', alignItems:'center', gap: mob ? '5px' : '8px' });
         const miniDotEl = ce('span');
-        css(miniDotEl, { width:'7px', height:'7px', borderRadius:'50%', flexShrink:'0' });
+        css(miniDotEl, { width: mob ? '5px' : '7px', height: mob ? '5px' : '7px', borderRadius:'50%', flexShrink:'0' });
         const miniLabelEl = ce('span');
-        css(miniLabelEl, { fontSize:'12px', color:'#9a9a9a', fontWeight:'600', letterSpacing:'.2px', fontFamily:'Manrope,sans-serif' });
+        css(miniLabelEl, {
+          fontSize: mob ? '9px' : '12px',
+          color:'#9a9a9a', fontWeight:'600',
+          letterSpacing:'.2px', fontFamily:'Manrope,sans-serif',
+        });
         miniTopEl.appendChild(miniDotEl); miniTopEl.appendChild(miniLabelEl);
         const miniTitleEl = ce('span');
-        css(miniTitleEl, { fontSize:'15px', fontWeight:'600', color:'#222', lineHeight:'1.28', letterSpacing:'-.1px', fontFamily:'Manrope,sans-serif' });
+        css(miniTitleEl, {
+          fontSize: mob ? '11px' : '15px',
+          fontWeight:'600', color:'#222',
+          lineHeight:'1.28', letterSpacing:'-.1px', fontFamily:'Manrope,sans-serif',
+        });
         miniTextEl.appendChild(miniTopEl); miniTextEl.appendChild(miniTitleEl);
         miniEl.appendChild(miniImgEl); miniEl.appendChild(miniTextEl);
 
         const bigEl = ce('div');
-        css(bigEl, { position:'absolute', left:'0', top:'0', width:'600px', height:'432px', background:'#fff', borderRadius:'24px', boxShadow:'0 34px 74px rgba(0,0,0,.16)', display:'flex', overflow:'hidden', transition:TR });
+        css(bigEl, {
+          position:'absolute', left:'0', top:'0',
+          width: mob ? '188px' : '600px',
+          height: mob ? '280px' : '432px',
+          background:'#fff',
+          borderRadius: mob ? '18px' : '24px',
+          boxShadow:'0 34px 74px rgba(0,0,0,.16)',
+          display:'flex',
+          flexDirection: mob ? 'column' : 'row',
+          overflow:'hidden', transition:TR,
+        });
         const bigImgEl = ce('div');
-        css(bigImgEl, { width:'396px', height:'100%', flexShrink:'0', backgroundSize:'cover', backgroundPosition:'center' });
+        css(bigImgEl, {
+          width: mob ? '100%' : '396px',
+          height: mob ? '170px' : '100%',
+          flexShrink:'0', backgroundSize:'cover', backgroundPosition:'center',
+        });
         const bigBadgeEl = ce('div');
-        css(bigBadgeEl, { position:'absolute', top:'18px', right:'18px', background:'#141414', color:'#fff', fontSize:'14px', fontWeight:'600', letterSpacing:'.2px', padding:'9px 15px', borderRadius:'11px', zIndex:'2', fontFamily:'Manrope,sans-serif' });
+        css(bigBadgeEl, {
+          position:'absolute',
+          top: mob ? '8px' : '18px',
+          right: mob ? '8px' : '18px',
+          background:'#141414', color:'#fff',
+          fontSize: mob ? '10px' : '14px',
+          fontWeight:'600', letterSpacing:'.2px',
+          padding: mob ? '5px 9px' : '9px 15px',
+          borderRadius: mob ? '8px' : '11px',
+          zIndex:'2', fontFamily:'Manrope,sans-serif',
+        });
         const bigInfoEl = ce('div');
-        css(bigInfoEl, { flex:'1', background:'#fff', padding:'26px', display:'flex', flexDirection:'column', justifyContent:'flex-end' });
+        css(bigInfoEl, {
+          flex:'1', background:'#fff',
+          padding: mob ? '12px' : '26px',
+          display:'flex', flexDirection:'column', justifyContent:'flex-end',
+        });
         const bigMetaEl = ce('div');
-        css(bigMetaEl, { display:'flex', alignItems:'center', gap:'9px', marginBottom:'12px' });
+        css(bigMetaEl, {
+          display:'flex', alignItems:'center',
+          gap: mob ? '6px' : '9px',
+          marginBottom: mob ? '6px' : '12px',
+        });
         const bigDotEl = ce('span');
-        css(bigDotEl, { width:'7px', height:'7px', borderRadius:'50%', flexShrink:'0' });
+        css(bigDotEl, { width: mob ? '5px' : '7px', height: mob ? '5px' : '7px', borderRadius:'50%', flexShrink:'0' });
         const bigCatEl = ce('span');
-        css(bigCatEl, { fontSize:'14px', color:'#8a8a8a', fontFamily:'Manrope,sans-serif' });
+        css(bigCatEl, { fontSize: mob ? '10px' : '14px', color:'#8a8a8a', fontFamily:'Manrope,sans-serif' });
         bigMetaEl.appendChild(bigDotEl); bigMetaEl.appendChild(bigCatEl);
         const bigTitleEl = ce('div');
-        css(bigTitleEl, { fontSize:'22px', fontWeight:'700', lineHeight:'1.24', letterSpacing:'-.2px', color:'#161616', fontFamily:'Manrope,sans-serif' });
+        css(bigTitleEl, {
+          fontSize: mob ? '14px' : '22px',
+          fontWeight:'700', lineHeight:'1.24',
+          letterSpacing:'-.1px', color:'#161616', fontFamily:'Manrope,sans-serif',
+        });
         bigInfoEl.appendChild(bigMetaEl); bigInfoEl.appendChild(bigTitleEl);
         bigEl.appendChild(bigImgEl); bigEl.appendChild(bigBadgeEl); bigEl.appendChild(bigInfoEl);
 
@@ -156,14 +256,21 @@ export default function ProductSlide() {
       stage.appendChild(btn);
       return btn;
     }
-    const L = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg>';
-    const R = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>';
-    const U = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 15 12 8 19 15"/></svg>';
-    const D = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>';
-    makeArrow(L, { top:'50%', left:'calc(50% - 360px)', transform:'translate(-50%,-50%)', width:'56px', height:'56px', boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', () => go(-1));
-    makeArrow(R, { top:'50%', left:'calc(50% + 360px)', transform:'translate(-50%,-50%)', width:'56px', height:'56px', boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', () => go(1));
-    makeArrow(U, { top:'22px', left:'50%', transform:'translateX(-50%)', width:'48px', height:'48px', boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', () => vstep(-1));
-    makeArrow(D, { bottom:'22px', left:'50%', transform:'translateX(-50%)', width:'48px', height:'48px', boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', () => vstep(1));
+
+    const arrowSz  = mob ? '34px' : '56px';
+    const arrowSzU = mob ? '30px' : '48px';
+    const arrowOff = mob ? `calc(50% - 108px)` : `calc(50% - 360px)`;
+    const arrowOffR = mob ? `calc(50% + 108px)` : `calc(50% + 360px)`;
+
+    const L = `<svg width="${mob?14:20}" height="${mob?14:20}" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg>`;
+    const R = `<svg width="${mob?14:20}" height="${mob?14:20}" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>`;
+    const U = `<svg width="${mob?13:19}" height="${mob?13:19}" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 15 12 8 19 15"/></svg>`;
+    const D = `<svg width="${mob?13:19}" height="${mob?13:19}" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>`;
+
+    makeArrow(L, { top:'50%', left:arrowOff,  transform:'translate(-50%,-50%)', width:arrowSz,  height:arrowSz,  boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', () => go(-1));
+    makeArrow(R, { top:'50%', left:arrowOffR, transform:'translate(-50%,-50%)', width:arrowSz,  height:arrowSz,  boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', () => go(1));
+    makeArrow(U, { top: mob ? '10px' : '22px', left:'50%', transform:'translateX(-50%)', width:arrowSzU, height:arrowSzU, boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', () => vstep(-1));
+    makeArrow(D, { bottom: mob ? '10px' : '22px', left:'50%', transform:'translateX(-50%)', width:arrowSzU, height:arrowSzU, boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', () => vstep(1));
 
     function render() {
       const { active, sub } = state;
@@ -270,6 +377,7 @@ export default function ProductSlide() {
 
     let ha = 0, ht = 0, va = 0, vt = 0;
     function onWheel(e) {
+      if (mob) return; // на мобилке скролл страницы не блокируем
       if (Math.abs(cursorX - window.innerWidth / 2) > 380) return;
       e.preventDefault();
       const ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY), now = performance.now();
@@ -282,21 +390,30 @@ export default function ProductSlide() {
       }
     }
 
-    let tsx = 0, tsy = 0;
-    function onTouchStart(e) { tsx = e.touches[0].clientX; tsy = e.touches[0].clientY; }
-    function onTouchEnd(e) {
-      const dx = e.changedTouches[0].clientX - tsx, dy = e.changedTouches[0].clientY - tsy, TH = 48;
+    let psx = 0, psy = 0, tracking = false, capturedId = -1;
+    function onPointerDown(e) {
+      if (e.pointerType === 'mouse') return;
+      psx = e.clientX; psy = e.clientY; tracking = true; capturedId = e.pointerId;
+    }
+    function onPointerUp(e) {
+      if (!tracking || e.pointerId !== capturedId) return;
+      tracking = false; capturedId = -1;
+      const dx = e.clientX - psx, dy = e.clientY - psy, TH = 20;
       if (Math.max(Math.abs(dx), Math.abs(dy)) < TH) return;
       if (Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
       else vstep(dy < 0 ? 1 : -1);
     }
+    function onPointerCancel(e) {
+      if (e.pointerId === capturedId) { tracking = false; capturedId = -1; }
+    }
 
     window.addEventListener('keydown', onKey);
-    window.addEventListener('wheel', onWheel, { passive: false });
+    if (!mob) window.addEventListener('wheel', onWheel, { passive: false });
+    section.addEventListener('pointerdown', onPointerDown);
+    section.addEventListener('pointerup', onPointerUp);
+    section.addEventListener('pointercancel', onPointerCancel);
     section.addEventListener('mousemove', onMouseMove);
     section.addEventListener('mouseleave', onMouseLeave);
-    section.addEventListener('touchstart', onTouchStart, { passive: true });
-    section.addEventListener('touchend', onTouchEnd, { passive: true });
 
     rowEl.style.transition = 'none';
     render();
@@ -304,9 +421,10 @@ export default function ProductSlide() {
 
     return () => {
       window.removeEventListener('keydown', onKey);
-      section.removeEventListener('wheel', onWheel);
-      section.removeEventListener('touchstart', onTouchStart);
-      section.removeEventListener('touchend', onTouchEnd);
+      if (!mob) window.removeEventListener('wheel', onWheel);
+      section.removeEventListener('pointerdown', onPointerDown);
+      section.removeEventListener('pointerup', onPointerUp);
+      section.removeEventListener('pointercancel', onPointerCancel);
       while (stage.firstChild) stage.removeChild(stage.firstChild);
     };
   }, []);
@@ -314,10 +432,11 @@ export default function ProductSlide() {
   return (
     <section
       ref={sectionRef}
+      className="exs-prod-section"
       id="exs-section"
-      style={{ position: 'relative', width: '100vw', marginLeft: 'calc(50% - 50vw)', height: '100vh', overflow: 'hidden', background: '#fff' }}
+      style={{ position: 'relative', overflow: 'hidden', background: '#fff', touchAction: 'none' }}
     >
-      <div ref={stageRef} style={{ position: 'absolute', inset: 0 }} />
+      <div ref={stageRef} style={{ position: 'absolute', inset: 0, touchAction: 'none' }} />
     </section>
   );
 }

@@ -340,10 +340,10 @@ export default function WardrobeSection() {
       {/* Header */}
       <div style={{ padding: "60px 20px 0", position: "relative", zIndex: 1, textAlign: "center" }}>
         <h2 style={{ margin: 0, fontFamily: "'Manrope', sans-serif", fontSize: "clamp(26px, 7.5vw, 36px)", fontWeight: 400, lineHeight: 1.08, letterSpacing: ".01em", textTransform: "uppercase", color: "#f4f1ec" }}>
-          Качество в<br />каждой детали
+          Широкий выбор стекла и зеркал<br />для ваших проектов
         </h2>
         <p style={{ margin: "12px auto 0", fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 300, lineHeight: 1.55, color: "rgba(244,241,236,0.52)", maxWidth: "78%" }}>
-          Мы тщательно подбираем материалы и комплектующие,<br className="wrd-lead-br" />чтобы каждая деталь служила долго и выглядела безупречно.
+          Предлагаем разные виды стекла, зеркал, обработки и фурнитуры для интерьерных, архитектурных и коммерческих решений. Каждое изделие подбирается под задачу&nbsp;— по стилю, толщине, оттенку, безопасности и условиям эксплуатации.
         </p>
       </div>
 
