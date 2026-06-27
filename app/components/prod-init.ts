@@ -939,46 +939,327 @@ export function initProdScripts(): void {
       }
     })();
 
-  // Block examples iframe vertical interaction until fully in view,
-  // but always forward horizontal scroll/swipe so categories can be browsed mid-scroll
+  // Examples section — Виды работ (Catalog Slider)
   (function() {
-    var section = document.querySelector('.examples-section');
-    var iframe = section && section.querySelector('iframe');
-    if (!iframe) return;
-    iframe.style.pointerEvents = 'none';
+    var CATS = [
+      { label:'Душевые', dot:'#0d9488', cover:'assets/boxes/1_shower_box-Photoroom.png', subs:[
+        { title:'Дверная',             img:'assets/examples/shower_room/1_door.png' },
+        { title:'Угловая (2 стекла)',  img:'assets/examples/shower_room/2_angle_2.png' },
+        { title:'Угловая (3 стекла)',  img:'assets/examples/shower_room/3_angle_3.png' },
+        { title:'Складная',            img:'assets/examples/shower_room/4_collapsible.png' },
+        { title:'Трапеция',            img:'assets/examples/shower_room/5_trapezoid.png' },
+        { title:'Т-образная',          img:'assets/examples/shower_room/6_T-type.png' },
+      ]},
+      { label:'Зеркала', dot:'#a855f7', cover:'assets/boxes/2_mirror_box-Photoroom.png', subs:[
+        { title:'Круглое',             img:'assets/examples/mirrors_light/1_circle.png' },
+        { title:'Г-образное',          img:'assets/examples/mirrors_light/2_R-type.png' },
+        { title:'Овальное',            img:'assets/examples/mirrors_light/3_oval.png' },
+        { title:'Эллипс',              img:'assets/examples/mirrors_light/4_ellipse.png' },
+        { title:'Прямоугольное',       img:'assets/examples/mirrors_light/5_square.png' },
+        { title:'Арочное',             img:'assets/examples/mirrors_light/6_arch.png' },
+      ]},
+      { label:'Ограждения', dot:'#d97706', cover:'assets/boxes/3_stairs_box-Photoroom.png', subs:[
+        { title:'На точечных фитингах',img:'assets/examples/stairs/1_points.png' },
+        { title:'На стойках',          img:'assets/examples/stairs/2_racks.png' },
+        { title:'В профиле',           img:'assets/examples/stairs/3_profile.png' },
+      ]},
+      { label:'Перегородки', dot:'#3b82f6', cover:'assets/boxes/4_partition-Photoroom.png', subs:[
+        { title:'Стеклянная перегородка', img:'assets/boxes/4_partition-Photoroom.png' },
+      ]},
+      { label:'Лофт', dot:'#ef4444', cover:'assets/boxes/5_loft-Photoroom.png', subs:[
+        { title:'Лофт-перегородка',    img:'assets/boxes/5_loft-Photoroom.png' },
+      ]},
+      { label:'Панели', dot:'#10b981', cover:'assets/boxes/8_panels-Photoroom.png', subs:[
+        { title:'Стеклянная панель',   img:'assets/boxes/8_panels-Photoroom.png' },
+      ]},
+      { label:'Козырьки', dot:'#f59e0b', cover:'assets/boxes/9_visors-Photoroom.png', subs:[
+        { title:'Стеклянный козырёк',  img:'assets/boxes/9_visors-Photoroom.png' },
+      ]},
+      { label:'Полки', dot:'#8b5cf6', cover:'assets/boxes/12_shelves-Photoroom.png', subs:[
+        { title:'Стеклянная полка',    img:'assets/boxes/12_shelves-Photoroom.png' },
+      ]},
+    ];
+    if (window.innerWidth <= 768) { renderMobile(); return; }
+    initDesktop();
 
-    var ratio = 0;
-    var observer = new IntersectionObserver(function(entries) {
-      ratio = entries[0].intersectionRatio;
-      iframe.style.pointerEvents = ratio >= 0.80 ? 'auto' : 'none';
-      fwd({ type: 'visibility', ratio: ratio });
-    }, { threshold: [0, 0.25, 0.5, 0.75, 0.80, 1.0] });
-    observer.observe(section);
-
-    function fwd(msg) {
-      try { iframe.contentWindow.postMessage(msg, '*'); } catch(e) {}
+    function renderMobile() {
+      var el = document.getElementById('exs-mobile');
+      if (!el) return;
+      var h = '<div style="text-align:center;margin-bottom:14px"><h2 style="font-size:18px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">Виды работ</h2>'
+            + '<p style="font-size:12px;line-height:1.5;color:rgba(0,0,0,.5)">Зеркала, душевые перегородки, стеклянные ограждения</p></div>';
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+      CATS.forEach(function(cat, ci) {
+        h += '<div style="border-radius:10px;overflow:hidden;background:#0d0d0d">'
+           + '<div style="position:relative;height:135px;overflow:hidden" id="exsm-vp-'+ci+'">';
+        cat.subs.forEach(function(su, pi) {
+          h += '<div class="exs-photo-item '+(pi===0?'state-current':'state-below')+'" style="background-image:url(\''+su.img+'\')"></div>';
+        });
+        if (cat.subs.length > 1) {
+          h += '<div style="position:absolute;bottom:5px;right:5px;display:flex;flex-direction:column;gap:3px;z-index:5">'
+             + '<button onclick="exsMStep('+ci+',-1)" style="width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer">'
+             + '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="18 15 12 9 6 15"/></svg></button>'
+             + '<button onclick="exsMStep('+ci+',1)" style="width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer">'
+             + '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg></button>'
+             + '</div>';
+        }
+        h += '</div>'
+           + '<div style="padding:6px 9px;color:rgba(255,255,255,.6);font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-family:Manrope,sans-serif" id="exsm-lbl-'+ci+'">'+cat.label+'</div>'
+           + '</div>';
+      });
+      h += '</div>';
+      el.innerHTML = h;
     }
+    var exsMIdx = CATS.map(function(){ return 0; });
+    window.exsMStep = function(ci, dir) {
+      var n = CATS[ci].subs.length;
+      exsMIdx[ci] = ((exsMIdx[ci]+dir)+n)%n;
+      var vp = document.getElementById('exsm-vp-'+ci);
+      if (!vp) return;
+      var cur = exsMIdx[ci];
+      vp.querySelectorAll('.exs-photo-item').forEach(function(el,i){
+        el.className='exs-photo-item '+(i===cur?'state-current':i<cur?'state-above':'state-below');
+      });
+    };
 
-    // Forward horizontal wheel to iframe even when section is only partially visible
-    window.addEventListener('wheel', function(e) {
-      if (ratio < 0.08 || ratio >= 0.80) return;
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
-      e.preventDefault();
-      fwd({ type: 'wheelX', delta: e.deltaX });
-    }, { passive: false });
+    function initDesktop() {
+      var STEP = 540, VSTEP = 310, WIN = 2, BUCKET = 5;
+      var N = CATS.length;
+      var state = { active: 0, sub: 0 };
+      var locked = false;
+      var TR = 'opacity .42s ease, transform .5s cubic-bezier(.2,.8,.2,1)';
 
-    // Forward horizontal touch swipe to iframe when section is partially visible
-    var tx = 0, ty = 0;
-    window.addEventListener('touchstart', function(e) {
-      tx = e.touches[0].clientX; ty = e.touches[0].clientY;
-    }, { passive: true });
-    window.addEventListener('touchend', function(e) {
-      if (ratio >= 0.95) return;
-      var dx = e.changedTouches[0].clientX - tx;
-      var dy = e.changedTouches[0].clientY - ty;
-      if (Math.abs(dx) > Math.abs(dy) * 1.1 && Math.abs(dx) > 30) {
-        fwd({ type: 'swipeX', dir: dx < 0 ? 1 : -1 });
+      function mod(a, b) { return ((a % b) + b) % b; }
+      function win(pos) {
+        var arr = new Array(BUCKET);
+        for (var v = pos - WIN; v <= pos + WIN; v++) arr[mod(v, BUCKET)] = v;
+        return arr;
       }
-    }, { passive: true });
+      function ce(tag) { return document.createElement(tag); }
+      function css(el, styles) { for (var k in styles) el.style[k] = styles[k]; }
+
+      var stage = document.getElementById('exs-stage');
+
+      var rowEl = ce('div');
+      css(rowEl, { position:'absolute', left:'50%', top:0, height:'100%', width:0 });
+      stage.appendChild(rowEl);
+
+      var slots = [];
+      for (var si = 0; si < BUCKET; si++) {
+        var slotEl = ce('div');
+        css(slotEl, { position:'absolute', top:0, height:'100%', width: STEP+'px' });
+        var innerEl = ce('div');
+        css(innerEl, { position:'absolute', left:'50%', top:'50%', transform:'translate(-50%,-50%)', width:'600px', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' });
+        slotEl.appendChild(innerEl);
+
+        var compactEl = ce('div');
+        css(compactEl, { position:'absolute', width:'292px', height:'404px', borderRadius:'20px', overflow:'hidden', boxShadow:'0 22px 55px rgba(0,0,0,.14)', backgroundSize:'cover', backgroundPosition:'center', cursor:'pointer' });
+        var scrimEl = ce('div');
+        css(scrimEl, { position:'absolute', top:0, left:0, right:0, bottom:0, background:'linear-gradient(to top, rgba(0,0,0,.5) 0%, transparent 55%)', pointerEvents:'none' });
+        compactEl.appendChild(scrimEl);
+        var compactLbl = ce('span');
+        css(compactLbl, { position:'absolute', bottom:'18px', left:0, right:0, textAlign:'center', fontFamily:'Manrope,sans-serif', fontSize:'11px', letterSpacing:'.24em', textTransform:'uppercase', fontWeight:400, color:'rgba(255,255,255,.85)', textShadow:'0 1px 4px rgba(0,0,0,.6)', pointerEvents:'none' });
+        compactEl.appendChild(compactLbl);
+        innerEl.appendChild(compactEl);
+
+        var stripEl = ce('div');
+        css(stripEl, { position:'absolute', width:'640px', height:'100%', transformOrigin:'center' });
+        var pillEl = ce('div');
+        css(pillEl, { position:'absolute', top:'36px', bottom:'36px', left:0, right:0, background:'#f4f4f3', borderRadius:'34px' });
+        stripEl.appendChild(pillEl);
+        var colEl = ce('div');
+        css(colEl, { position:'absolute', left:0, right:0, top:'50%', height:0, transition:'transform .5s cubic-bezier(.2,.8,.2,1)' });
+        stripEl.appendChild(colEl);
+        innerEl.appendChild(stripEl);
+        rowEl.appendChild(slotEl);
+
+        var cells = [];
+        for (var ci = 0; ci < BUCKET; ci++) {
+          var cellEl = ce('div');
+          css(cellEl, { position:'absolute', left:'50%', width:0, height:0 });
+
+          var miniEl = ce('div');
+          css(miniEl, { position:'absolute', left:0, top:0, width:'452px', height:'112px', background:'#fff', borderRadius:'20px', boxShadow:'0 16px 38px rgba(0,0,0,.10)', display:'flex', alignItems:'center', gap:'18px', padding:'16px', transition:TR, zIndex:1, cursor:'pointer' });
+          var miniImgEl = ce('div');
+          css(miniImgEl, { width:'96px', height:'80px', borderRadius:'13px', flexShrink:0, backgroundSize:'cover', backgroundPosition:'center' });
+          var miniTextEl = ce('div');
+          css(miniTextEl, { flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:'7px' });
+          var miniTopEl = ce('div');
+          css(miniTopEl, { display:'flex', alignItems:'center', gap:'8px' });
+          var miniDotEl = ce('span');
+          css(miniDotEl, { width:'7px', height:'7px', borderRadius:'50%', flexShrink:0 });
+          var miniLabelEl = ce('span');
+          css(miniLabelEl, { fontSize:'12px', color:'#9a9a9a', fontWeight:600, letterSpacing:'.2px', fontFamily:'Manrope,sans-serif' });
+          miniTopEl.appendChild(miniDotEl); miniTopEl.appendChild(miniLabelEl);
+          var miniTitleEl = ce('span');
+          css(miniTitleEl, { fontSize:'15px', fontWeight:600, color:'#222', lineHeight:1.28, letterSpacing:'-.1px', fontFamily:'Manrope,sans-serif' });
+          miniTextEl.appendChild(miniTopEl); miniTextEl.appendChild(miniTitleEl);
+          miniEl.appendChild(miniImgEl); miniEl.appendChild(miniTextEl);
+
+          var bigEl = ce('div');
+          css(bigEl, { position:'absolute', left:0, top:0, width:'600px', height:'432px', background:'#fff', borderRadius:'24px', boxShadow:'0 34px 74px rgba(0,0,0,.16)', display:'flex', overflow:'hidden', transition:TR });
+          var bigImgEl = ce('div');
+          css(bigImgEl, { width:'396px', height:'100%', flexShrink:0, backgroundSize:'cover', backgroundPosition:'center' });
+          var bigBadgeEl = ce('div');
+          css(bigBadgeEl, { position:'absolute', top:'18px', right:'18px', background:'#141414', color:'#fff', fontSize:'14px', fontWeight:600, letterSpacing:'.2px', padding:'9px 15px', borderRadius:'11px', zIndex:2, fontFamily:'Manrope,sans-serif' });
+          var bigInfoEl = ce('div');
+          css(bigInfoEl, { flex:1, background:'#fff', padding:'26px', display:'flex', flexDirection:'column', justifyContent:'flex-end' });
+          var bigMetaEl = ce('div');
+          css(bigMetaEl, { display:'flex', alignItems:'center', gap:'9px', marginBottom:'12px' });
+          var bigDotEl = ce('span');
+          css(bigDotEl, { width:'7px', height:'7px', borderRadius:'50%', flexShrink:0 });
+          var bigCatEl = ce('span');
+          css(bigCatEl, { fontSize:'14px', color:'#8a8a8a', fontFamily:'Manrope,sans-serif' });
+          bigMetaEl.appendChild(bigDotEl); bigMetaEl.appendChild(bigCatEl);
+          var bigTitleEl = ce('div');
+          css(bigTitleEl, { fontSize:'22px', fontWeight:700, lineHeight:1.24, letterSpacing:'-.2px', color:'#161616', fontFamily:'Manrope,sans-serif' });
+          bigInfoEl.appendChild(bigMetaEl); bigInfoEl.appendChild(bigTitleEl);
+          bigEl.appendChild(bigImgEl); bigEl.appendChild(bigBadgeEl); bigEl.appendChild(bigInfoEl);
+
+          cellEl.appendChild(miniEl); cellEl.appendChild(bigEl);
+          colEl.appendChild(cellEl);
+          cells.push({ el:cellEl, miniEl:miniEl, miniImgEl:miniImgEl, miniDotEl:miniDotEl, miniLabelEl:miniLabelEl, miniTitleEl:miniTitleEl, bigEl:bigEl, bigImgEl:bigImgEl, bigDotEl:bigDotEl, bigCatEl:bigCatEl, bigTitleEl:bigTitleEl, bigBadgeEl:bigBadgeEl });
+        }
+        slots.push({ el:slotEl, compactEl:compactEl, compactLbl:compactLbl, stripEl:stripEl, colEl:colEl, cells:cells });
+      }
+
+      function makeArrow(svgStr, styles) {
+        var btn = ce('button');
+        css(btn, { position:'absolute', background:'#fff', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', zIndex:30, border:'none', padding:0 });
+        css(btn, styles);
+        btn.innerHTML = svgStr;
+        stage.appendChild(btn);
+        return btn;
+      }
+      var L = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg>';
+      var R = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>';
+      var U = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 15 12 8 19 15"/></svg>';
+      var D = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>';
+      makeArrow(L, { top:'50%', left:'calc(50% - 360px)', transform:'translate(-50%,-50%)', width:'56px', height:'56px', boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', function(){ go(-1); });
+      makeArrow(R, { top:'50%', left:'calc(50% + 360px)', transform:'translate(-50%,-50%)', width:'56px', height:'56px', boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', function(){ go(1); });
+      makeArrow(U, { top:'22px', left:'50%', transform:'translateX(-50%)', width:'48px', height:'48px', boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', function(){ vstep(-1); });
+      makeArrow(D, { bottom:'22px', left:'50%', transform:'translateX(-50%)', width:'48px', height:'48px', boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', function(){ vstep(1); });
+
+      function render() {
+        var active = state.active, sub = state.sub;
+        rowEl.style.transform = 'translateX(' + (-(active * STEP + STEP/2)) + 'px)';
+        win(active).forEach(function(vp) {
+          var si2 = mod(vp, BUCKET);
+          var sd = slots[si2];
+          var cat = CATS[mod(vp, N)];
+          var open = (vp === active);
+          var m = cat.subs.length;
+          var vpos = open ? sub : 0;
+          sd.el.style.left = (vp * STEP) + 'px';
+          sd.compactEl.style.backgroundImage = 'url(' + cat.cover + ')';
+          sd.compactEl.style.opacity = open ? 0 : 1;
+          sd.compactEl.style.transform = 'scale(' + (open ? 1.06 : 1) + ')';
+          sd.compactEl.style.transition = 'opacity .46s ease, transform .5s cubic-bezier(.2,.8,.2,1)';
+          sd.compactEl.style.pointerEvents = open ? 'none' : 'auto';
+          sd.compactLbl.textContent = cat.label;
+          sd.stripEl.style.opacity = open ? 1 : 0;
+          sd.stripEl.style.transform = 'scaleY(' + (open ? 1 : 0.86) + ')';
+          sd.stripEl.style.transition = 'opacity .42s ease, transform .5s cubic-bezier(.2,.8,.2,1)';
+          sd.stripEl.style.pointerEvents = open ? 'auto' : 'none';
+          sd.colEl.style.transform = 'translateY(' + (-(vpos * VSTEP)) + 'px)';
+          win(vpos).forEach(function(svp) {
+            var ci2 = mod(svp, BUCKET);
+            var cell = sd.cells[ci2];
+            var su = cat.subs[mod(svp, m)];
+            var isA = (svp === vpos);
+            cell.el.style.top = (svp * VSTEP) + 'px';
+            cell.miniEl.style.transform = 'translate(-50%,-50%) scale(' + (isA ? 0.9 : 1) + ')';
+            cell.miniEl.style.opacity = isA ? 0 : 1;
+            cell.miniEl.style.pointerEvents = isA ? 'none' : 'auto';
+            cell.miniImgEl.style.backgroundImage = 'url(' + su.img + ')';
+            cell.miniDotEl.style.background = cat.dot;
+            cell.miniLabelEl.textContent = cat.label;
+            cell.miniTitleEl.textContent = su.title;
+            cell.bigEl.style.transform = 'translate(-50%,-50%) scale(' + (isA ? 1 : 0.66) + ')';
+            cell.bigEl.style.opacity = isA ? 1 : 0;
+            cell.bigEl.style.pointerEvents = isA ? 'auto' : 'none';
+            cell.bigEl.style.zIndex = isA ? 3 : 2;
+            cell.bigImgEl.style.backgroundImage = 'url(' + su.img + ')';
+            cell.bigDotEl.style.background = cat.dot;
+            cell.bigCatEl.textContent = cat.label;
+            cell.bigTitleEl.textContent = su.title;
+            cell.bigBadgeEl.textContent = cat.label + ' · ' + String(mod(svp, m) + 1).padStart(2, '0');
+          });
+        });
+      }
+
+      function go(delta) {
+        if (locked) return; locked = true;
+        state.active += delta; state.sub = 0;
+        render();
+        setTimeout(function() { locked = false; }, 600);
+      }
+      function vstep(dir) {
+        if (locked) return; locked = true;
+        state.sub += dir;
+        render();
+        setTimeout(function() { locked = false; }, 550);
+      }
+
+      slots.forEach(function(sd, si2) {
+        sd.compactEl.addEventListener('click', function() {
+          var vps = win(state.active);
+          for (var i = 0; i < vps.length; i++) {
+            if (mod(vps[i], BUCKET) === si2) {
+              var delta = vps[i] - state.active;
+              if (delta !== 0) go(delta > 0 ? 1 : -1);
+              break;
+            }
+          }
+        });
+        sd.cells.forEach(function(cell, ci3) {
+          cell.miniEl.addEventListener('click', function() {
+            var svps = win(state.sub);
+            for (var j = 0; j < svps.length; j++) {
+              if (mod(svps[j], BUCKET) === ci3) {
+                var d = svps[j] - state.sub;
+                if (d !== 0) vstep(d > 0 ? 1 : -1);
+                break;
+              }
+            }
+          });
+        });
+      });
+
+      window.addEventListener('keydown', function(e) {
+        var rect = document.getElementById('exs-section').getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+        if (e.key === 'ArrowLeft')       { e.preventDefault(); go(-1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+        else if (e.key === 'ArrowUp')    { e.preventDefault(); vstep(-1); }
+        else if (e.key === 'ArrowDown')  { e.preventDefault(); vstep(1); }
+      });
+
+      var ha = 0, ht = 0, va = 0, vt = 0;
+      stage.addEventListener('wheel', function(e) {
+        var ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY), now = performance.now();
+        if (ax > ay) {
+          e.preventDefault();
+          ha = (now - ht < 200) ? ha + e.deltaX : e.deltaX; ht = now;
+          if (Math.abs(ha) > 80) { go(ha > 0 ? 1 : -1); ha = 0; }
+        } else {
+          e.preventDefault();
+          va = (now - vt < 200) ? va + e.deltaY : e.deltaY; vt = now;
+          if (Math.abs(va) > 50) { vstep(va > 0 ? 1 : -1); va = 0; }
+        }
+      }, { passive: false });
+
+      var tsx = 0, tsy = 0;
+      stage.addEventListener('touchstart', function(e) { tsx = e.touches[0].clientX; tsy = e.touches[0].clientY; }, { passive: true });
+      stage.addEventListener('touchend', function(e) {
+        var dx = e.changedTouches[0].clientX - tsx, dy = e.changedTouches[0].clientY - tsy, TH = 48;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < TH) return;
+        if (Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+        else vstep(dy < 0 ? 1 : -1);
+      }, { passive: true });
+
+      rowEl.style.transition = 'none';
+      render();
+      requestAnimationFrame(function() { rowEl.style.transition = 'transform .55s cubic-bezier(.2,.8,.2,1)'; });
+    }
   })();
 }
