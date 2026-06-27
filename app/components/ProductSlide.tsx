@@ -319,7 +319,7 @@ export default function ProductSlide() {
           cell.bigDotEl.style.background = cat.dot;
           cell.bigCatEl.textContent = cat.label;
           cell.bigTitleEl.textContent = su.title;
-          cell.bigBadgeEl.textContent = `${cat.label} · ${String(mod(svp, m) + 1).padStart(2, '0')}`;
+          cell.bigBadgeEl.textContent = `Модель ${String(mod(svp, m) + 1).padStart(2, '0')}`;
         });
       });
     }
@@ -390,7 +390,18 @@ export default function ProductSlide() {
       }
     }
 
+    if (mob) {
+      section.style.touchAction = 'auto';
+      stage.style.touchAction = 'auto';
+    }
+
+    const mobCenterHalf = 120;
     let psx = 0, psy = 0, tracking = false, capturedId = -1;
+    function onTouchStart(e) {
+      if (Math.abs(e.touches[0].clientX - window.innerWidth / 2) <= mobCenterHalf) {
+        e.preventDefault();
+      }
+    }
     function onPointerDown(e) {
       if (e.pointerType === 'mouse') return;
       psx = e.clientX; psy = e.clientY; tracking = true; capturedId = e.pointerId;
@@ -409,6 +420,7 @@ export default function ProductSlide() {
 
     window.addEventListener('keydown', onKey);
     if (!mob) window.addEventListener('wheel', onWheel, { passive: false });
+    if (mob) section.addEventListener('touchstart', onTouchStart, { passive: false });
     section.addEventListener('pointerdown', onPointerDown);
     section.addEventListener('pointerup', onPointerUp);
     section.addEventListener('pointercancel', onPointerCancel);
@@ -422,6 +434,7 @@ export default function ProductSlide() {
     return () => {
       window.removeEventListener('keydown', onKey);
       if (!mob) window.removeEventListener('wheel', onWheel);
+      if (mob) section.removeEventListener('touchstart', onTouchStart);
       section.removeEventListener('pointerdown', onPointerDown);
       section.removeEventListener('pointerup', onPointerUp);
       section.removeEventListener('pointercancel', onPointerCancel);
