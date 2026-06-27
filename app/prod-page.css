@@ -2370,10 +2370,24 @@
     .mat-track { padding: 0 8px; }
     .mat-cell { flex: 0 0 72%; max-width: 220px; }
 
-    /* Mirror section — desktop reserves 220px on the left for the (absent
-       on mobile) cabinet imagery; collapse to a normal centered block. */
-    .mirror-inner { padding: 90px 24px; }
-    .mirror-text { max-width: 100%; }
+    /* Mirror section — centered block on mobile */
+    .mirror-section { min-height: auto; }
+    .mirror-text .section__title { font-size: clamp(19px, 5.6vw, 27px); }
+    .mirror-section::before {
+      background-image: url('/assets/background-5-mobile.png');
+      opacity: 0.9;
+    }
+    .mirror-section.mirror-visible::before { animation: none; opacity: 0.9; }
+    .mirror-inner {
+      padding: 64px 24px 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .mirror-text { max-width: 100%; display: flex; flex-direction: column; align-items: center; }
+    .mirror-lead { margin-top: 20px; font-size: 14px; max-width: 100%; }
+    .mirror-cta  { margin-top: 36px; }
 
     /* Footer — two side-by-side rows (contacts+FAQ, brand+nav+meta) each
        stack vertically instead of overflowing. */
@@ -2392,6 +2406,11 @@
     }
     .site-footer__nav { justify-content: flex-start; gap: 16px 24px; }
     .footer-meta { align-items: flex-start; }
+    .site-footer__contacts { align-items: center; }
+    .site-footer__phone { text-align: center; }
+    .footer-messengers { justify-content: center; }
+
+    #ba-wrap { display: none; }
 
     /* Before/After full-width slider — title was a fixed nowrap line sized
        for desktop width and ran off both edges of the screen. */

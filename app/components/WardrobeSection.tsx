@@ -2,6 +2,18 @@
 
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    setMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return mobile;
+}
+
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const TABS = ["ЗЕРКАЛА", "СТЕКЛА", "ТРИПЛЕКС", "УСЛУГИ"] as const;
@@ -123,6 +135,7 @@ const SNAP_MS  = 300;
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function WardrobeSection() {
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<Tab>("ЗЕРКАЛА");
   // activeExtIdx = index in the extended (5-copy) array that is currently centred
   const [activeExtIdx, setActiveExtIdx] = useState(0);
@@ -339,11 +352,11 @@ export default function WardrobeSection() {
 
       {/* Header */}
       <div style={{ padding: "60px 20px 0", position: "relative", zIndex: 1, textAlign: "center" }}>
-        <h2 style={{ margin: 0, fontFamily: "'Manrope', sans-serif", fontSize: "clamp(26px, 7.5vw, 36px)", fontWeight: 400, lineHeight: 1.08, letterSpacing: ".01em", textTransform: "uppercase", color: "#f4f1ec" }}>
+        <h2 style={{ margin: 0, fontFamily: "'Manrope', sans-serif", fontSize: isMobile ? "clamp(19px, 5.6vw, 27px)" : "clamp(26px, 7.5vw, 36px)", fontWeight: 400, lineHeight: 1.08, letterSpacing: ".01em", textTransform: "uppercase", color: "#f4f1ec" }}>
           Широкий выбор стекла и зеркал<br />для ваших проектов
         </h2>
         <p style={{ margin: "12px auto 0", fontFamily: "'Manrope', sans-serif", fontSize: 13, fontWeight: 300, lineHeight: 1.55, color: "rgba(244,241,236,0.52)", maxWidth: "78%" }}>
-          Предлагаем разные виды стекла, зеркал, обработки и фурнитуры для интерьерных, архитектурных и коммерческих решений. Каждое изделие подбирается под задачу&nbsp;— по стилю, толщине, оттенку, безопасности и условиям эксплуатации.
+          Предлагаем разные виды стекла, зеркал, обработки и фурнитуры для интерьерных, архитектурных и коммерческих решений.
         </p>
       </div>
 

@@ -923,21 +923,11 @@ export default function ScrollVideoHero() {
             {stillImage}
             {videoBuffers}
 
-            {/* Top gradient for logo readability */}
-            <div style={{
-              position: "absolute", top: 0, left: 0, right: 0, zIndex: 4,
-              height: "60%", pointerEvents: "none",
-              background: "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%)",
-            }} />
+            {phase === "ready" && hotspotZone !== null && (
+              <ZoneHotspots key={hotspotZone} zone={hotspotZone} isMobile />
+            )}
 
-            {/* Logo */}
-            <div style={{
-              position: "absolute", top: 0, left: 0, zIndex: 10,
-              padding: "12px 16px",
-              pointerEvents: "none",
-            }}>
-              <img src="/logo.png" alt="VIP GLASS" style={{ height: 28, width: "auto", display: "block" }} />
-            </div>
+
 
             {/* Dark fill at bottom — shows through white card's top border-radius gaps */}
             <div style={{
@@ -1283,7 +1273,7 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
 }
 
 // ── Zone hotspot overlay ───────────────────────────────────────────────────────
-function ZoneHotspots({ zone }: { zone: number }) {
+function ZoneHotspots({ zone, isMobile }: { zone: number; isMobile?: boolean }) {
   const hotspots = ZONE_HOTSPOTS[zone] ?? [];
   return (
     <>
@@ -1299,15 +1289,20 @@ function ZoneHotspots({ zone }: { zone: number }) {
       `}</style>
       <div style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none" }}>
         {hotspots.map((hs, i) => (
-          <HotspotDot key={i} hotspot={hs} index={i} />
+          <HotspotDot key={i} hotspot={hs} index={i} isMobile={isMobile} />
         ))}
       </div>
     </>
   );
 }
 
-function HotspotDot({ hotspot, index }: { hotspot: Hotspot; index: number }) {
+function HotspotDot({ hotspot, index, isMobile }: { hotspot: Hotspot; index: number; isMobile?: boolean }) {
   const [hovered, setHovered] = useState(false);
+  const size      = isMobile ? 20 : 34;
+  const dotSize   = isMobile ? 6  : 10;
+  const labelOff  = isMobile ? 18 : 32;
+  const fontSize  = isMobile ? 8  : 11;
+  const ltrSpacing = isMobile ? ".16em" : ".22em";
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -1316,8 +1311,8 @@ function HotspotDot({ hotspot, index }: { hotspot: Hotspot; index: number }) {
         position: "absolute",
         left: hotspot.left,
         top: hotspot.top,
-        width: 34,
-        height: 34,
+        width: size,
+        height: size,
         borderRadius: "50%",
         border: `1px solid ${hovered ? "oklch(0.78 0.06 70)" : "rgba(233,230,224,.55)"}`,
         background: hovered ? "rgba(255,238,210,.08)" : "rgba(255,255,255,.04)",
@@ -1331,7 +1326,7 @@ function HotspotDot({ hotspot, index }: { hotspot: Hotspot; index: number }) {
       {/* inner dot */}
       <div style={{
         position: "absolute",
-        width: 10, height: 10,
+        width: dotSize, height: dotSize,
         borderRadius: "50%",
         background: "#e9e6e0",
         top: "50%", left: "50%",
@@ -1355,14 +1350,14 @@ function HotspotDot({ hotspot, index }: { hotspot: Hotspot; index: number }) {
       <span style={{
         position: "absolute",
         ...(hotspot.tipLeft
-          ? { right: 32, left: "auto", padding: "0 8px 0 0" }
-          : { left: 32,  right: "auto", padding: "0 0 0 8px" }),
+          ? { right: labelOff, left: "auto", padding: "0 6px 0 0" }
+          : { left: labelOff,  right: "auto", padding: "0 0 0 6px" }),
         top: "50%",
         transform: "translateY(-50%)",
         whiteSpace: "nowrap",
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: 11,
-        letterSpacing: ".22em",
+        fontSize,
+        letterSpacing: ltrSpacing,
         color: "#e9e6e0",
         textTransform: "uppercase",
         pointerEvents: "none",
