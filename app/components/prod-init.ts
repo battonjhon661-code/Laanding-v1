@@ -1182,7 +1182,7 @@ export function initProdScripts(): void {
             cell.bigDotEl.style.background = cat.dot;
             cell.bigCatEl.textContent = cat.label;
             cell.bigTitleEl.textContent = su.title;
-            cell.bigBadgeEl.textContent = cat.label + ' · ' + String(mod(svp, m) + 1).padStart(2, '0');
+            cell.bigBadgeEl.textContent = 'Модель ' + String(mod(svp, m) + 1).padStart(2, '0');
           });
         });
       }
@@ -1236,6 +1236,7 @@ export function initProdScripts(): void {
 
       var ha = 0, ht = 0, va = 0, vt = 0;
       stage.addEventListener('wheel', function(e) {
+        if (Math.abs(e.clientX - window.innerWidth / 2) > 380) return;
         var ax = Math.abs(e.deltaX), ay = Math.abs(e.deltaY), now = performance.now();
         if (ax > ay) {
           e.preventDefault();
