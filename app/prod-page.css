@@ -2347,9 +2347,9 @@
     .mirror-text .section__title { font-size: clamp(19px, 5.6vw, 27px); }
     .mirror-section::before {
       background-image: url('/assets/background-5-mobile.png');
-      opacity: 0.9;
+      opacity: 1;
     }
-    .mirror-section.mirror-visible::before { animation: none; opacity: 0.9; }
+    .mirror-section.mirror-visible::before { animation: none; opacity: 1; }
     .mirror-inner {
       padding: 64px 24px 72px;
       display: flex;
