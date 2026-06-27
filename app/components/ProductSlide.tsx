@@ -415,7 +415,6 @@ export default function ProductSlide() {
         setTimeout(() => {
           if (centerBox.parentNode) centerBox.parentNode.removeChild(centerBox);
           activeStripEl.style.zIndex = '';
-          rowEl.style.transition = 'none';
           rowEl.style.opacity = '1';
           introEl.style.transition = 'opacity .5s ease';
           introEl.style.opacity = '0';
