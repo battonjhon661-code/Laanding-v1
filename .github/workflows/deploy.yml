@@ -23,18 +23,14 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Check out/ exists
-        run: ls -la ./out/
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
 
       - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./out/
-          server-dir: /public_html/
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
+        run: |
+          lftp -c "
+            set ftp:ssl-allow no;
+            set ftp:passive-mode off;
+            open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }};
+            mirror --reverse --delete --verbose ./out/ /public_html/;
+          "
