@@ -73,6 +73,44 @@ export default function RootLayout({
       <head>
         <meta name="google-site-verification" content="e4WnUIL3TFRyItiFvehYNoTycpzOuxlc_qKb0bv3sEQ" />
         <link rel="preload" as="image" fetchPriority="high" href="/locations/bedroom.webp" />
+        {/* JSON-LD LocalBusiness */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              name: "VIPGLASS",
+              description: "Интерьерное стекло премиум-качества — зеркала, душевые перегородки, стеклянные ограждения и полки.",
+              url: "https://vipglass.ru",
+              telephone: "+7 (999) 999-99-99",
+              image: "https://vipglass.ru/bedroom.png",
+              address: {
+                "@type": "PostalAddress",
+                addressCountry: "RU",
+              },
+              openingHoursSpecification: {
+                "@type": "OpeningHoursSpecification",
+                dayOfWeek: ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+                opens: "09:00",
+                closes: "21:00",
+              },
+              priceRange: "₽₽₽",
+              hasOfferCatalog: {
+                "@type": "OfferCatalog",
+                name: "Стеклянные интерьерные изделия",
+                itemListElement: [
+                  { "@type": "Offer", itemOffered: { "@type": "Product", name: "Зеркала" } },
+                  { "@type": "Offer", itemOffered: { "@type": "Product", name: "Душевые перегородки" } },
+                  { "@type": "Offer", itemOffered: { "@type": "Product", name: "Стеклянные перегородки" } },
+                  { "@type": "Offer", itemOffered: { "@type": "Product", name: "Стеклянные ограждения" } },
+                  { "@type": "Offer", itemOffered: { "@type": "Product", name: "Стеклянные полки" } },
+                ],
+              },
+            }),
+          }}
+        />
+        {/* /JSON-LD LocalBusiness */}
         {/* Yandex.Metrika counter */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -80,7 +118,7 @@ export default function RootLayout({
           for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r){return;}}
           k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
           (window,document,'script','https://mc.yandex.ru/metrika/tag.js','ym');
-          ym(109396212,'init',{ssr:true,webvisor:true,clickmap:true,ecommerce:"dataLayer",referrer:document.referrer,url:location.href,accurateTrackBounce:true,trackLinks:true});
+          ym(109396212,'init',{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});
         ` }} />
         <noscript dangerouslySetInnerHTML={{ __html: '<div><img src="https://mc.yandex.ru/watch/109396212" style="position:absolute;left:-9999px;" alt="" /></div>' }} />
         {/* /Yandex.Metrika counter */}
