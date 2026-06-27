@@ -1148,7 +1148,7 @@
       min-height: 100vh;
       background: #0a0a0a;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       will-change: transform;
     }
     .mirror-section::before {
@@ -1157,51 +1157,23 @@
       inset: 0;
       background: url('/assets/background-5.png') center center / cover no-repeat;
       pointer-events: none;
-      opacity: 0;
+      opacity: 1;
     }
-    .mirror-section.mirror-visible::before {
-      animation: mirrorFlicker 1.6s ease forwards;
-    }
-    @keyframes mirrorFlicker {
-      0%   { opacity: 0; }
-      6%   { opacity: 0.65; }
-      11%  { opacity: 0.08; }
-      20%  { opacity: 0.8; }
-      26%  { opacity: 0.18; }
-      38%  { opacity: 0.92; }
-      44%  { opacity: 0.38; }
-      58%  { opacity: 1; }
-      72%  { opacity: 0.78; }
-      86%  { opacity: 1; }
-      100% { opacity: 1; }
-    }
-
-    /* Mirror text entrance */
-    .mirror-text .eyebrow,
-    .mirror-text .section__title,
-    .mirror-text .mirror-lead,
-    .mirror-text .mirror-cta {
-      opacity: 0;
-      transform: translateY(26px);
-      transition: opacity 0.65s ease, transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    .mirror-section.mirror-visible .mirror-text .eyebrow        { opacity: 1; transform: none; transition-delay: 0.5s; }
-    .mirror-section.mirror-visible .mirror-text .section__title { opacity: 1; transform: none; transition-delay: 0.68s; }
-    .mirror-section.mirror-visible .mirror-text .mirror-lead    { opacity: 1; transform: none; transition-delay: 0.88s; }
-    .mirror-section.mirror-visible .mirror-text .mirror-cta     { opacity: 1; transform: none; transition-delay: 1.08s; }
-    /* instant reset on exit — no delay going out */
-    .mirror-text .eyebrow,
-    .mirror-text .section__title,
-    .mirror-text .mirror-lead,
-    .mirror-text .mirror-cta { transition-delay: 0s; }
     .mirror-inner {
       position: relative;
       z-index: 2;
       width: 100%;
-      padding: 120px 56px 120px 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 80px 56px 120px;
     }
     .mirror-text {
-      max-width: 540px;
+      max-width: 640px;
+      text-align: center;
+    }
+    .mirror-text .section__title {
+      color: #000;
     }
     .mirror-lead {
       font-family: 'Manrope', sans-serif;

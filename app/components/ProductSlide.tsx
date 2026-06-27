@@ -56,6 +56,11 @@ export default function ProductSlide() {
 
     // параметры — мобильные в ~0.3× от десктопа чтобы полоска ≈ 50vw
     const STEP  = mob ? 160 : 540;
+    // размеры compact-карточки = размер грид-бокса (W/4 × H/2), чтобы intro-анимация была бесшовной
+    const W = stage.offsetWidth || window.innerWidth;
+    const H = stage.offsetHeight || window.innerHeight;
+    const compactCardW = mob ? 100 : Math.min(Math.round(W / 4), STEP - 30);
+    const compactCardH = mob ? 136 : Math.round(H / 2);
     const VSTEP = mob ? 200 : 310;
     const WIN = 2, BUCKET = 5;
     const N = CATS.length;
@@ -94,8 +99,8 @@ export default function ProductSlide() {
       const compactEl = ce('div');
       css(compactEl, {
         position:'absolute',
-        width: mob ? '100px' : '340px',
-        height: mob ? '136px' : '440px',
+        width: `${compactCardW}px`,
+        height: `${compactCardH}px`,
         borderRadius: mob ? '14px' : '20px',
         overflow:'hidden', background:'transparent',
         backgroundSize:'cover', backgroundPosition:'center', cursor:'pointer',
@@ -259,22 +264,188 @@ export default function ProductSlide() {
 
     const arrowSz  = mob ? '34px' : '56px';
     const arrowSzU = mob ? '30px' : '48px';
-    const arrowOff = mob ? `calc(50% - 108px)` : `calc(50% - 360px)`;
-    const arrowOffR = mob ? `calc(50% + 108px)` : `calc(50% + 360px)`;
+    const arrowOff = mob ? `calc(50% - 78px)` : `calc(50% - 115px)`;
+    const arrowOffR = mob ? `calc(50% + 78px)` : `calc(50% + 115px)`;
 
     const L = `<svg width="${mob?14:20}" height="${mob?14:20}" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg>`;
     const R = `<svg width="${mob?14:20}" height="${mob?14:20}" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>`;
     const U = `<svg width="${mob?13:19}" height="${mob?13:19}" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 15 12 8 19 15"/></svg>`;
     const D = `<svg width="${mob?13:19}" height="${mob?13:19}" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>`;
 
-    makeArrow(L, { top:'50%', left:arrowOff,  transform:'translate(-50%,-50%)', width:arrowSz,  height:arrowSz,  boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', () => go(-1));
-    makeArrow(R, { top:'50%', left:arrowOffR, transform:'translate(-50%,-50%)', width:arrowSz,  height:arrowSz,  boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', () => go(1));
-    makeArrow(U, { top: mob ? '10px' : '22px', left:'50%', transform:'translateX(-50%)', width:arrowSzU, height:arrowSzU, boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', () => vstep(-1));
-    makeArrow(D, { bottom: mob ? '10px' : '22px', left:'50%', transform:'translateX(-50%)', width:arrowSzU, height:arrowSzU, boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', () => vstep(1));
+    const arrowL = makeArrow(L, { bottom: mob ? '10px' : '22px', left:arrowOff,  transform:'translateX(-50%)', width:arrowSz, height:arrowSz, boxShadow:'0 10px 30px rgba(0,0,0,.13)' });
+    arrowL.addEventListener('click', () => go(-1));
+    const arrowR = makeArrow(R, { bottom: mob ? '10px' : '22px', left:arrowOffR, transform:'translateX(-50%)', width:arrowSz, height:arrowSz, boxShadow:'0 10px 30px rgba(0,0,0,.13)' });
+    arrowR.addEventListener('click', () => go(1));
+
+    const dotsEl = ce('div');
+    css(dotsEl, {
+      position: 'absolute',
+      bottom: mob ? '10px' : '22px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      height: mob ? '34px' : '56px',
+      display: 'flex',
+      gap: mob ? '5px' : '7px',
+      alignItems: 'center',
+      zIndex: '30',
+      pointerEvents: 'none',
+    });
+    const dotEls = CATS.map(() => {
+      const d = ce('span');
+      css(d, {
+        display: 'block',
+        width: mob ? '5px' : '7px',
+        height: mob ? '5px' : '7px',
+        borderRadius: '50%',
+        background: '#222',
+        opacity: '0.2',
+        transition: 'opacity .3s ease, transform .3s ease',
+        flexShrink: '0',
+      });
+      dotsEl.appendChild(d);
+      return d;
+    });
+    stage.appendChild(dotsEl);
+
+    // ── Intro animation ──────────────────────────────────────────
+    // introEl (z-index 40) визуально перекрывает карусель — rowEl трогать не нужно
+    // Стрелки и точки скрываем — появятся после анимации
+    arrowL.style.opacity = '0';
+    arrowR.style.opacity = '0';
+    dotsEl.style.opacity = '0';
+
+    // Build 4×2 intro grid over the full stage
+    const introEl = ce('div');
+    css(introEl, { position:'absolute', inset:'0', zIndex:'40', pointerEvents:'auto' });
+
+    const introBoxes = CATS.map((cat, i) => {
+      const col = i % 4;
+      const row = Math.floor(i / 4);
+      const box = ce('div');
+      css(box, {
+        position:'absolute',
+        left: `${col * 25}%`,
+        top: `${row * 50}%`,
+        width: '25%',
+        height: '50%',
+        backgroundImage: `url(${cat.cover})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        overflow: 'hidden',
+        willChange: 'transform, opacity',
+      });
+      if (col < 3) box.style.borderRight = '1px solid rgba(255,255,255,.1)';
+      if (row < 1) box.style.borderBottom = '1px solid rgba(255,255,255,.1)';
+
+      const lbl = ce('span');
+      css(lbl, {
+        position:'absolute', top:'50%', left:'0', right:'0',
+        transform:'translateY(-50%)',
+        textAlign:'center', fontFamily:'Manrope,sans-serif',
+        fontSize: mob ? '9px' : '12px', letterSpacing: mob ? '.18em' : '.22em',
+        textTransform:'uppercase', fontWeight:'600', color:'#fff',
+        textShadow:'0 1px 6px rgba(0,0,0,.5)', pointerEvents:'none',
+      });
+      lbl.textContent = cat.label;
+      box.appendChild(lbl);
+
+      introEl.appendChild(box);
+      return { el: box, col, row };
+    });
+    stage.appendChild(introEl);
+    rowEl.style.opacity = '0';
+
+    // cat index → slot virtual position for active=0 (null = off-screen)
+    const CAT_VP = [0, 1, 2, null, null, null, -2, -1];
+
+    let introPlayed = false;
+    function playIntro() {
+      if (introPlayed) return;
+      introPlayed = true;
+
+      introBoxes.forEach(({ el, col, row }, i) => {
+        const gridCX = (col + 0.5) / 4 * W;
+        const gridCY = (row + 0.5) / 2 * H;
+        const vp = CAT_VP[i];
+        const delay = vp !== null ? Math.abs(vp) * 55 : 0;
+
+        css(el, {
+          transition: `transform .85s ${delay}ms cubic-bezier(.2,.8,.2,1), opacity .65s ${delay}ms ease`,
+        });
+
+        if (vp !== null) {
+          const targetCX = W / 2 + vp * STEP;
+          el.style.transform = `translate(${targetCX - gridCX}px,${H / 2 - gridCY}px)`;
+        } else {
+          // off-screen: scatter outward — top row up, bottom row down
+          el.style.transform = `translateY(${row === 0 ? '-55%' : '55%'}) scale(0.88)`;
+          el.style.opacity = '0';
+        }
+      });
+
+      const REVEAL = 900;
+      setTimeout(() => {
+        // Вырываем центральный бокс (cat 0) из introEl — ему нужен собственный плавный fade
+        const centerBox = introBoxes[0].el;
+        const br = centerBox.getBoundingClientRect();
+        const sr = stage.getBoundingClientRect();
+        css(centerBox, {
+          position: 'absolute',
+          left: (br.left - sr.left) + 'px',
+          top: (br.top - sr.top) + 'px',
+          width: br.width + 'px',
+          height: br.height + 'px',
+          transform: 'none',
+          zIndex: '41',
+          transition: 'none',
+        });
+        stage.appendChild(centerBox); // убирает из introEl, добавляет прямо в stage
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          introEl.style.pointerEvents = 'none';
+          // Только центральная карточка исчезает, полоска появляется
+          centerBox.style.transition = 'opacity .7s ease';
+          centerBox.style.opacity = '0';
+          activeStripEl.style.transition = 'opacity .7s ease';
+          activeStripEl.style.opacity = '1';
+        }));
+
+        // После появления полоски: показываем карусель (compact-карточки совпадают с боковыми intro-боксами),
+        // затем плавно убираем introEl — кросс-фейд незаметен т.к. позиции/размеры/картинки одинаковые
+        setTimeout(() => {
+          if (centerBox.parentNode) centerBox.parentNode.removeChild(centerBox);
+          activeStripEl.style.zIndex = '';
+          rowEl.style.transition = 'none';
+          rowEl.style.opacity = '1';
+          introEl.style.transition = 'opacity .5s ease';
+          introEl.style.opacity = '0';
+          arrowL.style.transition = 'opacity .35s ease';
+          arrowR.style.transition = 'opacity .35s ease';
+          dotsEl.style.transition = 'opacity .35s ease';
+          arrowL.style.opacity = '1';
+          arrowR.style.opacity = '1';
+          dotsEl.style.opacity = '1';
+          setTimeout(() => {
+            if (introEl.parentNode) introEl.parentNode.removeChild(introEl);
+          }, 500);
+        }, 750);
+      }, REVEAL);
+    }
+
+    const obs = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) { playIntro(); obs.disconnect(); }
+    }, { threshold: 0.75 });
+    obs.observe(section);
+    // ── End intro ──────────────────────────────────────────────
 
     function render() {
       const { active, sub } = state;
       rowEl.style.transform = `translateX(${-(active * STEP + STEP / 2)}px)`;
+      const activeCat = mod(active, N);
+      dotEls.forEach((d, i) => {
+        d.style.opacity = i === activeCat ? '1' : '0.22';
+        d.style.transform = i === activeCat ? 'scale(1.5)' : 'scale(1)';
+      });
       win(active).forEach(vp => {
         const si2 = mod(vp, BUCKET);
         const sd = slots[si2];
@@ -431,7 +602,14 @@ export default function ProductSlide() {
     render();
     requestAnimationFrame(() => { rowEl.style.transition = 'transform .55s cubic-bezier(.2,.8,.2,1)'; });
 
+    // Для intro-анимации: активная полоска стартует скрытой и с высоким z-index —
+    // будет проявляться ПОВЕРХ center box без белого просвета
+    const activeStripEl = slots[mod(state.active, BUCKET)].stripEl;
+    activeStripEl.style.opacity = '0';
+    activeStripEl.style.zIndex = '45';
+
     return () => {
+      obs.disconnect();
       window.removeEventListener('keydown', onKey);
       if (!mob) window.removeEventListener('wheel', onWheel);
       if (mob) section.removeEventListener('touchstart', onTouchStart);
