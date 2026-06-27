@@ -132,56 +132,59 @@ interface Hotspot { left: string; top: string; label: string; tipLeft?: boolean;
 const ZONE_HOTSPOTS: Hotspot[][] = [
   // 0 Спальня
   [
-    { left: "53%", top: "42%", label: "Рифлёное стекло" },
-    { left: "5%",  top: "38%", label: "Зеркало" },
+    { left: "53%", top: "42%", label: "Неподвижная перегородка" },
+    { left: "5%",  top: "38%", label: "Прикроватные зеркала" },
   ],
   // 1 Балкон
   [
     { left: "64%", top: "39%", label: "Стеклянное ограждение" },
-    { left: "52%", top: "60%", label: "Парапет лестницы", tipLeft: true },
+    { left: "52%", top: "60%", label: "Стеклянные перила", tipLeft: true },
+    { left: "71%", top: "55%", label: "Стеклянные полы", tipLeft: true },
   ],
   // 2 Спортзал
   [
     { left: "38%", top: "40%", label: "Зеркальная стена" },
-    { left: "83%", top: "46%", label: "Стеклянная перегородка", tipLeft: true },
+    { left: "83%", top: "46%", label: "Цельностеклянная перегородка", tipLeft: true },
+    { left: "62%", top: "34%", label: "Панорамное остекление", tipLeft: true },
   ],
   // 3 Бассейн
   [
-    { left: "14%", top: "35%", label: "Стеклянная перегородка" },
+    { left: "14%", top: "35%", label: "Цельностеклянная перегородка" },
     { left: "62%", top: "50%", label: "Остекление сауны", tipLeft: true },
   ],
   // 4 Душевая
   [
-    { left: "51%", top: "50%", label: "Душевой экран" },
-    { left: "85%", top: "42%", label: "Зеркало с подсветкой", tipLeft: true },
+    { left: "51%", top: "50%", label: "Душевые двери" },
+    { left: "85%", top: "42%", label: "Зеркало с подсветкой в раме", tipLeft: true },
   ],
   // 5 Кухня
   [
     { left: "13%", top: "44%", label: "Витрина" },
     { left: "62%", top: "24%", label: "Стеклянные фасады", tipLeft: true },
     { left: "55%", top: "44%", label: "Кухонный фартук" },
+    { left: "83%", top: "76%", label: "Стеклянные столешницы", tipLeft: true },
   ],
   // 6 Прихожая
   [
-    { left: "27%", top: "42%", label: "Зеркальная стена" },
-    { left: "54%", top: "54%", label: "Овальные зеркала", tipLeft: true },
+    { left: "27%", top: "42%", label: "Зеркальное панно" },
+    { left: "54%", top: "54%", label: "Loft Ширмы из стекла и зеркал", tipLeft: true },
   ],
   // 7 Холл
   [
-    { left: "26%", top: "50%", label: "Стеклянный парапет" },
-    { left: "62%", top: "54%", label: "Стеклянная перегородка", tipLeft: true },
-    { left: "69%", top: "42%", label: "Зеркало", tipLeft: true },
+    { left: "26%", top: "50%", label: "Стеклянные лестницы" },
+    { left: "62%", top: "54%", label: "Loft перегородки из стекла", tipLeft: true },
+    { left: "74%", top: "42%", label: "Зеркала в рамах", tipLeft: true },
   ],
   // 8 Детская
   [
     { left: "44%", top: "40%", label: "Рифлёное стекло" },
     { left: "68%", top: "40%", label: "Состаренное зеркало", tipLeft: true },
-    { left: "83%", top: "34%", label: "Зеркало-бабочка", tipLeft: true },
+    { left: "83%", top: "34%", label: "Декоративные зеркала", tipLeft: true },
   ],
   // 9 Ванная
   [
     { left: "39%", top: "37%", label: "Зеркало с подсветкой" },
-    { left: "60%", top: "48%", label: "Душевой экран", tipLeft: true },
+    { left: "60%", top: "48%", label: "Душевые перегородки", tipLeft: true },
   ],
 ];
 
@@ -1220,9 +1223,9 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
         color: textInk,
       } as React.CSSProperties}>
         {isBlock ? (
-          <>наше Стекло создаёт<br />пространство и уют.</>
+          <>наше Стекло создаёт пространство и уют.</>
         ) : (
-          <>Стекло и зеркала,<br />которые идеально подходят вашему интерьеру</>
+          <>Стекло и зеркала, которые<br />идеально подходят вашему интерьеру</>
         )}
       </h1>
 
@@ -1263,7 +1266,7 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
         textTransform: "uppercase",
         whiteSpace: "nowrap",
       } as React.CSSProperties}>
-        Смотреть проекты
+        Хочу обсудить проект
         <svg width="26" height="10" viewBox="0 0 26 10" fill="none">
           <path d="M0 5h24M20 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" />
         </svg>
