@@ -2302,6 +2302,11 @@
     .exs-stage-area {
       top: 80px !important;
     }
+    .exs-heading {
+      left: 0 !important;
+      right: 0;
+      text-align: center;
+    }
   }
 
   .exs-photo-item {
