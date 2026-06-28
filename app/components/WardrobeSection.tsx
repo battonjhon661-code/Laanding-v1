@@ -397,6 +397,7 @@ export default function WardrobeSection() {
               item={item}
               isActive={extIdx === activeExtIdx}
               onClick={() => scrollToReal(extIdx % count)}
+              showNew={!item.video && activeTab !== "УСЛУГИ"}
             />
           ))}
         </div>
@@ -415,13 +416,20 @@ export default function WardrobeSection() {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-function CardItem({ item, isActive, onClick }: { item: Item; isActive: boolean; onClick: () => void }) {
+function CardItem({ item, isActive, onClick, showNew }: { item: Item; isActive: boolean; onClick: () => void; showNew?: boolean }) {
   return (
     <div onClick={onClick} style={{ flexShrink: 0, width: CARD_W, height: 248, borderRadius: 16, overflow: "hidden", position: "relative", background: "#111", cursor: "pointer", transform: isActive ? "scale(1)" : "scale(0.91)", opacity: isActive ? 1 : 0.52, boxShadow: isActive ? "0 8px 48px rgba(0,0,0,0.75)" : "0 2px 12px rgba(0,0,0,0.35)", transition: "transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s ease, box-shadow .35s ease" }}>
       <img src={item.preview} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       {isActive && item.video && (
         <video key={item.video} src={item.video} muted autoPlay loop playsInline
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      )}
+      {showNew && (
+        <div style={{ position: "absolute", top: 10, right: 10, padding: "3px 8px", borderRadius: 6, background: "rgba(244,241,236,0.92)", backdropFilter: "blur(4px)", pointerEvents: "none" }}>
+          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".18em", textTransform: "uppercase", color: "#0a0b0a" }}>
+            Новый
+          </span>
+        </div>
       )}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "28px 12px 13px", background: "linear-gradient(transparent, rgba(0,0,0,0.72))", pointerEvents: "none" }}>
         <span style={{ display: "block", textAlign: "center", fontFamily: "'Manrope', sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: ".22em", textTransform: "uppercase", color: "#f4f1ec" }}>

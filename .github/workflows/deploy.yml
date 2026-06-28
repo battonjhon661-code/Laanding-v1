@@ -23,6 +23,20 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Create .htaccess for Apache
+        run: |
+          cat > out/.htaccess << 'EOF'
+          Options -MultiViews
+          RewriteEngine On
+          RewriteBase /
+
+          RewriteCond %{REQUEST_FILENAME} -f [OR]
+          RewriteCond %{REQUEST_FILENAME} -d
+          RewriteRule ^ - [L]
+
+          RewriteRule ^ /index.html [L]
+          EOF
+
       - name: Install lftp
         run: sudo apt-get install -y lftp
 
