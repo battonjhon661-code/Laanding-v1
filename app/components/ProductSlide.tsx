@@ -223,47 +223,135 @@ export default function ProductSlide() {
           height: mob ? '170px' : '100%',
           flexShrink:'0', backgroundSize:'cover', backgroundPosition:'center',
         });
-        const bigBadgeEl = ce('div');
+        if (!document.getElementById('btn-sheen-style')) {
+          const st = document.createElement('style');
+          st.id = 'btn-sheen-style';
+          st.textContent = `@keyframes btnSheen{0%{transform:translateX(-120%) skewX(-18deg);opacity:0}8%{opacity:1}92%{opacity:1}100%{transform:translateX(320%) skewX(-18deg);opacity:0}}`;
+          document.head.appendChild(st);
+        }
+        const bigBadgeEl = ce('button');
         css(bigBadgeEl, {
-          position:'absolute',
-          top: mob ? '8px' : '18px',
-          right: mob ? '8px' : '18px',
-          background:'#141414', color:'#fff',
-          fontSize: mob ? '10px' : '14px',
-          fontWeight:'600', letterSpacing:'.2px',
-          padding: mob ? '5px 9px' : '9px 15px',
-          borderRadius: mob ? '8px' : '11px',
-          zIndex:'2', fontFamily:'Manrope,sans-serif',
+          display:'inline-flex', alignItems:'center',
+          gap: mob ? '8px' : '12px',
+          padding: mob ? '0 12px' : '0 20px',
+          height: mob ? '34px' : '44px',
+          background:'#171717', color:'#fff',
+          fontSize: mob ? '10px' : '11px',
+          fontWeight:'650', letterSpacing:'.02em',
+          whiteSpace:'nowrap',
+          borderRadius:'8px',
+          border:'1px solid #171717',
+          cursor:'pointer',
+          fontFamily:'Manrope,sans-serif',
+          zIndex:'2', outline:'none',
+          overflow:'hidden',
+          boxShadow:'0 6px 16px rgba(0,0,0,.18)',
+          transition:'background .16s ease, transform .16s ease, box-shadow .16s ease',
+        });
+        const sheenEl = ce('span');
+        css(sheenEl, {
+          position:'absolute', top:'0', bottom:'0', left:'0', width:'45%',
+          background:'linear-gradient(to right, transparent, rgba(255,255,255,0.22), rgba(255,255,255,0.08), transparent)',
+          animation:'btnSheen 2.8s cubic-bezier(.4,0,.6,1) infinite',
+          pointerEvents:'none',
+        });
+        bigBadgeEl.appendChild(sheenEl);
+        const labelEl = ce('span');
+        labelEl.textContent = 'Заказать';
+        bigBadgeEl.appendChild(labelEl);
+        const arrowEl = ce('span');
+        arrowEl.innerHTML = '<svg width="22" height="8" viewBox="0 0 26 10" fill="none" style="display:block;flex-shrink:0"><path d="M0 5h24M20 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/></svg>';
+        bigBadgeEl.appendChild(arrowEl);
+        bigBadgeEl.addEventListener('mouseenter', () => {
+          css(bigBadgeEl, { background:'#292929', transform:'translateY(-2px)', boxShadow:'0 9px 22px rgba(0,0,0,.22)' });
+          sheenEl.style.animationDuration = '1.6s';
+        });
+        bigBadgeEl.addEventListener('mouseleave', () => {
+          css(bigBadgeEl, { background:'#171717', transform:'translateY(0)', boxShadow:'0 6px 16px rgba(0,0,0,.18)' });
+          sheenEl.style.animationDuration = '2.8s';
+        });
+        bigBadgeEl.addEventListener('mousedown', () => {
+          css(bigBadgeEl, { background:'#111', transform:'translateY(0)', boxShadow:'0 3px 8px rgba(0,0,0,.14)' });
+        });
+        bigBadgeEl.addEventListener('mouseup', () => {
+          css(bigBadgeEl, { background:'#292929', transform:'translateY(-2px)', boxShadow:'0 9px 22px rgba(0,0,0,.22)' });
+        });
+        bigBadgeEl.addEventListener('click', () => {
+          document.querySelector('.site-footer')?.scrollIntoView({ behavior:'smooth' });
+          setTimeout(() => {
+            document.querySelectorAll<HTMLElement>('.footer-msg-btn').forEach((b, idx) => {
+              setTimeout(() => {
+                b.animate(
+                  [
+                    { opacity:1, boxShadow:'none' },
+                    { opacity:.5, boxShadow:'none', offset:.18 },
+                    { opacity:1, boxShadow:'0 0 14px rgba(255,255,255,.55)', offset:.36 },
+                    { opacity:.7, boxShadow:'none', offset:.55 },
+                    { opacity:1, boxShadow:'0 0 20px rgba(255,255,255,.6)', offset:.72 },
+                    { opacity:1, boxShadow:'none' },
+                  ],
+                  { duration: 1100, easing:'ease' }
+                );
+              }, idx * 180);
+            });
+          }, 650);
         });
         const bigInfoEl = ce('div');
         css(bigInfoEl, {
           flex:'1', background:'#fff',
           padding: mob ? '12px' : '26px',
-          display:'flex', flexDirection:'column', justifyContent:'flex-end',
+          display:'flex', flexDirection:'column', justifyContent:'flex-start',
         });
         const bigMetaEl = ce('div');
         css(bigMetaEl, {
           display:'flex', alignItems:'center',
           gap: mob ? '6px' : '9px',
-          marginBottom: mob ? '6px' : '12px',
+          marginTop:'auto',
+          marginBottom: mob ? '4px' : '6px',
         });
         const bigDotEl = ce('span');
         css(bigDotEl, { width: mob ? '5px' : '7px', height: mob ? '5px' : '7px', borderRadius:'50%', flexShrink:'0' });
         const bigCatEl = ce('span');
         css(bigCatEl, { fontSize: mob ? '10px' : '14px', color:'#8a8a8a', fontFamily:'Manrope,sans-serif' });
         bigMetaEl.appendChild(bigDotEl); bigMetaEl.appendChild(bigCatEl);
+        const bigModelEl = ce('div');
+        if (mob) {
+          css(bigModelEl, {
+            color:'#8a8a8a',
+            fontSize:'10px',
+            fontWeight:'500', letterSpacing:'.15px',
+            fontFamily:'Manrope,sans-serif',
+            marginBottom:'2px',
+          });
+        } else {
+          css(bigModelEl, {
+            position:'absolute',
+            top:'18px', right:'18px',
+            color:'#161616',
+            fontSize:'12px',
+            fontWeight:'600', letterSpacing:'.15px',
+            zIndex:'3', fontFamily:'Manrope,sans-serif',
+          });
+        }
         const bigTitleEl = ce('div');
         css(bigTitleEl, {
-          fontSize: mob ? '14px' : '22px',
+          fontSize: mob ? '13px' : '18px',
           fontWeight:'700', lineHeight:'1.24',
-          letterSpacing:'-.1px', color:'#161616', fontFamily:'Manrope,sans-serif',
+          letterSpacing:'-.1px', color:'#161616',
+          fontFamily:'Manrope,sans-serif',
+          marginBottom: mob ? '8px' : '14px',
         });
-        bigInfoEl.appendChild(bigMetaEl); bigInfoEl.appendChild(bigTitleEl);
-        bigEl.appendChild(bigImgEl); bigEl.appendChild(bigBadgeEl); bigEl.appendChild(bigInfoEl);
+        if (mob) {
+          bigInfoEl.appendChild(bigModelEl); bigInfoEl.appendChild(bigMetaEl); bigInfoEl.appendChild(bigTitleEl); bigInfoEl.appendChild(bigBadgeEl);
+          bigEl.appendChild(bigImgEl); bigEl.appendChild(bigInfoEl);
+        } else {
+          bigInfoEl.appendChild(bigMetaEl); bigInfoEl.appendChild(bigTitleEl); bigInfoEl.appendChild(bigBadgeEl);
+          bigEl.appendChild(bigImgEl); bigEl.appendChild(bigModelEl); bigEl.appendChild(bigInfoEl);
+        }
 
         cellEl.appendChild(miniEl); cellEl.appendChild(bigEl);
         colEl.appendChild(cellEl);
-        cells.push({ el:cellEl, miniEl, miniImgEl, miniDotEl, miniLabelEl, miniTitleEl, bigEl, bigImgEl, bigDotEl, bigCatEl, bigTitleEl, bigBadgeEl });
+        cells.push({ el:cellEl, miniEl, miniImgEl, miniDotEl, miniLabelEl, miniTitleEl, bigEl, bigImgEl, bigDotEl, bigCatEl, bigTitleEl, bigModelEl, bigBadgeEl });
       }
       slots.push({ el:slotEl, compactEl, compactLbl, stripEl, colEl, cells });
     }
@@ -506,7 +594,8 @@ export default function ProductSlide() {
           cell.bigDotEl.style.background = cat.dot;
           cell.bigCatEl.textContent = cat.label;
           cell.bigTitleEl.textContent = su.title;
-          cell.bigBadgeEl.textContent = `Модель ${String(mod(svp, m) + 1).padStart(2, '0')}`;
+          cell.bigModelEl.textContent = `Модель ${String(mod(svp, m) + 1).padStart(2, '0')}`;
+          /* текст кнопки задан при создании */
         });
       });
     }
@@ -585,6 +674,7 @@ export default function ProductSlide() {
     const mobCenterHalf = 120;
     let psx = 0, psy = 0, tracking = false, capturedId = -1;
     function onTouchStart(e) {
+      if (e.target.closest('button')) return;
       if (Math.abs(e.touches[0].clientX - window.innerWidth / 2) <= mobCenterHalf) {
         e.preventDefault();
       }
@@ -643,6 +733,36 @@ export default function ProductSlide() {
       id="exs-section"
       style={{ position: 'relative', overflow: 'hidden', background: '#fff', touchAction: 'none' }}
     >
+      <div className="exs-heading" style={{
+        position: 'absolute',
+        top: 'clamp(24px, 3.5vh, 48px)',
+        left: 'clamp(24px, 5vw, 80px)',
+        zIndex: 10,
+        pointerEvents: 'none',
+      }}>
+        <div style={{
+          fontFamily: 'Manrope, sans-serif',
+          fontSize: '11px',
+          fontWeight: 400,
+          letterSpacing: '.28em',
+          textTransform: 'uppercase',
+          color: '#8a8782',
+          marginBottom: '10px',
+        }}>
+          Каталог
+        </div>
+        <div style={{
+          fontFamily: 'Manrope, sans-serif',
+          fontWeight: 400,
+          fontSize: 'clamp(22px, 2.2vw, 36px)',
+          letterSpacing: '.01em',
+          textTransform: 'uppercase',
+          color: '#0c0c0d',
+          lineHeight: 1.06,
+        }}>
+          Примеры работ
+        </div>
+      </div>
       <div ref={stageRef} style={{ position: 'absolute', inset: 0, touchAction: 'none' }} />
     </section>
   );

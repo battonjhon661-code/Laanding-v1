@@ -1232,7 +1232,7 @@
     @media (max-width: 900px) {
       .nav__links     { display: none; }
       .nav__phone     { display: none; }
-      .nav__burger    { display: grid; grid-column: 3; justify-self: end; }
+      .nav__burger    { display: none; }
       .vs-grid        { grid-template-columns: 1fr; gap: 12px; }
       .vs-section     { padding: 80px 0; }
       .vs-wrap        { padding: 0 20px; }
@@ -2299,6 +2299,9 @@
       height: 65vh;
       touch-action: none;
     }
+    .exs-heading {
+      display: none;
+    }
   }
 
   .exs-photo-item {
@@ -2373,8 +2376,8 @@
     .mat-track { padding: 0 8px; }
     .mat-cell { flex: 0 0 72%; max-width: 220px; }
 
-    /* Mirror section — centered block on mobile */
-    .mirror-section { min-height: auto; }
+    /* Mirror section — full-height on mobile, text scaled down */
+    .mirror-section { min-height: 100svh; }
     .mirror-text .section__title { font-size: clamp(19px, 5.6vw, 27px); }
     .mirror-section::before {
       background-image: url('/assets/background-5-mobile.webp');
