@@ -26,19 +26,29 @@ const CATS = [
     { title:'В профиле',            img:'/assets/examples/stairs/3_profile.webp' },
   ]},
   { label:'Перегородки', dot:'#3b82f6', cover:'/assets/boxes/4_partition-Photoroom.webp', subs:[
-    { title:'Стеклянная перегородка', img:'/assets/boxes/4_partition-Photoroom.webp' },
+    { title:'Цельностеклянная', img:'/assets/examples/partitions/1_cs.webp' },
+    { title:'На каркасе',       img:'/assets/examples/partitions/2_karkas.webp' },
+    { title:'Раздвижная',       img:'/assets/examples/partitions/3_razdvizhnaya.webp' },
   ]},
   { label:'Лофт', dot:'#ef4444', cover:'/assets/boxes/5_loft-Photoroom.webp', subs:[
-    { title:'Лофт-перегородка',    img:'/assets/boxes/5_loft-Photoroom.webp' },
+    { title:'Арочная',    img:'/assets/examples/lofts/1_arochnaya.webp' },
+    { title:'Складная',   img:'/assets/examples/lofts/2_skladnaya.webp' },
+    { title:'Угловая',    img:'/assets/examples/lofts/3_uglovaya.webp' },
+    { title:'Прямая',     img:'/assets/examples/lofts/4_pryamaya.webp' },
+    { title:'Раздвижная', img:'/assets/examples/lofts/5_razdvizhnaya.webp' },
   ]},
   { label:'Панели', dot:'#10b981', cover:'/assets/boxes/8_panels-Photoroom.webp', subs:[
-    { title:'Стеклянная панель',   img:'/assets/boxes/8_panels-Photoroom.webp' },
+    { title:'Прихожая',    img:'/assets/examples/panels/1_prihojaya.webp' },
+    { title:'Прикроватная', img:'/assets/examples/panels/2_prikrovatnaya.webp' },
   ]},
   { label:'Козырьки', dot:'#f59e0b', cover:'/assets/boxes/9_visors-Photoroom.webp', subs:[
-    { title:'Стеклянный козырёк',  img:'/assets/boxes/9_visors-Photoroom.webp' },
+    { title:'Навесная', img:'/assets/examples/visors/1_navesnaya.webp' },
+    { title:'В профиле', img:'/assets/examples/visors/2_profil.webp' },
   ]},
   { label:'Полки', dot:'#8b5cf6', cover:'/assets/boxes/12_shelves-Photoroom.webp', subs:[
-    { title:'Стеклянная полка',    img:'/assets/boxes/12_shelves-Photoroom.webp' },
+    { title:'Встроенные с подсветкой', img:'/assets/examples/shelves/1_vstroennie_s_podsvetkoy.webp' },
+    { title:'Полки в нише',            img:'/assets/examples/shelves/2_polki_v_nishe.webp' },
+    { title:'На больших держателях',   img:'/assets/examples/shelves/3_bolshie_derjateli.webp' },
   ]},
 ];
 
