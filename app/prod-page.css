@@ -2296,13 +2296,14 @@
     .exs-prod-section {
       width: 100%;
       margin-left: 0;
-      height: 80vh;
+      height: 77vh;
       touch-action: none;
     }
     .exs-stage-area {
       top: 80px !important;
     }
     .exs-heading {
+      top: 50px !important;
       left: 0 !important;
       right: 0;
       text-align: center;
