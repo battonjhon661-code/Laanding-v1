@@ -98,32 +98,32 @@ const CATALOG: Record<Tab, Item[]> = {
     { name: "Волновое",             preview: `${G}26_Wave_Glass.webp`,                          video: `${G}26_Wave_Glass.webm` },
   ],
   ТРИПЛЕКС: [
-    { name: "Вариант 1", preview: "/wardrobe/t1.png" },
-    { name: "Вариант 2", preview: "/wardrobe/t2.png" },
-    { name: "Вариант 3", preview: "/wardrobe/t3.png" },
-    { name: "Вариант 4", preview: "/wardrobe/t4.png" },
-    { name: "Вариант 5", preview: "/wardrobe/t5.png" },
+    { name: "Вариант 1", preview: "/wardrobe/t1.webp" },
+    { name: "Вариант 2", preview: "/wardrobe/t2.webp" },
+    { name: "Вариант 3", preview: "/wardrobe/t3.webp" },
+    { name: "Вариант 4", preview: "/wardrobe/t4.webp" },
+    { name: "Вариант 5", preview: "/wardrobe/t5.webp" },
   ],
   УСЛУГИ: [
-    { name: "Порезка",              preview: `${W}1_glass_cutting.png` },
-    { name: "Шлифовка",             preview: `${W}2_edge_grinding.png` },
-    { name: "Полировка",            preview: `${W}3_polished_edge.png` },
-    { name: "Фаска",                preview: `${W}4_beveled_mirror.png` },
-    { name: "Сверловка",            preview: `${W}5_glass_drilling.png` },
-    { name: "Зенковка",             preview: `${W}6_hole_countersinking.png` },
-    { name: "Триплекс",             preview: `${W}7_laminated_glass.png` },
-    { name: "Декор. скос",          preview: `${W}8_decorative_bevel.png` },
-    { name: "Внутр. вырезы",        preview: `${W}9_internal_cutouts.png` },
-    { name: "Вырезы под розетки",   preview: `${W}10_socket_cutouts.png` },
-    { name: "Внешние вырезы",       preview: `${W}11_external_cutouts.png` },
-    { name: "Закалка",              preview: `${W}12_tempered_glass.png` },
-    { name: "Алмаз. гравировка",    preview: `${W}13_diamond_engraving.png` },
-    { name: "Пескоструйная",        preview: `${W}14_sandblasted_glass.png` },
-    { name: "Мойка стекла",         preview: `${W}15_glass_washing.png` },
-    { name: "Окраска",              preview: `${W}16_glass_painting.png` },
-    { name: "Фотопечать",           preview: `${W}17_glass_photo_printing.png` },
-    { name: "УФ-склейка",           preview: `${W}18_uv_glass_bonding.png` },
-    { name: "Безопасный скос",      preview: `${W}19_safety_arrised_edge.png` },
+    { name: "Порезка",              preview: `${W}1_glass_cutting.webp` },
+    { name: "Шлифовка",             preview: `${W}2_edge_grinding.webp` },
+    { name: "Полировка",            preview: `${W}3_polished_edge.webp` },
+    { name: "Фаска",                preview: `${W}4_beveled_mirror.webp` },
+    { name: "Сверловка",            preview: `${W}5_glass_drilling.webp` },
+    { name: "Зенковка",             preview: `${W}6_hole_countersinking.webp` },
+    { name: "Триплекс",             preview: `${W}7_laminated_glass.webp` },
+    { name: "Декор. скос",          preview: `${W}8_decorative_bevel.webp` },
+    { name: "Внутр. вырезы",        preview: `${W}9_internal_cutouts.webp` },
+    { name: "Вырезы под розетки",   preview: `${W}10_socket_cutouts.webp` },
+    { name: "Внешние вырезы",       preview: `${W}11_external_cutouts.webp` },
+    { name: "Закалка",              preview: `${W}12_tempered_glass.webp` },
+    { name: "Алмаз. гравировка",    preview: `${W}13_diamond_engraving.webp` },
+    { name: "Пескоструйная",        preview: `${W}14_sandblasted_glass.webp` },
+    { name: "Мойка стекла",         preview: `${W}15_glass_washing.webp` },
+    { name: "Окраска",              preview: `${W}16_glass_painting.webp` },
+    { name: "Фотопечать",           preview: `${W}17_glass_photo_printing.webp` },
+    { name: "УФ-склейка",           preview: `${W}18_uv_glass_bonding.webp` },
+    { name: "Безопасный скос",      preview: `${W}19_safety_arrised_edge.webp` },
   ],
 };
 
@@ -425,8 +425,8 @@ function CardItem({ item, isActive, onClick, showNew }: { item: Item; isActive: 
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       )}
       {showNew && (
-        <div style={{ position: "absolute", top: 10, right: 10, padding: "3px 8px", borderRadius: 6, background: "rgba(244,241,236,0.92)", backdropFilter: "blur(4px)", pointerEvents: "none" }}>
-          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".18em", textTransform: "uppercase", color: "#0a0b0a" }}>
+        <div style={{ position: "absolute", top: 10, right: 10, padding: "4px 8px", borderRadius: 6, background: "rgba(244,241,236,0.92)", backdropFilter: "blur(4px)", pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontFamily: "'Manrope', sans-serif", fontSize: 8, fontWeight: 900, letterSpacing: ".18em", textTransform: "uppercase", color: "#0a0b0a", lineHeight: 1 }}>
             Новый
           </span>
         </div>

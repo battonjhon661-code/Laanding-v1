@@ -4,41 +4,41 @@
 import { useEffect, useRef } from 'react';
 
 const CATS = [
-  { label:'Душевые', dot:'#0d9488', cover:'/assets/boxes/1_shower_box-Photoroom.png', subs:[
-    { title:'Дверная',            img:'/assets/examples/shower_room/1_door.png' },
-    { title:'Угловая (2 стекла)', img:'/assets/examples/shower_room/2_angle_2.png' },
-    { title:'Угловая (3 стекла)', img:'/assets/examples/shower_room/3_angle_3.png' },
-    { title:'Складная',           img:'/assets/examples/shower_room/4_collapsible.png' },
-    { title:'Трапеция',           img:'/assets/examples/shower_room/5_trapezoid.png' },
-    { title:'Т-образная',         img:'/assets/examples/shower_room/6_T-type.png' },
+  { label:'Душевые', dot:'#0d9488', cover:'/assets/boxes/1_shower_box-Photoroom.webp', subs:[
+    { title:'Дверная',            img:'/assets/examples/shower_room/1_door.webp' },
+    { title:'Угловая (2 стекла)', img:'/assets/examples/shower_room/2_angle_2.webp' },
+    { title:'Угловая (3 стекла)', img:'/assets/examples/shower_room/3_angle_3.webp' },
+    { title:'Складная',           img:'/assets/examples/shower_room/4_collapsible.webp' },
+    { title:'Трапеция',           img:'/assets/examples/shower_room/5_trapezoid.webp' },
+    { title:'Т-образная',         img:'/assets/examples/shower_room/6_T-type.webp' },
   ]},
-  { label:'Зеркала', dot:'#a855f7', cover:'/assets/boxes/2_mirror_box-Photoroom.png', subs:[
-    { title:'Круглое',            img:'/assets/examples/mirrors_light/1_circle.png' },
-    { title:'Г-образное',         img:'/assets/examples/mirrors_light/2_R-type.png' },
-    { title:'Овальное',           img:'/assets/examples/mirrors_light/3_oval.png' },
-    { title:'Эллипс',             img:'/assets/examples/mirrors_light/4_ellipse.png' },
-    { title:'Прямоугольное',      img:'/assets/examples/mirrors_light/5_square.png' },
-    { title:'Арочное',            img:'/assets/examples/mirrors_light/6_arch.png' },
+  { label:'Зеркала', dot:'#a855f7', cover:'/assets/boxes/2_mirror_box-Photoroom.webp', subs:[
+    { title:'Круглое',            img:'/assets/examples/mirrors_light/1_circle.webp' },
+    { title:'Г-образное',         img:'/assets/examples/mirrors_light/2_R-type.webp' },
+    { title:'Овальное',           img:'/assets/examples/mirrors_light/3_oval.webp' },
+    { title:'Эллипс',             img:'/assets/examples/mirrors_light/4_ellipse.webp' },
+    { title:'Прямоугольное',      img:'/assets/examples/mirrors_light/5_square.webp' },
+    { title:'Арочное',            img:'/assets/examples/mirrors_light/6_arch.webp' },
   ]},
-  { label:'Ограждения', dot:'#d97706', cover:'/assets/boxes/3_stairs_box-Photoroom.png', subs:[
-    { title:'На точечных фитингах', img:'/assets/examples/stairs/1_points.png' },
-    { title:'На стойках',           img:'/assets/examples/stairs/2_racks.png' },
-    { title:'В профиле',            img:'/assets/examples/stairs/3_profile.png' },
+  { label:'Ограждения', dot:'#d97706', cover:'/assets/boxes/3_stairs_box-Photoroom.webp', subs:[
+    { title:'На точечных фитингах', img:'/assets/examples/stairs/1_points.webp' },
+    { title:'На стойках',           img:'/assets/examples/stairs/2_racks.webp' },
+    { title:'В профиле',            img:'/assets/examples/stairs/3_profile.webp' },
   ]},
-  { label:'Перегородки', dot:'#3b82f6', cover:'/assets/boxes/4_partition-Photoroom.png', subs:[
-    { title:'Стеклянная перегородка', img:'/assets/boxes/4_partition-Photoroom.png' },
+  { label:'Перегородки', dot:'#3b82f6', cover:'/assets/boxes/4_partition-Photoroom.webp', subs:[
+    { title:'Стеклянная перегородка', img:'/assets/boxes/4_partition-Photoroom.webp' },
   ]},
-  { label:'Лофт', dot:'#ef4444', cover:'/assets/boxes/5_loft-Photoroom.png', subs:[
-    { title:'Лофт-перегородка',    img:'/assets/boxes/5_loft-Photoroom.png' },
+  { label:'Лофт', dot:'#ef4444', cover:'/assets/boxes/5_loft-Photoroom.webp', subs:[
+    { title:'Лофт-перегородка',    img:'/assets/boxes/5_loft-Photoroom.webp' },
   ]},
-  { label:'Панели', dot:'#10b981', cover:'/assets/boxes/8_panels-Photoroom.png', subs:[
-    { title:'Стеклянная панель',   img:'/assets/boxes/8_panels-Photoroom.png' },
+  { label:'Панели', dot:'#10b981', cover:'/assets/boxes/8_panels-Photoroom.webp', subs:[
+    { title:'Стеклянная панель',   img:'/assets/boxes/8_panels-Photoroom.webp' },
   ]},
-  { label:'Козырьки', dot:'#f59e0b', cover:'/assets/boxes/9_visors-Photoroom.png', subs:[
-    { title:'Стеклянный козырёк',  img:'/assets/boxes/9_visors-Photoroom.png' },
+  { label:'Козырьки', dot:'#f59e0b', cover:'/assets/boxes/9_visors-Photoroom.webp', subs:[
+    { title:'Стеклянный козырёк',  img:'/assets/boxes/9_visors-Photoroom.webp' },
   ]},
-  { label:'Полки', dot:'#8b5cf6', cover:'/assets/boxes/12_shelves-Photoroom.png', subs:[
-    { title:'Стеклянная полка',    img:'/assets/boxes/12_shelves-Photoroom.png' },
+  { label:'Полки', dot:'#8b5cf6', cover:'/assets/boxes/12_shelves-Photoroom.webp', subs:[
+    { title:'Стеклянная полка',    img:'/assets/boxes/12_shelves-Photoroom.webp' },
   ]},
 ];
 

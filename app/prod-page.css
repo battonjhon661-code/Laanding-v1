@@ -254,7 +254,7 @@
     .hero {
       height: 100vh;
       width: 100%;
-      background: url('/assets/background.png') center center / cover no-repeat;
+      background: url('/assets/background.webp') center center / cover no-repeat;
       position: relative;
       z-index: 1;
     }
@@ -508,7 +508,7 @@
     }
     #slide2 {
       height: 110vh;
-      background: url('/assets/background-second-0.png') center center / cover no-repeat;
+      background: url('/assets/background-second-0.webp') center center / cover no-repeat;
       display: flex;
       align-items: center;
       padding-left: 15%;
@@ -521,7 +521,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: url('/assets/background-second.png') center center / cover no-repeat;
+      background: url('/assets/background-second.webp') center center / cover no-repeat;
       opacity: 0;
       transition: opacity 1.6s ease;
       z-index: 0;
@@ -1155,7 +1155,7 @@
       content: "";
       position: absolute;
       inset: 0;
-      background: url('/assets/background-5.png') center center / cover no-repeat;
+      background: url('/assets/background-5.webp') center center / cover no-repeat;
       pointer-events: none;
       opacity: 1;
     }
@@ -1968,7 +1968,7 @@
   /* ─── Block 7: Card Scatter ──────────────────────────────── */
   .cstack-stage {
     height: 100vh;
-    background: #f4f3ef url('/assets/123.png') center center / cover no-repeat;
+    background: #f4f3ef url('/assets/123.webp') center center / cover no-repeat;
     overflow: hidden;
   }
   .cstack-sticky {
@@ -2346,7 +2346,7 @@
     .mirror-section { min-height: auto; }
     .mirror-text .section__title { font-size: clamp(19px, 5.6vw, 27px); }
     .mirror-section::before {
-      background-image: url('/assets/background-5-mobile.png');
+      background-image: url('/assets/background-5-mobile.webp');
       opacity: 1;
     }
     .mirror-section.mirror-visible::before { animation: none; opacity: 1; }
