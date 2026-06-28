@@ -36,5 +36,5 @@ jobs:
             set ftp:ssl-allow no;
             set ftp:passive-mode off;
             open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }};
-            mirror --reverse --verbose ./out/ /domains/laanding-v1.ru/public_html/;
+            mirror --reverse --verbose --exclude '\.(png|jpg|jpeg|webp|webm|mp4|svg|ico)$' ./out/ /domains/laanding-v1.ru/public_html/;
           "
