@@ -1034,7 +1034,7 @@ export function initProdScripts(): void {
     };
 
     function initDesktop() {
-      var STEP = 540, VSTEP = 310, WIN = 2, BUCKET = 5;
+      var STEP = 540, VSTEP = 310, WIN = 1, BUCKET = 3;
       var N = CATS.length;
       var state = { active: 0, sub: 0 };
       var locked = false;

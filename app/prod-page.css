@@ -2316,6 +2316,7 @@
     background-position: center;
     background-repeat: no-repeat;
     transition: transform .52s cubic-bezier(.22,1,.36,1), opacity .36s ease;
+    will-change: transform, opacity;
   }
   .exs-photo-item.state-current { transform: translateY(0); opacity: 1; }
   .exs-photo-item.state-above   { transform: translateY(-100%); opacity: 0; }

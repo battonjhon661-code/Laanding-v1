@@ -169,8 +169,9 @@ export default function WardrobeSection() {
   const tabRefs         = useRef<(HTMLButtonElement | null)[]>([]);
   const [ind, setInd]   = useState<{ left: number; width: number } | null>(null);
 
-  const wrapRef  = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
+  const wrapRef   = useRef<HTMLDivElement>(null);
+  const trackRef  = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
   const drag       = useRef({ active: false, startX: 0, startTx: 0, velX: 0, lastX: 0, lastT: 0 });
   const txRef      = useRef(0);
@@ -298,6 +299,23 @@ export default function WardrobeSection() {
     return () => wrap.removeEventListener("wheel", onWheel);
   }, [snapTo, count]);
 
+  // ── Slide down from under hero ───────────────────────────────────────────────
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+    section.style.transform = 'translateY(-64px)';
+    section.style.opacity = '0';
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      section.style.transition = 'transform 2s cubic-bezier(0.2,0.8,0.2,1), opacity 1.4s ease';
+      section.style.transform = 'translateY(0)';
+      section.style.opacity = '1';
+      obs.disconnect();
+    }, { threshold: 0.45 });
+    obs.observe(section);
+    return () => obs.disconnect();
+  }, []);
+
   // ── Tab pill indicator ────────────────────────────────────────────────────────
 
   useLayoutEffect(() => {
@@ -365,7 +383,7 @@ export default function WardrobeSection() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <section style={{ position: "relative", zIndex: 0, background: "#0a0b0a", overflow: "hidden", paddingBottom: 32, marginTop: -24, paddingTop: 24 }}>
+    <section ref={sectionRef} style={{ position: "relative", zIndex: 0, background: "#0a0b0a", overflow: "hidden", paddingBottom: 32, marginTop: -24, paddingTop: 24 }}>
       <style>{`.wrd-tabs::-webkit-scrollbar { display: none; }`}</style>
 
       {/* Top shadow */}
@@ -444,7 +462,7 @@ export default function WardrobeSection() {
 function CardItem({ item, isActive, onClick, showNew }: { item: Item; isActive: boolean; onClick: () => void; showNew?: boolean }) {
   return (
     <div onClick={onClick} style={{ flexShrink: 0, width: CARD_W, height: 248, borderRadius: 16, overflow: "hidden", position: "relative", background: "#111", cursor: "pointer", transform: isActive ? "scale(1)" : "scale(0.91)", opacity: isActive ? 1 : 0.52, boxShadow: isActive ? "0 8px 48px rgba(0,0,0,0.75)" : "0 2px 12px rgba(0,0,0,0.35)", transition: "transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s ease, box-shadow .35s ease" }}>
-      <img src={item.preview} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      <img src={item.preview} alt={item.name} loading={isActive ? "eager" : "lazy"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       {isActive && item.video && (
         <video key={item.video} src={item.video} muted autoPlay loop playsInline
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
