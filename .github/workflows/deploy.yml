@@ -25,17 +25,7 @@ jobs:
 
       - name: Create .htaccess for Apache
         run: |
-          cat > out/.htaccess << 'EOF'
-          Options -MultiViews
-          RewriteEngine On
-          RewriteBase /
-
-          RewriteCond %{REQUEST_FILENAME} -f [OR]
-          RewriteCond %{REQUEST_FILENAME} -d
-          RewriteRule ^ - [L]
-
-          RewriteRule ^ /index.html [L]
-          EOF
+          printf 'Options -MultiViews\nRewriteEngine On\nRewriteBase /\n\nRewriteCond %%{REQUEST_FILENAME} -f [OR]\nRewriteCond %%{REQUEST_FILENAME} -d\nRewriteRule ^ - [L]\n\nRewriteRule ^ /index.html [L]\n' > out/.htaccess
 
       - name: Install lftp
         run: sudo apt-get install -y lftp
@@ -46,5 +36,5 @@ jobs:
             set ftp:ssl-allow no;
             set ftp:passive-mode off;
             open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }};
-            mirror --reverse --verbose ./out/ /public_html/;
+            mirror --reverse --verbose ./out/ /domains/laanding-v1.ru/public_html/;
           "
