@@ -185,13 +185,12 @@ export default function WardrobeSection() {
   const items = CATALOG[activeTab];
   const count = items.length;
 
-  // 5 copies: [g-left2 | g-left1 | MIDDLE | g-right1 | g-right2]
-  // MIDDLE items are at extended indices 2*count … 3*count-1.
-  // Buffer of 2*count items on each side means even a fast continuous swipe
-  // burst can't outrun the recenter and reach the edge of the rendered array —
-  // which is what made the 3-copy carousel appear to "jump back to item 1".
+  // 3 copies: [guard-left | MIDDLE | guard-right]
+  // MIDDLE items are at extended indices count … 2*count-1.
+  // 1-copy buffer on each side is enough for normal swiping;
+  // resetRef recenters after each swipe burst so the guard zones stay fresh.
   const extItems = useMemo(
-    () => [...items, ...items, ...items, ...items, ...items],
+    () => [...items, ...items, ...items],
     [items]
   );
 
@@ -215,11 +214,11 @@ export default function WardrobeSection() {
   // a jump. Formula: shift the track so the middle-copy card sits at the exact
   // screen position the guard-zone card occupied: teleportTx = current + (clamped - midIdx)*STRIDE.
   const snapTo = useCallback((extIdx: number, animate: boolean) => {
-    const clamped = Math.max(0, Math.min(5 * count - 1, extIdx));
+    const clamped = Math.max(0, Math.min(3 * count - 1, extIdx));
     const realIdx = ((clamped % count) + count) % count;
-    const midIdx  = 2 * count + realIdx; // equivalent card in the middle copy
+    const midIdx  = count + realIdx; // equivalent card in the middle copy
 
-    if (animate && (clamped < 2 * count || clamped >= 3 * count)) {
+    if (animate && (clamped < count || clamped >= 2 * count)) {
       const teleportTx = txRef.current + (clamped - midIdx) * STRIDE;
       setTx(teleportTx, false);
       requestAnimationFrame(() => {
@@ -235,7 +234,7 @@ export default function WardrobeSection() {
   // ── Init on tab change ────────────────────────────────────────────────────────
 
   useLayoutEffect(() => {
-    const midStart = 2 * count; // first item of middle copy
+    const midStart = count; // first item of middle copy
     setTx(txForIdx(midStart), false);
     setActiveExtIdx(midStart);
   }, [activeTab, count, setTx, txForIdx]);
@@ -254,8 +253,8 @@ export default function WardrobeSection() {
       resetRef.current = null;
       if (drag.current.active) return; // don't reset mid-drag
       const cur = activeExtIdxRef.current;
-      const midStart = 2 * count;
-      const midEnd   = 3 * count;
+      const midStart = count;
+      const midEnd   = 2 * count;
       if (cur < midStart || cur >= midEnd) {
         const realIdx = ((cur % count) + count) % count;
         const newIdx  = midStart + realIdx;
@@ -283,7 +282,7 @@ export default function WardrobeSection() {
       track.style.transform = `translateX(${newTx}px)`;
 
       const vwNow = wrapRef.current?.clientWidth ?? 375;
-      const nearest = Math.max(0, Math.min(5 * count - 1,
+      const nearest = Math.max(0, Math.min(3 * count - 1,
         Math.round((vwNow / 2 - CARD_W / 2 - newTx) / STRIDE)));
       setActiveExtIdx(prev => prev === nearest ? prev : nearest);
 
@@ -352,7 +351,7 @@ export default function WardrobeSection() {
     txRef.current = newTx;
     if (trackRef.current) trackRef.current.style.transform = `translateX(${newTx}px)`;
     const vw = wrapRef.current?.clientWidth ?? 375;
-    const nearest = Math.max(0, Math.min(5 * count - 1,
+    const nearest = Math.max(0, Math.min(3 * count - 1,
       Math.round((vw / 2 - CARD_W / 2 - newTx) / STRIDE)));
     setActiveExtIdx(prev => prev === nearest ? prev : nearest);
     const dt = e.timeStamp - d.lastT;
@@ -375,7 +374,7 @@ export default function WardrobeSection() {
   // ── Card click / dot click ────────────────────────────────────────────────────
 
   const scrollToReal = useCallback((realIdx: number) => {
-    snapTo(2 * count + realIdx, true);
+    snapTo(count + realIdx, true);
   }, [count, snapTo]);
 
   const realActiveIdx = activeExtIdx % count;
@@ -463,7 +462,7 @@ function CardItem({ item, isActive, onClick, showNew }: { item: Item; isActive: 
   return (
     <div onClick={onClick} style={{ flexShrink: 0, width: CARD_W, height: 248, borderRadius: 16, overflow: "hidden", position: "relative", background: "#111", cursor: "pointer", transform: isActive ? "scale(1)" : "scale(0.91)", opacity: isActive ? 1 : 0.52, boxShadow: isActive ? "0 8px 48px rgba(0,0,0,0.75)" : "0 2px 12px rgba(0,0,0,0.35)", transition: "transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s ease, box-shadow .35s ease" }}>
       <img src={item.preview} alt={item.name} loading={isActive ? "eager" : "lazy"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-      {isActive && item.video && (
+      {isActive && item.video && !isMobile && (
         <video key={item.video} src={item.video} muted autoPlay loop playsInline
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       )}
