@@ -4,9 +4,9 @@ import ProdPage from "./components/ProdPage";
 
 export default function Home() {
   return (
-    <main>
+    <main id="hero">
       <ScrollVideoHero />
-      <div className="wardrobe-mobile-only">
+      <div className="wardrobe-mobile-only" id="materials">
         <WardrobeSection />
       </div>
       <ProdPage />
