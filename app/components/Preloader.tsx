@@ -9,7 +9,7 @@ export default function Preloader({ visible, loadPct }: { visible: boolean; load
       style={{ opacity: visible ? 1 : 0, pointerEvents: visible ? "auto" : "none" }}
     >
       <div className="vg-logo-stack">
-        <img src="/logo.png" alt="VIP GLASS" className="vg-logo-img" />
+        <img src="/logo.webp" alt="VIP GLASS" className="vg-logo-img" />
         <div className="vg-progress-track">
           <div className="vg-progress-fill" style={{ width: `${loadPct}%` }} />
         </div>
