@@ -763,7 +763,7 @@ export default function ProductSlide() {
           Примеры работ
         </div>
       </div>
-      <div ref={stageRef} style={{ position: 'absolute', inset: 0, touchAction: 'none' }} />
+      <div ref={stageRef} className="exs-stage-area" style={{ position: 'absolute', inset: 0, touchAction: 'none' }} />
     </section>
   );
 }
