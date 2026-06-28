@@ -1112,12 +1112,19 @@ export function initProdScripts(): void {
           var bigImgEl = ce('div');
           css(bigImgEl, { width:'396px', height:'100%', flexShrink:0, backgroundSize:'cover', backgroundPosition:'center' });
           var bigBadgeEl = ce('button');
-          css(bigBadgeEl, { position:'absolute', top:'18px', right:'18px', background:'#141414', color:'#fff', fontSize:'14px', fontWeight:600, letterSpacing:'.2px', padding:'9px 18px', borderRadius:'11px', zIndex:2, fontFamily:'Manrope,sans-serif', border:'1.5px solid rgba(255,255,255,.18)', cursor:'pointer', transition:'background .22s, transform .18s, box-shadow .22s, border-color .22s', outline:'none' });
+          css(bigBadgeEl, { position:'absolute', top:'18px', right:'18px', display:'inline-flex', alignItems:'center', gap:'12px', padding:'0 20px', height:'44px', background:'#171717', color:'#fff', fontSize:'11px', fontWeight:650, letterSpacing:'.02em', whiteSpace:'nowrap', borderRadius:'14px', border:'1px solid #171717', cursor:'pointer', fontFamily:'Manrope,sans-serif', zIndex:2, outline:'none', transition:'background .16s ease, transform .16s ease, box-shadow .16s ease', boxShadow:'0 6px 16px rgba(0,0,0,.18)' });
+          bigBadgeEl.innerHTML = 'Заказать<svg width="22" height="8" viewBox="0 0 26 10" fill="none" style="flex-shrink:0"><path d="M0 5h24M20 1l4 4-4 4" stroke="currentColor" stroke-width="1.4"/></svg>';
           bigBadgeEl.addEventListener('mouseenter', function() {
-            css(bigBadgeEl, { background:'#2a2a2a', transform:'scale(1.06)', boxShadow:'0 4px 18px rgba(0,0,0,.35)', borderColor:'rgba(255,255,255,.48)' });
+            css(bigBadgeEl, { background:'#292929', transform:'translateY(-2px)', boxShadow:'0 9px 22px rgba(0,0,0,.22)' });
           });
           bigBadgeEl.addEventListener('mouseleave', function() {
-            css(bigBadgeEl, { background:'#141414', transform:'scale(1)', boxShadow:'none', borderColor:'rgba(255,255,255,.18)' });
+            css(bigBadgeEl, { background:'#171717', transform:'translateY(0)', boxShadow:'0 6px 16px rgba(0,0,0,.18)' });
+          });
+          bigBadgeEl.addEventListener('mousedown', function() {
+            css(bigBadgeEl, { background:'#111', transform:'translateY(0)', boxShadow:'0 3px 8px rgba(0,0,0,.14)' });
+          });
+          bigBadgeEl.addEventListener('mouseup', function() {
+            css(bigBadgeEl, { background:'#292929', transform:'translateY(-2px)', boxShadow:'0 9px 22px rgba(0,0,0,.22)' });
           });
           bigBadgeEl.addEventListener('click', function() {
             var footer = document.querySelector('.site-footer') || document.querySelector('footer');
@@ -1211,7 +1218,7 @@ export function initProdScripts(): void {
             cell.bigDotEl.style.background = cat.dot;
             cell.bigCatEl.textContent = cat.label;
             cell.bigTitleEl.textContent = su.title;
-            cell.bigBadgeEl.textContent = 'Заказать';
+            /* текст кнопки задан при создании через innerHTML */
           });
         });
       }
