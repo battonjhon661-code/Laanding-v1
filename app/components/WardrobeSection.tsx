@@ -98,11 +98,36 @@ const CATALOG: Record<Tab, Item[]> = {
     { name: "Волновое",             preview: `${G}26_Wave_Glass.webp`,                          video: `${G}26_Wave_Glass.webm` },
   ],
   ТРИПЛЕКС: [
-    { name: "Вариант 1", preview: "/wardrobe/t1.webp" },
-    { name: "Вариант 2", preview: "/wardrobe/t2.webp" },
-    { name: "Вариант 3", preview: "/wardrobe/t3.webp" },
-    { name: "Вариант 4", preview: "/wardrobe/t4.webp" },
-    { name: "Вариант 5", preview: "/wardrobe/t5.webp" },
+    { name: "Прозрачный",         preview: "/wardrobe/triplex/01_clear.webp" },
+    { name: "Тёмно-синий",        preview: "/wardrobe/triplex/02_dark_navy.webp" },
+    { name: "Серый",              preview: "/wardrobe/triplex/03_gray.webp" },
+    { name: "Бронзовый",          preview: "/wardrobe/triplex/04_bronze_recreated.webp" },
+    { name: "Королевский синий",  preview: "/wardrobe/triplex/05_royal_blue.webp" },
+    { name: "Бирюзовый",          preview: "/wardrobe/triplex/06_turquoise.webp" },
+    { name: "Светло-бирюзовый",   preview: "/wardrobe/triplex/07_light_aqua.webp" },
+    { name: "Зелёный",            preview: "/wardrobe/triplex/08_green.webp" },
+    { name: "Жёлтый",             preview: "/wardrobe/triplex/09_yellow.webp" },
+    { name: "Оранжевый",          preview: "/wardrobe/triplex/10_orange.webp" },
+    { name: "Прозрачный мат.",    preview: "/wardrobe/triplex/11_clear.webp" },
+    { name: "Тёмно-синий мат.",   preview: "/wardrobe/triplex/12_dark_navy.webp" },
+    { name: "Серый мат.",         preview: "/wardrobe/triplex/13_gray.webp" },
+    { name: "Бронзовый мат.",     preview: "/wardrobe/triplex/14_bronze.webp" },
+    { name: "Синий мат.",         preview: "/wardrobe/triplex/15_royal_blue.webp" },
+    { name: "Голубой мат.",       preview: "/wardrobe/triplex/16_cyan.webp" },
+    { name: "Аква мат.",          preview: "/wardrobe/triplex/17_light_aqua.webp" },
+    { name: "Зелёный мат.",       preview: "/wardrobe/triplex/18_green.webp" },
+    { name: "Жёлтый мат.",        preview: "/wardrobe/triplex/19_yellow.webp" },
+    { name: "Оранжевый мат.",     preview: "/wardrobe/triplex/20_orange.webp" },
+    { name: "Синий глубокий",     preview: "/wardrobe/triplex/21_dark_navy.webp" },
+    { name: "Маджента",           preview: "/wardrobe/triplex/22_magenta.webp" },
+    { name: "Фуксия",             preview: "/wardrobe/triplex/23_fuchsia.webp" },
+    { name: "Сине-серый",         preview: "/wardrobe/triplex/24_slate_blue.webp" },
+    { name: "Ультрасиний",        preview: "/wardrobe/triplex/25_royal_blue.webp" },
+    { name: "Бледно-розовый",     preview: "/wardrobe/triplex/26_pale_pink.webp" },
+    { name: "Розовый",            preview: "/wardrobe/triplex/27_rose_pink.webp" },
+    { name: "Малиновый",          preview: "/wardrobe/triplex/28_raspberry.webp" },
+    { name: "Тёмно-красный",      preview: "/wardrobe/triplex/29_crimson.webp" },
+    { name: "Рубиновый",          preview: "/wardrobe/triplex/30_ruby_red.webp" },
   ],
   УСЛУГИ: [
     { name: "Порезка",              preview: `${W}1_glass_cutting.webp` },
@@ -347,7 +372,7 @@ export default function WardrobeSection() {
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 140, background: "linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.55) 30%, rgba(0,0,0,0.2) 65%, transparent 100%)", zIndex: 3, pointerEvents: "none" }} />
 
       {/* Background */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "url(/back-2.png)", backgroundSize: "cover", backgroundPosition: "center 30%", opacity: 0.62 }} />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "url(/back-2.webp)", backgroundSize: "cover", backgroundPosition: "center 30%", opacity: 0.62 }} />
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.32) 100%)" }} />
 
       {/* Header */}
