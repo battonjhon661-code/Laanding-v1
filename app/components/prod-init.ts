@@ -1280,11 +1280,12 @@ export function initProdScripts(): void {
     var styleEl = document.createElement('style');
     styleEl.textContent = [
       '@keyframes footerBtnFlash{',
-      '  0%  {box-shadow:0 0 0 0 rgba(255,255,255,.8);transform:scale(1)}',
-      '  35% {box-shadow:0 0 20px 6px rgba(255,255,255,.22);transform:scale(1.07)}',
-      '  100%{box-shadow:0 0 0 0 rgba(255,255,255,0);transform:scale(1)}',
+      '  0%  {box-shadow:0 0 0 0 rgba(255,255,255,.95),0 0 0 0 rgba(255,255,255,.35);transform:scale(1);border-color:rgba(255,255,255,.9)}',
+      '  22% {box-shadow:0 0 18px 4px rgba(255,255,255,.55),0 0 0 10px rgba(255,255,255,.1);transform:scale(1.11);border-color:rgba(255,255,255,.85)}',
+      '  55% {box-shadow:0 0 28px 8px rgba(255,255,255,.15),0 0 0 22px rgba(255,255,255,.03);transform:scale(1.04);border-color:rgba(255,255,255,.45)}',
+      '  100%{box-shadow:0 0 0 0 rgba(255,255,255,0),0 0 0 32px rgba(255,255,255,0);transform:scale(1);border-color:rgba(255,255,255,.16)}',
       '}',
-      '.footer-msg-btn--flash{animation:footerBtnFlash .7s ease-out 3;transition:none!important}',
+      '.footer-msg-btn--flash{animation:footerBtnFlash .85s ease-out 3;transition:none!important}',
     ].join('');
     document.head.appendChild(styleEl);
 
@@ -1294,14 +1295,16 @@ export function initProdScripts(): void {
       footer.scrollIntoView({ behavior: 'smooth' });
       setTimeout(function () {
         var btns = document.querySelectorAll('.footer-msg-btn');
-        btns.forEach(function (btn) {
-          btn.classList.remove('footer-msg-btn--flash');
-          void (btn as HTMLElement).offsetWidth;
-          btn.classList.add('footer-msg-btn--flash');
+        btns.forEach(function (btn) { btn.classList.remove('footer-msg-btn--flash'); });
+        btns.forEach(function (btn, idx) {
+          setTimeout(function () {
+            void (btn as HTMLElement).offsetWidth;
+            btn.classList.add('footer-msg-btn--flash');
+          }, idx * 180);
         });
         setTimeout(function () {
           btns.forEach(function (btn) { btn.classList.remove('footer-msg-btn--flash'); });
-        }, 2300);
+        }, 2900);
       }, 850);
     }
 

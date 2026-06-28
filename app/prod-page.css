@@ -2287,6 +2287,9 @@
   /* ─── Mobile (≤768px) ────────────────────────────────────── */
   @media (max-width: 768px) {
 
+    /* Виды работ: mobile cards use cover so images fill the card area */
+    .exs-mobile .exs-photo-item { background-size: cover; }
+
     /* Desktop materials/cabinet block hidden on mobile — replaced by WardrobeSection */
     .mat-block { display: none; }
 

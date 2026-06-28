@@ -66,13 +66,16 @@ export default function ProductSlide() {
 
     const mob = window.innerWidth <= 768;
 
-    // параметры — мобильные в ~0.3× от десктопа чтобы полоска ≈ 50vw
-    const STEP  = mob ? 160 : 540;
-    // размеры compact-карточки = размер грид-бокса (W/4 × H/2), чтобы intro-анимация была бесшовной
+    const GCOLS = mob ? 2 : 4;
+    const GROWS = 2; // 2 rows on both mobile and desktop → portrait intro cells
+    // параметры карусели
     const W = stage.offsetWidth || window.innerWidth;
     const H = stage.offsetHeight || window.innerHeight;
-    const compactCardW = mob ? 100 : Math.min(Math.round(W / 4), STEP - 30);
-    const compactCardH = mob ? 136 : Math.round(H / 2);
+    // 0.82 factor makes mobile compact cards slightly smaller than half-screen
+    const compactCardW = mob ? Math.round(W / GCOLS * 0.82) : Math.min(Math.round(W / 4), 510);
+    // Keep the same 292/404 portrait ratio as desktop compact cards
+    const compactCardH = mob ? Math.round(compactCardW * 404 / 292) : Math.round(H / 2);
+    const STEP  = mob ? compactCardW + 20 : 540;
     const VSTEP = mob ? 200 : 310;
     const WIN = 2, BUCKET = 5;
     const N = CATS.length;
@@ -102,7 +105,7 @@ export default function ProductSlide() {
       css(innerEl, {
         position:'absolute', left:'50%', top:'50%',
         transform:'translate(-50%,-50%)',
-        width: mob ? '240px' : '600px',
+        width: mob ? `${STEP + 10}px` : '600px',
         height:'100%',
         display:'flex', alignItems:'center', justifyContent:'center',
       });
@@ -133,7 +136,7 @@ export default function ProductSlide() {
       const stripEl = ce('div');
       css(stripEl, {
         position:'absolute',
-        width: mob ? '200px' : '640px',
+        width: mob ? `${STEP}px` : '640px',
         height:'100%', transformOrigin:'center',
       });
       const pillEl = ce('div');
@@ -163,7 +166,7 @@ export default function ProductSlide() {
         const miniEl = ce('div');
         css(miniEl, {
           position:'absolute', left:'0', top:'0',
-          width: mob ? '188px' : '452px',
+          width: mob ? `${STEP - 10}px` : '452px',
           height: mob ? '72px' : '112px',
           background:'#fff',
           borderRadius: mob ? '14px' : '20px',
@@ -205,7 +208,7 @@ export default function ProductSlide() {
         const bigEl = ce('div');
         css(bigEl, {
           position:'absolute', left:'0', top:'0',
-          width: mob ? '188px' : '600px',
+          width: mob ? `${STEP - 10}px` : '600px',
           height: mob ? '280px' : '432px',
           background:'#fff',
           borderRadius: mob ? '18px' : '24px',
@@ -331,23 +334,23 @@ export default function ProductSlide() {
     css(introEl, { position:'absolute', inset:'0', zIndex:'40', pointerEvents:'auto' });
 
     const introBoxes = CATS.map((cat, i) => {
-      const col = i % 4;
-      const row = Math.floor(i / 4);
+      const col = i % GCOLS;
+      const row = Math.floor(i / GCOLS);
       const box = ce('div');
       css(box, {
         position:'absolute',
-        left: `${col * 25}%`,
-        top: `${row * 50}%`,
-        width: '25%',
-        height: '50%',
+        left: `${col / GCOLS * 100}%`,
+        top: `${row / GROWS * 100}%`,
+        width: `${100 / GCOLS}%`,
+        height: `${100 / GROWS}%`,
         backgroundImage: `url(${cat.cover})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         overflow: 'hidden',
         willChange: 'transform, opacity',
       });
-      if (col < 3) box.style.borderRight = '1px solid rgba(255,255,255,.1)';
-      if (row < 1) box.style.borderBottom = '1px solid rgba(255,255,255,.1)';
+      if (col < GCOLS - 1) box.style.borderRight = '1px solid rgba(255,255,255,.1)';
+      if (row < GROWS - 1) box.style.borderBottom = '1px solid rgba(255,255,255,.1)';
 
       const lbl = ce('span');
       css(lbl, {
@@ -376,8 +379,8 @@ export default function ProductSlide() {
       introPlayed = true;
 
       introBoxes.forEach(({ el, col, row }, i) => {
-        const gridCX = (col + 0.5) / 4 * W;
-        const gridCY = (row + 0.5) / 2 * H;
+        const gridCX = (col + 0.5) / GCOLS * W;
+        const gridCY = (row + 0.5) / GROWS * H;
         const vp = CAT_VP[i];
         const delay = vp !== null ? Math.abs(vp) * 55 : 0;
 
@@ -387,10 +390,12 @@ export default function ProductSlide() {
 
         if (vp !== null) {
           const targetCX = W / 2 + vp * STEP;
-          el.style.transform = `translate(${targetCX - gridCX}px,${H / 2 - gridCY}px)`;
+          const sx = compactCardW / (W / GCOLS);
+          const sy = compactCardH / (H / GROWS);
+          el.style.transform = `translate(${targetCX - gridCX}px,${H / 2 - gridCY}px) scale(${sx}, ${sy})`;
         } else {
           // off-screen: scatter outward — top row up, bottom row down
-          el.style.transform = `translateY(${row === 0 ? '-55%' : '55%'}) scale(0.88)`;
+          el.style.transform = `translateY(${row < GROWS / 2 ? '-55%' : '55%'}) scale(0.88)`;
           el.style.opacity = '0';
         }
       });

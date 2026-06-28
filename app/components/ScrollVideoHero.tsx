@@ -1176,6 +1176,27 @@ function Chapters({
   );
 }
 
+// ── Scroll to footer + flash messenger buttons ────────────────────────────────
+function gotoFooterAndFlash() {
+  document.querySelector(".site-footer")?.scrollIntoView({ behavior: "smooth" });
+  setTimeout(() => {
+    const btns = document.querySelectorAll<HTMLElement>(".footer-msg-btn");
+    btns.forEach((btn, idx) => {
+      setTimeout(() => {
+        btn.animate(
+          [
+            { transform: "scale(1)",    boxShadow: "0 0 0 0 rgba(255,255,255,.9),  0 0 0 0  rgba(255,255,255,.4)"  },
+            { transform: "scale(1.10)", boxShadow: "0 0 18px 4px rgba(255,255,255,.5), 0 0 0 10px rgba(255,255,255,.08)", offset: 0.22 },
+            { transform: "scale(1.04)", boxShadow: "0 0 28px 8px rgba(255,255,255,.14), 0 0 0 22px rgba(255,255,255,.02)", offset: 0.55 },
+            { transform: "scale(1)",    boxShadow: "0 0 0 0 rgba(255,255,255,0),  0 0 0 32px rgba(255,255,255,0)"  },
+          ],
+          { duration: 900, iterations: 3, easing: "ease-out" }
+        );
+      }, idx * 200);
+    });
+  }, 750);
+}
+
 // ── HeroText: overline + h1 + paragraph + CTA ────────────────────────────────
 function HeroText({ variant }: { variant?: "block" } = {}) {
   const isMobile = useIsMobile();
@@ -1245,41 +1266,325 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
         )}
       </p>
 
-      <button
-        onClick={() => {
-          if (typeof window !== "undefined" && (window as any).scrollToFooterAndFlash) {
-            (window as any).scrollToFooterAndFlash();
-          } else {
-            document.querySelector(".site-footer")?.scrollIntoView({ behavior: "smooth" });
-          }
-        }}
-        style={{
-        marginTop: isMobile ? "16px" : ("clamp(22px, 3vh, 36px)" as string),
-        display: isBlock ? "flex" : "inline-flex",
-        width: isBlock ? "100%" : undefined,
-        alignItems: "center",
-        justifyContent: isBlock ? "center" : undefined,
-        gap: isBlock ? "16px" : isMobile ? "20px" : ("clamp(28px, 3vw, 48px)" as string),
-        padding: isBlock ? "14px 20px" : isMobile ? "12px 20px" : ("clamp(13px, 1.5vh, 18px) clamp(22px, 2vw, 30px)" as string),
-        border: `1px solid ${isBlock ? "#1a1917" : textLine}`,
-        borderRadius: 100,
-        background: isBlock ? "#1a1917" : "rgba(244,241,236,0.02)",
-        backdropFilter: isBlock ? undefined : "blur(2px)",
-        color: isBlock ? "#fff" : textInk,
-        cursor: "pointer",
-        fontFamily: "inherit",
-        fontSize: isMobile ? "10px" : ("clamp(10px, .74vw, 12.5px)" as string),
-        fontWeight: 500,
-        letterSpacing: ".22em",
-        textTransform: "uppercase",
-        whiteSpace: "nowrap",
-      } as React.CSSProperties}>
-        Хочу обсудить проект
-        <svg width="26" height="10" viewBox="0 0 26 10" fill="none">
-          <path d="M0 5h24M20 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" />
-        </svg>
-      </button>
+      {isBlock ? (
+        <button
+          onClick={gotoFooterAndFlash}
+          style={{
+            marginTop: "16px",
+            display: "flex",
+            width: "100%",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "16px",
+            padding: "14px 20px",
+            border: "1px solid #1a1917",
+            borderRadius: 100,
+            background: "#1a1917",
+            color: "#fff",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: "10px",
+            fontWeight: 500,
+            letterSpacing: ".22em",
+            textTransform: "uppercase" as const,
+            whiteSpace: "nowrap" as const,
+          }}>
+          Хочу обсудить проект
+          <svg width="26" height="10" viewBox="0 0 26 10" fill="none">
+            <path d="M0 5h24M20 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        </button>
+      ) : (
+        <GlassHeroButton onAction={gotoFooterAndFlash} />
+      )}
     </div>
+  );
+}
+
+// ── Glass Button (desktop CTA) ────────────────────────────────────────────────
+
+const GLASS_SHADOW_CSS =
+  "inset 0 1px 0 rgba(255,255,255,.95)," +
+  "inset 0 -1px 1px rgba(255,255,255,.45)," +
+  "inset 0 0 0 1px rgba(255,255,255,.22)," +
+  "inset 0 16px 26px rgba(255,255,255,.06)," +
+  "inset 0 -18px 30px rgba(0,0,0,.28)";
+
+function hexRgb(hex: string): string {
+  let h = hex.trim().replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const n = parseInt(h, 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+}
+
+function glassBackground(color: string): string {
+  const c = hexRgb(color);
+  return [
+    "linear-gradient(180deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.05) 15%, rgba(255,255,255,0) 44%, rgba(255,255,255,.03) 73%, rgba(255,255,255,.3) 100%)",
+    "radial-gradient(125% 88% at 30% 8%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%)",
+    `radial-gradient(120% 95% at 72% 120%, rgba(${c},.32), rgba(${c},0) 62%)`,
+    `linear-gradient(180deg, rgba(${c},.17), rgba(${c},.05))`,
+    "rgba(255,255,255,.04)",
+  ].join(", ");
+}
+
+type GlassShard = { clip: string; dx: number; dy: number; rot: number; r: number };
+
+function buildGlassGeom(): { shards: GlassShard[]; cracks: string[] } {
+  const cx = 50, cy = 50;
+  const edge = (a: number): [number, number] => {
+    const dx = Math.cos(a), dy = Math.sin(a);
+    const tx = dx > 1e-6 ? (100 - cx) / dx : dx < -1e-6 ? (0 - cx) / dx : Infinity;
+    const ty = dy > 1e-6 ? (100 - cy) / dy : dy < -1e-6 ? (0 - cy) / dy : Infinity;
+    const t = Math.min(Math.abs(tx), Math.abs(ty));
+    return [cx + dx * t, cy + dy * t];
+  };
+  const corners = [
+    { a: Math.PI / 4,     p: [100, 100] as [number, number] },
+    { a: 3 * Math.PI / 4, p: [0, 100]   as [number, number] },
+    { a: 5 * Math.PI / 4, p: [0, 0]     as [number, number] },
+    { a: 7 * Math.PI / 4, p: [100, 0]   as [number, number] },
+  ];
+  const cornersBetween = (a0: number, a1: number): [number, number][] => {
+    const out: { a: number; p: [number, number] }[] = [];
+    for (const c of corners) {
+      for (const off of [-2 * Math.PI, 0, 2 * Math.PI]) {
+        const ca = c.a + off;
+        if (ca > a0 + 1e-4 && ca < a1 - 1e-4) out.push({ a: ca, p: c.p });
+      }
+    }
+    out.sort((x, y) => x.a - y.a);
+    return out.map(c => c.p);
+  };
+  const jag = (cx: number, cy: number, x: number, y: number): string => {
+    const dx = x - cx, dy = y - cy;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+    const perpX = -uy, perpY = ux;
+    const scale = Math.min(1.15, Math.max(.72, len / 48));
+    const profile: [number, number][] = [
+      [0, 0], [.13, 1.15], [.27, -.95], [.41, 1.5],
+      [.56, -.75], [.72, 1.0], [.87, -.4], [1, 0],
+    ];
+    const pt = (t: number, off: number): [number, number] => [
+      cx + dx * t + perpX * off * scale,
+      cy + dy * t + perpY * off * scale,
+    ];
+    const fmt = (p: [number, number]) => p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+    let d = '';
+    profile.forEach((p, i) => { d += (i ? ' L' : 'M') + fmt(pt(p[0], p[1])); });
+    const branch = (base: [number, number], side: number, reach: number): string => {
+      const b = pt(base[0], base[1]);
+      const m: [number, number] = [b[0] + ux * reach * .24 + perpX * side * reach * .48, b[1] + uy * reach * .24 + perpY * side * reach * .48];
+      const e: [number, number] = [b[0] + ux * reach * .44 + perpX * side * reach,        b[1] + uy * reach * .44 + perpY * side * reach];
+      return ' M' + fmt(b) + ' L' + fmt(m) + ' L' + fmt(e);
+    };
+    d += branch(profile[3], -1, 7.4 * scale);
+    d += branch(profile[5],  1, 6.2 * scale);
+    return d;
+  };
+  const mk = (pts: [number, number][]): GlassShard => {
+    const clip = "polygon(" + pts.map(p => `${p[0].toFixed(1)}% ${p[1].toFixed(1)}%`).join(", ") + ")";
+    let mx = 0, my = 0;
+    pts.forEach(p => { mx += p[0]; my += p[1]; });
+    mx /= pts.length; my /= pts.length;
+    const ang = Math.atan2(my - cy, mx - cx);
+    const r = Math.hypot(mx - cx, my - cy);
+    const dist = 42 + r * 1.5 + Math.random() * 55;
+    return { clip, dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist - 22, rot: (Math.random() - .5) * 150, r };
+  };
+
+  const Nsegs = 12;
+  const angs = Array.from({ length: Nsegs }, (_, i) => i / Nsegs * 2 * Math.PI + (Math.random() - .5) * 0.28);
+  const shards: GlassShard[] = [], cracks: string[] = [];
+  for (let i = 0; i < Nsegs; i++) {
+    const a0 = angs[i], a1 = i === Nsegs - 1 ? angs[0] + 2 * Math.PI : angs[i + 1];
+    const p0 = edge(a0), p1 = edge(a1);
+    const mid = cornersBetween(a0, a1);
+    const mr = 0.42 + Math.random() * 0.22;
+    const m0: [number, number] = [cx + (p0[0] - cx) * mr, cy + (p0[1] - cy) * mr];
+    const m1: [number, number] = [cx + (p1[0] - cx) * mr, cy + (p1[1] - cy) * mr];
+    shards.push(mk([[cx, cy], m0, m1]));
+    shards.push(mk([m0, p0, ...mid, p1, m1]));
+    cracks.push(jag(cx, cy, p0[0], p0[1]));
+  }
+  return { shards, cracks };
+}
+
+const GLASS_BREAK_MS = 1650;
+
+function GlassHeroButton({ onAction }: { onAction: () => void }) {
+  const [phase, setPhase] = useState<'idle' | 'hover' | 'breaking'>('idle');
+  const geomRef  = useRef<{ shards: GlassShard[]; cracks: string[] } | null>(null);
+  const wrapRef2 = useRef<HTMLDivElement>(null);
+  const animsRef = useRef<Animation[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  if (!geomRef.current) geomRef.current = buildGlassGeom();
+  const geom = geomRef.current;
+
+  const COLOR = "#f4f1ec";
+  const bg    = glassBackground(COLOR);
+  const rgb   = hexRgb(COLOR);
+  const glassVisible = phase !== 'breaking';
+
+  function cancelAnims() {
+    animsRef.current.forEach(a => { try { a.cancel(); } catch { /**/ } });
+    animsRef.current = [];
+  }
+
+  function runShatter() {
+    if (!wrapRef2.current) return;
+    const nodes = wrapRef2.current.querySelectorAll('[data-glass-shard]');
+    cancelAnims();
+    nodes.forEach((el, i) => {
+      const s = geom.shards[i];
+      if (!s) return;
+      const { dx, dy, rot, r } = s;
+      const anim = el.animate([
+        { transform: 'none', opacity: '1', offset: 0, easing: 'cubic-bezier(.4,0,.6,1)' },
+        { transform: `translate(${(dx*.07).toFixed(1)}px,${(dy*.07-3).toFixed(1)}px) rotate(${(rot*.05).toFixed(1)}deg) scale(.99)`, opacity: '1', offset: .16, easing: 'cubic-bezier(.16,.7,.3,1)' },
+        { transform: `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(.56)`, opacity: '0.12', offset: .46, easing: 'cubic-bezier(.33,0,.5,1)' },
+        { transform: `translate(${(dx*1.14).toFixed(1)}px,${(dy*1.14).toFixed(1)}px) rotate(${(rot*1.12).toFixed(1)}deg) scale(.64)`, opacity: '0', offset: .62, easing: 'ease-in-out' },
+        { transform: `translate(${(dx*1.14).toFixed(1)}px,${(dy*1.14).toFixed(1)}px) rotate(${(rot*1.12).toFixed(1)}deg) scale(.64)`, opacity: '0', offset: .7, easing: 'cubic-bezier(.5,.05,.25,1)' },
+        { transform: 'none', opacity: '1', offset: 1 },
+      ], { duration: GLASS_BREAK_MS, delay: r * 2.6 + Math.random() * 35, easing: 'linear', fill: 'forwards' });
+      animsRef.current.push(anim);
+    });
+  }
+
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    cancelAnims();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <>
+      <style>{`
+        @keyframes gbTremble {
+          0%,100% { transform: translate(0,0) rotate(0deg) }
+          20%  { transform: translate(.5px,-.4px) rotate(.06deg) }
+          40%  { transform: translate(-.6px,.3px) rotate(-.05deg) }
+          60%  { transform: translate(.4px,.5px) rotate(.05deg) }
+          80%  { transform: translate(-.4px,-.5px) rotate(-.04deg) }
+        }
+        @keyframes gbTrembleCrack {
+          0%,100% { transform: translate(0,0) }
+          25%  { transform: translate(.5px,-.4px) }
+          50%  { transform: translate(-.6px,.5px) }
+          75%  { transform: translate(.4px,.4px) }
+        }
+        @keyframes gbSheen {
+          0%   { background-position: -60% 0 }
+          100% { background-position: 160% 0 }
+        }
+      `}</style>
+      <div
+        ref={wrapRef2}
+        role="button"
+        tabIndex={0}
+        onMouseEnter={() => { if (phase === 'idle') setPhase('hover'); }}
+        onMouseLeave={() => { if (phase === 'hover') setPhase('idle'); }}
+        onMouseDown={() => {
+          if (phase === 'breaking') return;
+          if (timerRef.current) clearTimeout(timerRef.current);
+          setPhase('breaking');
+          runShatter();
+          timerRef.current = setTimeout(() => { cancelAnims(); setPhase('idle'); }, GLASS_BREAK_MS + 230);
+        }}
+        onClick={onAction}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction(); } }}
+        style={{
+          position: 'relative',
+          marginTop: 'clamp(22px, 3vh, 36px)' as string,
+          display: 'inline-flex',
+          cursor: 'pointer',
+          userSelect: 'none',
+          transform: phase === 'hover' ? 'scale(1.028) translateY(-1.5px)' : 'scale(1)',
+          transition: 'transform .22s cubic-bezier(.34,1.56,.64,1)',
+        } as React.CSSProperties}
+      >
+        {/* cast shadow */}
+        <div style={{ position: 'absolute', left: '8%', right: '8%', bottom: '-10px', height: '26px', borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(0,0,0,.55), rgba(0,0,0,0))', filter: 'blur(2px)', pointerEvents: 'none' }} />
+
+        {/* glass body */}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '14px',
+          background: bg,
+          boxShadow: GLASS_SHADOW_CSS + `, 0 16px 32px rgba(0,0,0,.55), 0 0 26px rgba(${rgb},.18)`,
+          opacity: glassVisible ? 1 : 0,
+          animation: phase === 'breaking' ? 'none' : 'gbTremble .2s steps(2,end) infinite',
+          transition: 'opacity .04s linear',
+          pointerEvents: 'none',
+        } as React.CSSProperties} />
+
+        {/* label */}
+        <div style={{
+          position: 'relative', zIndex: 1,
+          display: 'inline-flex', alignItems: 'center',
+          gap: 'clamp(28px, 3vw, 48px)' as string,
+          padding: 'clamp(18px, 2.2vh, 26px) clamp(36px, 3.5vw, 52px)' as string,
+          opacity: phase === 'breaking' ? 0 : 1,
+          animation: phase === 'breaking' ? 'none' : 'gbTremble .2s steps(2,end) infinite',
+          transition: phase === 'breaking' ? 'opacity .14s ease-out' : 'opacity .35s ease-in .12s',
+          fontSize: 'clamp(10px, .74vw, 12.5px)' as string,
+          fontWeight: 500,
+          letterSpacing: '.22em',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          color: INK,
+          fontFamily: 'inherit',
+          pointerEvents: 'none',
+        } as React.CSSProperties}>
+          Хочу обсудить проект
+          <svg width="26" height="10" viewBox="0 0 26 10" fill="none">
+            <path d="M0 5h24M20 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        </div>
+
+        {/* specular sheen */}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '14px', pointerEvents: 'none',
+          opacity: glassVisible ? 1 : 0,
+          background: 'linear-gradient(105deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.55) 50%, rgba(255,255,255,0) 62%)',
+          backgroundSize: '220% 100%',
+          mixBlendMode: 'screen',
+          animation: phase === 'breaking' ? 'none' : (phase === 'hover' ? 'gbSheen 1.1s linear infinite' : 'gbSheen 3.4s linear infinite'),
+          transition: 'opacity .1s',
+        } as React.CSSProperties} />
+
+        {/* crack lines */}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}>
+          <g style={{
+            opacity: phase === 'idle' ? 0 : phase === 'hover' ? 0.72 : 0.98,
+            transition: phase === 'breaking' ? 'none' : 'opacity .12s ease-out',
+            transformOrigin: '50% 50%',
+            animation: phase === 'hover' ? 'gbTrembleCrack .14s steps(2) infinite' : 'none',
+          } as React.CSSProperties}>
+            {geom.cracks.map((d, i) => (
+              <path key={i} d={d} fill="none" stroke="rgba(255,255,255,.92)" strokeWidth="0.7" strokeLinecap="round" pathLength={1} style={{
+                filter: 'drop-shadow(0 0 .5px rgba(0,0,0,.75))',
+                strokeDasharray: '1 1',
+                strokeDashoffset: phase === 'idle' ? 1 : 0,
+                transition: phase === 'breaking' ? 'none' : 'stroke-dashoffset .72s cubic-bezier(.22,.72,.18,1)',
+                willChange: 'stroke-dashoffset',
+              } as React.CSSProperties} />
+            ))}
+          </g>
+        </svg>
+
+        {/* shards */}
+        {geom.shards.map((s, i) => (
+          <div key={i} data-glass-shard="" style={{
+            position: 'absolute', inset: 0, borderRadius: '14px',
+            background: bg, boxShadow: GLASS_SHADOW_CSS,
+            clipPath: s.clip, pointerEvents: 'none',
+            willChange: 'transform,opacity', opacity: 0,
+          } as React.CSSProperties} />
+        ))}
+      </div>
+    </>
   );
 }
 
