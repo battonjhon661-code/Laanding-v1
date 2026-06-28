@@ -111,6 +111,7 @@ export default function RootLayout({
           }}
         />
         {/* /JSON-LD LocalBusiness */}
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}` }} />
         {/* Yandex.Metrika counter */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};

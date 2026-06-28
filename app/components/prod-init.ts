@@ -943,40 +943,52 @@ export function initProdScripts(): void {
   (function() {
     var CATS = [
       { label:'Душевые', dot:'#0d9488', cover:'assets/boxes/1_shower_box-Photoroom.png', subs:[
-        { title:'Дверная',             img:'assets/examples/shower_room/1_door.png' },
-        { title:'Угловая (2 стекла)',  img:'assets/examples/shower_room/2_angle_2.png' },
-        { title:'Угловая (3 стекла)',  img:'assets/examples/shower_room/3_angle_3.png' },
-        { title:'Складная',            img:'assets/examples/shower_room/4_collapsible.png' },
-        { title:'Трапеция',            img:'assets/examples/shower_room/5_trapezoid.png' },
-        { title:'Т-образная',          img:'assets/examples/shower_room/6_T-type.png' },
+        { title:'Дверная',             img:'assets/examples/showers/1_dver.png' },
+        { title:'Прямая (2 стекла)',   img:'assets/examples/showers/2_pryamaya_2.png' },
+        { title:'Прямая (3 стекла)',   img:'assets/examples/showers/3_pryamaya_3.png' },
+        { title:'Трапеция',            img:'assets/examples/showers/4_trapeciya.png' },
+        { title:'Т-образная',          img:'assets/examples/showers/5_t_obraz.png' },
+        { title:'Складная',            img:'assets/examples/showers/6_skladnaya.png' },
+        { title:'Угловая (3 стекла)',  img:'assets/examples/showers/7_uglovaya_3.png' },
+        { title:'Угловая (2 стекла)',  img:'assets/examples/showers/8_uglovaya_2.png' },
       ]},
       { label:'Зеркала', dot:'#a855f7', cover:'assets/boxes/2_mirror_box-Photoroom.png', subs:[
-        { title:'Круглое',             img:'assets/examples/mirrors_light/1_circle.png' },
-        { title:'Г-образное',          img:'assets/examples/mirrors_light/2_R-type.png' },
-        { title:'Овальное',            img:'assets/examples/mirrors_light/3_oval.png' },
-        { title:'Эллипс',              img:'assets/examples/mirrors_light/4_ellipse.png' },
-        { title:'Прямоугольное',       img:'assets/examples/mirrors_light/5_square.png' },
-        { title:'Арочное',             img:'assets/examples/mirrors_light/6_arch.png' },
+        { title:'Круглое',             img:'assets/examples/mirrors/1_cicrle.png' },
+        { title:'Г-образное',          img:'assets/examples/mirrors/2_R_type.png' },
+        { title:'Овальное',            img:'assets/examples/mirrors/3_oval.png' },
+        { title:'Эллипс',              img:'assets/examples/mirrors/4_elipse.png' },
+        { title:'Прямоугольное',       img:'assets/examples/mirrors/5_square.png' },
+        { title:'Арочное',             img:'assets/examples/mirrors/6_arka.png' },
       ]},
       { label:'Ограждения', dot:'#d97706', cover:'assets/boxes/3_stairs_box-Photoroom.png', subs:[
-        { title:'На точечных фитингах',img:'assets/examples/stairs/1_points.png' },
-        { title:'На стойках',          img:'assets/examples/stairs/2_racks.png' },
-        { title:'В профиле',           img:'assets/examples/stairs/3_profile.png' },
+        { title:'На точечных фитингах',img:'assets/examples/stairs/1_tochki.png' },
+        { title:'На стойках',          img:'assets/examples/stairs/2_stoyki.png' },
+        { title:'В профиле',           img:'assets/examples/stairs/3_profil.png' },
       ]},
       { label:'Перегородки', dot:'#3b82f6', cover:'assets/boxes/4_partition-Photoroom.png', subs:[
-        { title:'Стеклянная перегородка', img:'assets/boxes/4_partition-Photoroom.png' },
+        { title:'Цельностеклянная',    img:'assets/examples/partitions/1_cs.png' },
+        { title:'На каркасе',          img:'assets/examples/partitions/2_karkas.png' },
+        { title:'Раздвижная',          img:'assets/examples/partitions/3_razdvizhnaya.png' },
       ]},
       { label:'Лофт', dot:'#ef4444', cover:'assets/boxes/5_loft-Photoroom.png', subs:[
-        { title:'Лофт-перегородка',    img:'assets/boxes/5_loft-Photoroom.png' },
+        { title:'Арочная',             img:'assets/examples/lofts/1_arochnaya.png' },
+        { title:'Складная',            img:'assets/examples/lofts/2_skladnaya.png' },
+        { title:'Угловая',             img:'assets/examples/lofts/3_uglovaya.png' },
+        { title:'Прямая',              img:'assets/examples/lofts/4_pryamaya.png' },
+        { title:'Раздвижная',          img:'assets/examples/lofts/5_razdvizhnaya.png' },
       ]},
       { label:'Панели', dot:'#10b981', cover:'assets/boxes/8_panels-Photoroom.png', subs:[
-        { title:'Стеклянная панель',   img:'assets/boxes/8_panels-Photoroom.png' },
+        { title:'Прихожая',            img:'assets/examples/panels/1_prihojaya.png' },
+        { title:'Прикроватная',        img:'assets/examples/panels/2_prikrovatnaya.png' },
       ]},
       { label:'Козырьки', dot:'#f59e0b', cover:'assets/boxes/9_visors-Photoroom.png', subs:[
-        { title:'Стеклянный козырёк',  img:'assets/boxes/9_visors-Photoroom.png' },
+        { title:'Навесная',            img:'assets/examples/visors/1_navesnaya.png' },
+        { title:'В профиле',           img:'assets/examples/visors/2_profil.png' },
       ]},
       { label:'Полки', dot:'#8b5cf6', cover:'assets/boxes/12_shelves-Photoroom.png', subs:[
-        { title:'Стеклянная полка',    img:'assets/boxes/12_shelves-Photoroom.png' },
+        { title:'Встроенные с подсветкой', img:'assets/examples/shelves/1_vstroennie_s_podsvetkoy.png' },
+        { title:'Полки в нише',            img:'assets/examples/shelves/2_polki_v_nishe.png' },
+        { title:'На больших держателях',   img:'assets/examples/shelves/3_bolshie_derjateli.png' },
       ]},
     ];
     if (window.innerWidth <= 768) { renderMobile(); return; }
@@ -1134,10 +1146,8 @@ export function initProdScripts(): void {
       var R = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>';
       var U = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 15 12 8 19 15"/></svg>';
       var D = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>';
-      makeArrow(L, { top:'50%', left:'calc(50% - 360px)', transform:'translate(-50%,-50%)', width:'56px', height:'56px', boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', function(){ go(-1); });
-      makeArrow(R, { top:'50%', left:'calc(50% + 360px)', transform:'translate(-50%,-50%)', width:'56px', height:'56px', boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', function(){ go(1); });
-      makeArrow(U, { top:'22px', left:'50%', transform:'translateX(-50%)', width:'48px', height:'48px', boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', function(){ vstep(-1); });
-      makeArrow(D, { bottom:'22px', left:'50%', transform:'translateX(-50%)', width:'48px', height:'48px', boxShadow:'0 8px 24px rgba(0,0,0,.12)' }).addEventListener('click', function(){ vstep(1); });
+      makeArrow(L, { bottom:'22px', left:'calc(50% - 360px)', transform:'translateX(-50%)', width:'56px', height:'56px', boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', function(){ go(-1); });
+      makeArrow(R, { bottom:'22px', left:'calc(50% + 360px)', transform:'translateX(-50%)', width:'56px', height:'56px', boxShadow:'0 10px 30px rgba(0,0,0,.13)' }).addEventListener('click', function(){ go(1); });
 
       function render() {
         var active = state.active, sub = state.sub;
