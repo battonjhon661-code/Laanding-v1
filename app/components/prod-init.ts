@@ -1281,7 +1281,7 @@ export function initProdScripts(): void {
         } else {
           e.preventDefault();
           va = (now - vt < 200) ? va + e.deltaY : e.deltaY; vt = now;
-          if (Math.abs(va) > 50) { vstep(va > 0 ? 1 : -1); va = 0; }
+          if (Math.abs(va) > 50) { go(va > 0 ? 1 : -1); va = 0; }
         }
       }, { passive: false });
 
