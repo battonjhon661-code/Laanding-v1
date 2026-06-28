@@ -1276,6 +1276,18 @@ export function initProdScripts(): void {
 
   /* Scroll to footer + flash messenger buttons */
   (function () {
+    // Inject keyframes via JS so Tailwind purge doesn't remove them
+    var styleEl = document.createElement('style');
+    styleEl.textContent = [
+      '@keyframes footerBtnFlash{',
+      '  0%  {box-shadow:0 0 0 0 rgba(255,255,255,.8);transform:scale(1)}',
+      '  35% {box-shadow:0 0 20px 6px rgba(255,255,255,.22);transform:scale(1.07)}',
+      '  100%{box-shadow:0 0 0 0 rgba(255,255,255,0);transform:scale(1)}',
+      '}',
+      '.footer-msg-btn--flash{animation:footerBtnFlash .7s ease-out 3;transition:none!important}',
+    ].join('');
+    document.head.appendChild(styleEl);
+
     function scrollToFooterAndFlash() {
       var footer = document.querySelector('.site-footer');
       if (!footer) return;
@@ -1284,7 +1296,7 @@ export function initProdScripts(): void {
         var btns = document.querySelectorAll('.footer-msg-btn');
         btns.forEach(function (btn) {
           btn.classList.remove('footer-msg-btn--flash');
-          void btn.offsetWidth;
+          void (btn as HTMLElement).offsetWidth;
           btn.classList.add('footer-msg-btn--flash');
         });
         setTimeout(function () {
@@ -1297,5 +1309,8 @@ export function initProdScripts(): void {
 
     var mirrorCta = document.querySelector('.mirror-cta');
     if (mirrorCta) mirrorCta.addEventListener('click', scrollToFooterAndFlash);
+
+    var psCta = document.querySelector('.ps-cta.ps-solid');
+    if (psCta) psCta.addEventListener('click', scrollToFooterAndFlash);
   })();
 }
