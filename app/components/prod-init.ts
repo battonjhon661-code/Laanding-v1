@@ -1111,8 +1111,27 @@ export function initProdScripts(): void {
           css(bigEl, { position:'absolute', left:0, top:0, width:'600px', height:'432px', background:'#fff', borderRadius:'24px', boxShadow:'0 34px 74px rgba(0,0,0,.16)', display:'flex', overflow:'hidden', transition:TR });
           var bigImgEl = ce('div');
           css(bigImgEl, { width:'396px', height:'100%', flexShrink:0, backgroundSize:'cover', backgroundPosition:'center' });
-          var bigBadgeEl = ce('div');
-          css(bigBadgeEl, { position:'absolute', top:'18px', right:'18px', background:'#141414', color:'#fff', fontSize:'14px', fontWeight:600, letterSpacing:'.2px', padding:'9px 15px', borderRadius:'11px', zIndex:2, fontFamily:'Manrope,sans-serif' });
+          var bigBadgeEl = ce('button');
+          css(bigBadgeEl, { position:'absolute', top:'18px', right:'18px', background:'#141414', color:'#fff', fontSize:'14px', fontWeight:600, letterSpacing:'.2px', padding:'9px 18px', borderRadius:'11px', zIndex:2, fontFamily:'Manrope,sans-serif', border:'1.5px solid rgba(255,255,255,.18)', cursor:'pointer', transition:'background .22s, transform .18s, box-shadow .22s, border-color .22s', outline:'none' });
+          bigBadgeEl.addEventListener('mouseenter', function() {
+            css(bigBadgeEl, { background:'#2a2a2a', transform:'scale(1.06)', boxShadow:'0 4px 18px rgba(0,0,0,.35)', borderColor:'rgba(255,255,255,.48)' });
+          });
+          bigBadgeEl.addEventListener('mouseleave', function() {
+            css(bigBadgeEl, { background:'#141414', transform:'scale(1)', boxShadow:'none', borderColor:'rgba(255,255,255,.18)' });
+          });
+          bigBadgeEl.addEventListener('click', function() {
+            var footer = document.querySelector('.site-footer') || document.querySelector('footer');
+            if (footer) footer.scrollIntoView({ behavior:'smooth' });
+            setTimeout(function() {
+              var btns = document.querySelectorAll('.footer-msg-btn');
+              btns.forEach(function(b) {
+                b.classList.remove('msg-pulse');
+                void b.offsetWidth;
+                b.classList.add('msg-pulse');
+                b.addEventListener('animationend', function() { b.classList.remove('msg-pulse'); }, { once: true });
+              });
+            }, 650);
+          });
           var bigInfoEl = ce('div');
           css(bigInfoEl, { flex:1, background:'#fff', padding:'26px', display:'flex', flexDirection:'column', justifyContent:'flex-end' });
           var bigMetaEl = ce('div');
@@ -1192,7 +1211,7 @@ export function initProdScripts(): void {
             cell.bigDotEl.style.background = cat.dot;
             cell.bigCatEl.textContent = cat.label;
             cell.bigTitleEl.textContent = su.title;
-            cell.bigBadgeEl.textContent = 'Модель ' + String(mod(svp, m) + 1).padStart(2, '0');
+            cell.bigBadgeEl.textContent = 'Заказать';
           });
         });
       }
@@ -1272,48 +1291,5 @@ export function initProdScripts(): void {
       render();
       requestAnimationFrame(function() { rowEl.style.transition = 'transform .55s cubic-bezier(.2,.8,.2,1)'; });
     }
-  })();
-
-  /* Scroll to footer + flash messenger buttons */
-  (function () {
-    // Inject keyframes via JS so Tailwind purge doesn't remove them
-    var styleEl = document.createElement('style');
-    styleEl.textContent = [
-      '@keyframes footerBtnFlash{',
-      '  0%  {box-shadow:0 0 0 0 rgba(255,255,255,.95),0 0 0 0 rgba(255,255,255,.35);transform:scale(1);border-color:rgba(255,255,255,.9)}',
-      '  22% {box-shadow:0 0 18px 4px rgba(255,255,255,.55),0 0 0 10px rgba(255,255,255,.1);transform:scale(1.11);border-color:rgba(255,255,255,.85)}',
-      '  55% {box-shadow:0 0 28px 8px rgba(255,255,255,.15),0 0 0 22px rgba(255,255,255,.03);transform:scale(1.04);border-color:rgba(255,255,255,.45)}',
-      '  100%{box-shadow:0 0 0 0 rgba(255,255,255,0),0 0 0 32px rgba(255,255,255,0);transform:scale(1);border-color:rgba(255,255,255,.16)}',
-      '}',
-      '.footer-msg-btn--flash{animation:footerBtnFlash .85s ease-out 3;transition:none!important}',
-    ].join('');
-    document.head.appendChild(styleEl);
-
-    function scrollToFooterAndFlash() {
-      var footer = document.querySelector('.site-footer');
-      if (!footer) return;
-      footer.scrollIntoView({ behavior: 'smooth' });
-      setTimeout(function () {
-        var btns = document.querySelectorAll('.footer-msg-btn');
-        btns.forEach(function (btn) { btn.classList.remove('footer-msg-btn--flash'); });
-        btns.forEach(function (btn, idx) {
-          setTimeout(function () {
-            void (btn as HTMLElement).offsetWidth;
-            btn.classList.add('footer-msg-btn--flash');
-          }, idx * 180);
-        });
-        setTimeout(function () {
-          btns.forEach(function (btn) { btn.classList.remove('footer-msg-btn--flash'); });
-        }, 2900);
-      }, 850);
-    }
-
-    (window as any).scrollToFooterAndFlash = scrollToFooterAndFlash;
-
-    var mirrorCta = document.querySelector('.mirror-cta');
-    if (mirrorCta) mirrorCta.addEventListener('click', scrollToFooterAndFlash);
-
-    var psCta = document.querySelector('.ps-cta.ps-solid');
-    if (psCta) psCta.addEventListener('click', scrollToFooterAndFlash);
   })();
 }
