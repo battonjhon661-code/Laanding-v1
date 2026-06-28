@@ -1002,7 +1002,7 @@ export function initProdScripts(): void {
       h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
       CATS.forEach(function(cat, ci) {
         h += '<div style="border-radius:10px;overflow:hidden;background:#0d0d0d">'
-           + '<div style="position:relative;height:135px;overflow:hidden" id="exsm-vp-'+ci+'">';
+           + '<div style="position:relative;aspect-ratio:292/404;overflow:hidden" id="exsm-vp-'+ci+'">';
         cat.subs.forEach(function(su, pi) {
           h += '<div class="exs-photo-item '+(pi===0?'state-current':'state-below')+'" style="background-image:url(\''+su.img+'\')"></div>';
         });
@@ -1272,5 +1272,30 @@ export function initProdScripts(): void {
       render();
       requestAnimationFrame(function() { rowEl.style.transition = 'transform .55s cubic-bezier(.2,.8,.2,1)'; });
     }
+  })();
+
+  /* Scroll to footer + flash messenger buttons */
+  (function () {
+    function scrollToFooterAndFlash() {
+      var footer = document.querySelector('.site-footer');
+      if (!footer) return;
+      footer.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(function () {
+        var btns = document.querySelectorAll('.footer-msg-btn');
+        btns.forEach(function (btn) {
+          btn.classList.remove('footer-msg-btn--flash');
+          void btn.offsetWidth;
+          btn.classList.add('footer-msg-btn--flash');
+        });
+        setTimeout(function () {
+          btns.forEach(function (btn) { btn.classList.remove('footer-msg-btn--flash'); });
+        }, 2300);
+      }, 850);
+    }
+
+    (window as any).scrollToFooterAndFlash = scrollToFooterAndFlash;
+
+    var mirrorCta = document.querySelector('.mirror-cta');
+    if (mirrorCta) mirrorCta.addEventListener('click', scrollToFooterAndFlash);
   })();
 }

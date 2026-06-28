@@ -1245,7 +1245,15 @@ function HeroText({ variant }: { variant?: "block" } = {}) {
         )}
       </p>
 
-      <button style={{
+      <button
+        onClick={() => {
+          if (typeof window !== "undefined" && (window as any).scrollToFooterAndFlash) {
+            (window as any).scrollToFooterAndFlash();
+          } else {
+            document.querySelector(".site-footer")?.scrollIntoView({ behavior: "smooth" });
+          }
+        }}
+        style={{
         marginTop: isMobile ? "16px" : ("clamp(22px, 3vh, 36px)" as string),
         display: isBlock ? "flex" : "inline-flex",
         width: isBlock ? "100%" : undefined,
