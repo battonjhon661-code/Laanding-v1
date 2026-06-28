@@ -1160,7 +1160,7 @@ export function initProdScripts(): void {
           var m = cat.subs.length;
           var vpos = open ? sub : 0;
           sd.el.style.left = (vp * STEP) + 'px';
-          sd.compactEl.style.backgroundImage = 'url(' + cat.cover + ')';
+          sd.compactEl.style.backgroundImage = 'url(' + (cat.subs.length ? cat.subs[0].img : cat.cover) + ')';
           sd.compactEl.style.opacity = open ? 0 : 1;
           sd.compactEl.style.transform = 'scale(' + (open ? 1.06 : 1) + ')';
           sd.compactEl.style.transition = 'opacity .46s ease, transform .5s cubic-bezier(.2,.8,.2,1)';
