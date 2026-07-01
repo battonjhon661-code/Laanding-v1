@@ -1017,8 +1017,7 @@ export function initProdScripts(): void {
       }
 
       el.innerHTML =
-        '<div class="exm-eyebrow">ПОПУЛЯРНЫЕ РАБОТЫ</div>'
-      + '<h2 class="exm-main-title">ПРИМЕРЫ РАБОТ</h2>'
+        '<h2 class="exm-main-title">ПРИМЕРЫ РАБОТ</h2>'
       + '<h3 class="exm-cat-title" id="exmCatTitle"></h3>'
       + '<p class="exm-cat-sub">Выберите категорию по вашему вкусу</p>'
       + '<div class="exm-carousel" id="exmCarousel"></div>'
