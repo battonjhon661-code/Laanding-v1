@@ -1662,7 +1662,22 @@
   }
   .mat-block.mat-visible .mat-cabinet {
     opacity: 1;
-    transition-delay: 0.1s;
+    transition-delay: 0.2s;
+  }
+
+  /* Mat curtain reveal (desktop only, scroll-driven) */
+  .mat-curtain {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #000;
+    z-index: 100;
+    pointer-events: none;
+  }
+  @media (max-width: 768px) {
+    .mat-curtain { display: none; }
   }
 
   /* Mat block text entrance */
@@ -1673,9 +1688,9 @@
     transform: translateY(32px);
     transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .mat-block.mat-visible .mat-crumb { opacity: 1; transform: none; transition-delay: 0.05s; }
-  .mat-block.mat-visible .mat-lead  { opacity: 1; transform: none; transition-delay: 0.44s; }
-  .mat-block.mat-visible .mat-hint  { opacity: 1; transform: none; transition-delay: 0.68s; }
+  .mat-block.mat-text-visible .mat-crumb { opacity: 1; transform: none; transition-delay: 0.05s; }
+  .mat-block.mat-text-visible .mat-lead  { opacity: 1; transform: none; transition-delay: 0.44s; }
+  .mat-block.mat-text-visible .mat-hint  { opacity: 1; transform: none; transition-delay: 0.68s; }
 
   /* ── mat-h1 char slide-up ───────────────────────────────────── */
   .mat-h1 { opacity: 1; }
@@ -2385,6 +2400,7 @@
 
       </div>
     </div>
+    <div class="mat-curtain" id="mat-curtain"></div>
   </section>
   </div><!-- /.parallax-stack -->
 
@@ -2647,7 +2663,7 @@
     <div class="mirror-inner">
       <div class="mirror-text">
         <p class="eyebrow">Зеркала для интерьера</p>
-        <h2 class="section__title">Наши зеркала<br>вписываются<br>в любой интерьер</h2>
+        <h2 class="section__title">Наши работы<br>вписываются<br>в любой интерьер</h2>
         <p class="mirror-lead">От минимализма до классики — каждое зеркало создаётся под ваш стиль, размер и освещение. Мы подбираем форму, раму и подсветку так, чтобы изделие стало частью пространства.</p>
         <button class="mirror-cta">
           Обсудить проект
@@ -3291,19 +3307,44 @@
         }
         block.style.transform = 'translateY(' + offset + 'px)';
       }
-      window.addEventListener('scroll', updateOverlap, { passive: true });
-      updateOverlap();
+      var curtain = document.getElementById('mat-curtain');
+      var textTriggered = false;
+      var cabinetRevealed = false;
 
-      var obs = new IntersectionObserver(function (entries) {
-        if (entries[0].isIntersecting && !triggered) {
-          triggered = true;
+      function updateCurtain() {
+        if (!curtain || window.innerWidth <= 768) return;
+        var rect = block.getBoundingClientRect();
+        var vh = window.innerHeight;
+
+        // 0 когда блок входит снизу (rect.top == vh), 1 когда в основном виден (rect.top == vh*0.15)
+        var revealProgress = (vh - rect.top) / (vh * 0.85);
+        revealProgress = Math.max(0, Math.min(1, revealProgress));
+
+        // Текст — появляется сразу при входе блока в поле зрения
+        if (!textTriggered && revealProgress > 0.04) {
+          textTriggered = true;
+          block.classList.add('mat-text-visible');
+        }
+
+        // Штора: top 50% → 100% по мере скролла
+        curtain.style.top = (50 + 50 * revealProgress) + '%';
+
+        // Кабинет — когда штора полностью ушла
+        if (!cabinetRevealed && revealProgress >= 1) {
+          cabinetRevealed = true;
           block.classList.add('mat-visible');
           runLightShow();
-          obs.disconnect();
         }
-      }, { threshold: 0.12 });
+      }
 
-      obs.observe(block);
+      function onScroll() {
+        updateOverlap();
+        updateCurtain();
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      updateOverlap();
+      updateCurtain();
     })();
 
 

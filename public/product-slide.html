@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Интерактивный слайд продукции</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --slide-w: 1661;
+      --slide-h: 947;
+      --scale: 1;
+      --ink: #0b0b0d;
+      --soft: #f8f8f8;
+      --line: #ececec;
+    }
+
+    * {
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 28% 50%, rgba(255, 255, 255, 0.92), rgba(245, 245, 244, 0.72) 45%, rgba(255, 255, 255, 0.95) 72%),
+        #f7f7f7;
+      font-family: Inter, Manrope, "Segoe UI", Arial, sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    button {
+      border: 0;
+      padding: 0;
+      font: inherit;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .slide-shell {
+      position: relative;
+      width: calc(var(--slide-w) * 1px * var(--scale));
+      height: calc(var(--slide-h) * 1px * var(--scale));
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: calc(var(--slide-w) * 1px);
+      height: calc(var(--slide-h) * 1px);
+      overflow: hidden;
+      transform: scale(var(--scale));
+      transform-origin: 0 0;
+      background:
+        linear-gradient(90deg, #ffffff 0 30.5%, #f7f7f7 30.5% 71.9%, #ffffff 71.9% 100%);
+      box-shadow: inset 0 0 34px rgba(0, 0, 0, 0.08);
+    }
+
+    .center-panel {
+      position: absolute;
+      left: 508px;
+      top: 0;
+      width: 688px;
+      height: 947px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 246, 246, 0.94)),
+        #f7f7f7;
+      box-shadow:
+        -18px 0 28px rgba(0, 0, 0, 0.12),
+        18px 0 28px rgba(0, 0, 0, 0.10);
+      z-index: 2;
+      transform-origin: 50% 50%;
+      backface-visibility: hidden;
+      will-change: transform, opacity, filter;
+    }
+
+    .category-cube {
+      position: absolute;
+      z-index: 1;
+      isolation: isolate;
+      transition:
+        transform 420ms cubic-bezier(.2, .82, .2, 1),
+        opacity 260ms ease,
+        filter 260ms ease;
+    }
+
+    .category-cube.left {
+      left: 22px;
+      top: 205px;
+      width: 455px;
+      height: 522px;
+    }
+
+    .category-cube.right {
+      left: 1216px;
+      top: 216px;
+      width: 420px;
+      height: 510px;
+    }
+
+    .cube-media {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      filter: drop-shadow(0 24px 20px rgba(0, 0, 0, 0.14));
+      user-select: none;
+      pointer-events: none;
+      transition: opacity 260ms ease, transform 420ms cubic-bezier(.2, .82, .2, 1);
+    }
+
+    .category-cube::after {
+      content: "";
+      position: absolute;
+      left: 104px;
+      top: 260px;
+      width: 292px;
+      height: 92px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, rgba(38, 27, 20, 0.76), rgba(38, 27, 20, 0.18));
+      backdrop-filter: blur(3px);
+      z-index: 1;
+    }
+
+    .category-cube.right::after {
+      left: 48px;
+      top: 262px;
+      width: 322px;
+    }
+
+    .cube-title {
+      position: absolute;
+      left: 126px;
+      top: 266px;
+      z-index: 2;
+      max-width: 300px;
+      margin: 0;
+      color: #fff;
+      font-size: 32px;
+      line-height: 0.98;
+      font-weight: 850;
+      text-shadow: 0 3px 14px rgba(0, 0, 0, 0.22);
+    }
+
+    .category-cube.right .cube-title {
+      left: 61px;
+      top: 271px;
+      max-width: 260px;
+    }
+
+    .category-cube:hover {
+      transform: translateY(-5px) scale(1.012);
+      filter: saturate(1.03);
+    }
+
+    .slide.is-category-next .category-cube.left {
+      animation: category-left-away 440ms cubic-bezier(.35, .02, .24, 1) both;
+    }
+
+    .slide.is-category-next .category-cube.right {
+      animation: category-right-toward-center 440ms cubic-bezier(.35, .02, .24, 1) both;
+    }
+
+    .slide.is-category-prev .category-cube.left {
+      animation: category-left-toward-center 440ms cubic-bezier(.35, .02, .24, 1) both;
+    }
+
+    .slide.is-category-prev .category-cube.right {
+      animation: category-right-away 440ms cubic-bezier(.35, .02, .24, 1) both;
+    }
+
+    .strip {
+      position: absolute;
+      left: 508px;
+      top: 0;
+      width: 688px;
+      height: 947px;
+      z-index: 3;
+      touch-action: none;
+      transform-origin: 50% 50%;
+      backface-visibility: hidden;
+      will-change: transform, opacity, filter;
+    }
+
+    .strip::after {
+      content: "";
+      position: absolute;
+      top: 54px;
+      bottom: 54px;
+      left: 50%;
+      width: 14px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .98), rgba(210, 210, 210, .2), rgba(255, 255, 255, .95), rgba(255, 255, 255, 0));
+      box-shadow: 0 0 30px rgba(255, 255, 255, .95), 0 0 18px rgba(0, 0, 0, .06);
+      opacity: 0;
+      transform: translateX(-50%);
+      pointer-events: none;
+      transition: opacity 160ms ease;
+      z-index: 9;
+    }
+
+    .strip.is-folding {
+      pointer-events: none;
+    }
+
+    .strip.is-folding::after {
+      opacity: 1;
+    }
+
+    .center-panel.is-folding {
+      pointer-events: none;
+    }
+
+    .strip.is-folding-out {
+      animation: strip-fold-out 430ms cubic-bezier(.58, .02, .38, .98) forwards;
+    }
+
+    .strip.is-folding-in {
+      animation: strip-fold-in 560ms cubic-bezier(.16, .84, .18, 1) both;
+    }
+
+    .center-panel.is-folding-out {
+      animation: strip-fold-out 430ms cubic-bezier(.58, .02, .38, .98) forwards;
+    }
+
+    .center-panel.is-folding-in {
+      animation: strip-fold-in 560ms cubic-bezier(.16, .84, .18, 1) both;
+    }
+
+    .ghost-card,
+    .product-card {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(231, 231, 231, 0.95);
+      box-shadow:
+        0 13px 28px rgba(0, 0, 0, 0.12),
+        0 2px 7px rgba(0, 0, 0, 0.04);
+    }
+
+    .ghost-card {
+      left: 79px;
+      width: 528px;
+      height: 157px;
+      border-radius: 15px;
+      overflow: hidden;
+      will-change: transform, opacity;
+    }
+
+    .ghost-card.top {
+      top: 61px;
+    }
+
+    .ghost-card.bottom {
+      top: 724px;
+    }
+
+    .ghost-thumb {
+      position: absolute;
+      left: 15px;
+      top: 17px;
+      width: 177px;
+      height: 122px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, rgba(236, 236, 236, 0.96), rgba(224, 224, 224, 0.72));
+      background-size: cover;
+      background-position: center;
+      opacity: 0.88;
+    }
+
+    .ghost-line {
+      position: absolute;
+      left: 219px;
+      height: 19px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #eeeeee, #dedede 54%, #eeeeee);
+    }
+
+    .ghost-line.wide {
+      top: 47px;
+      width: 241px;
+    }
+
+    .ghost-line.short {
+      top: 94px;
+      width: 151px;
+    }
+
+    .nav-button {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.12),
+        0 1px 0 rgba(255, 255, 255, 0.9) inset;
+      z-index: 8;
+      transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+    }
+
+    .nav-button:hover {
+      transform: scale(1.07);
+      background: #fff;
+      box-shadow:
+        0 14px 28px rgba(0, 0, 0, 0.16),
+        0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    }
+
+    .nav-button:active {
+      transform: scale(0.98);
+    }
+
+    .nav-button::before {
+      content: "";
+      display: block;
+      width: 14px;
+      height: 14px;
+      border: solid #9a9da1;
+      border-width: 0 5px 5px 0;
+    }
+
+    .nav-button.up {
+      left: 305px;
+      top: 13px;
+    }
+
+    .nav-button.up::before {
+      transform: translateY(3px) rotate(225deg);
+    }
+
+    .nav-button.down {
+      left: 305px;
+      top: 899px;
+    }
+
+    .nav-button.down::before {
+      transform: translateY(-3px) rotate(45deg);
+    }
+
+    .nav-button.left-arrow {
+      left: 478px;
+      top: 428px;
+    }
+
+    .nav-button.left-arrow::before {
+      transform: translateX(3px) rotate(135deg);
+    }
+
+    .nav-button.right-arrow {
+      left: 1176px;
+      top: 428px;
+    }
+
+    .nav-button.right-arrow::before {
+      transform: translateX(-3px) rotate(-45deg);
+    }
+
+    .product-card {
+      left: 36px;
+      top: 250px;
+      width: 615px;
+      height: 441px;
+      display: grid;
+      grid-template-columns: 399px 216px;
+      border-radius: 14px;
+      overflow: hidden;
+      transition:
+        transform 360ms cubic-bezier(.2, .82, .2, 1),
+        opacity 260ms ease,
+        box-shadow 260ms ease;
+      will-change: transform, opacity;
+    }
+
+    .product-card.incoming-card {
+      z-index: 6;
+      pointer-events: none;
+      box-shadow:
+        0 18px 35px rgba(0, 0, 0, 0.14),
+        0 2px 7px rgba(0, 0, 0, 0.04);
+    }
+
+    .product-card.is-changing {
+      transform: translateY(var(--move-y, 0)) scale(0.985);
+      opacity: 0.42;
+    }
+
+    .strip.is-product-carousel {
+      pointer-events: none;
+    }
+
+    .strip.product-next .product-card:not(.incoming-card) {
+      animation: product-current-to-top 520ms cubic-bezier(.22, .76, .19, 1) both;
+    }
+
+    .strip.product-next .product-card.incoming-card {
+      animation: product-in-from-bottom 520ms cubic-bezier(.22, .76, .19, 1) both;
+    }
+
+    .strip.product-next .ghost-card.top {
+      animation: ghost-exit-top 520ms cubic-bezier(.22, .76, .19, 1) both;
+    }
+
+    .strip.product-next .ghost-card.bottom {
+      animation: ghost-bottom-to-center 520ms cubic-bezier(.22, .76, .19, 1) both;
+    }
+
+    .strip.product-prev .product-card:not(.incoming-card) {
+      animation: product-current-to-bottom 520ms cubic-bezier(.22, .76, .19, 1) both;
+    }
+
+    .strip.product-prev .product-card.incoming-card {
+      animation: product-in-from-top 520ms cubic-bezier(.22, .76, .19, 1) both;
+    }
+
+    .strip.product-prev .ghost-card.top {
+      animation: ghost-top-to-center 520ms cubic-bezier(.22, .76, .19, 1) both;
+    }
+
+    .strip.product-prev .ghost-card.bottom {
+      animation: ghost-exit-bottom 520ms cubic-bezier(.22, .76, .19, 1) both;
+    }
+
+    .product-photo {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      background: #d8c7ad;
+    }
+
+    .product-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .product-photo::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.05));
+      pointer-events: none;
+    }
+
+    .product-info {
+      position: relative;
+      display: block;
+      min-width: 0;
+      padding: 15px 14px 17px 16px;
+      background: #f7f7f7;
+    }
+
+    .model-badge {
+      position: absolute;
+      top: 15px;
+      right: 14px;
+      min-width: 99px;
+      height: 28px;
+      padding: 5px 10px 0;
+      border-radius: 3px;
+      background: #050505;
+      color: #fff;
+      font-size: 16px;
+      line-height: 1;
+      font-weight: 500;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .product-drawing {
+      position: absolute;
+      left: 21px;
+      top: 83px;
+      width: 174px;
+      height: 266px;
+      object-fit: contain;
+      margin: 0;
+      filter: drop-shadow(0 7px 7px rgba(0, 0, 0, 0.08));
+    }
+
+    .product-copy {
+      position: absolute;
+      left: 16px;
+      right: 14px;
+      bottom: 18px;
+      min-width: 0;
+      padding: 0 1px 0 0;
+    }
+
+    .product-kicker {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #5f5f66;
+      font-size: 14px;
+      line-height: 1.15;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-kicker::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--accent, #d866ff);
+    }
+
+    .product-title {
+      margin: 0;
+      color: var(--ink);
+      font-size: 19px;
+      line-height: 1.16;
+      font-weight: 850;
+    }
+
+    .category-cube.is-pulsing .cube-media {
+      animation: cube-open 540ms cubic-bezier(.18, .84, .18, 1);
+    }
+
+    .strip.is-pulsing:not(.is-folding) .product-card {
+      animation: strip-open 540ms cubic-bezier(.18, .84, .18, 1);
+    }
+
+    @keyframes cube-open {
+      0% { transform: scale(1); opacity: 1; }
+      52% { transform: scale(1.08) translateX(var(--slide-x, 0)); opacity: .78; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes category-left-away {
+      0% { transform: translateX(0) scale(1); opacity: 1; }
+      100% { transform: translateX(-170px) scale(.9); opacity: .18; }
+    }
+
+    @keyframes category-right-toward-center {
+      0% { transform: translateX(0) scale(1); opacity: 1; }
+      100% { transform: translateX(-135px) scale(1.06); opacity: .86; }
+    }
+
+    @keyframes category-left-toward-center {
+      0% { transform: translateX(0) scale(1); opacity: 1; }
+      100% { transform: translateX(135px) scale(1.06); opacity: .86; }
+    }
+
+    @keyframes category-right-away {
+      0% { transform: translateX(0) scale(1); opacity: 1; }
+      100% { transform: translateX(170px) scale(.9); opacity: .18; }
+    }
+
+    @keyframes strip-open {
+      0% { transform: scaleX(.86); opacity: .46; }
+      100% { transform: scaleX(1); opacity: 1; }
+    }
+
+    @keyframes product-current-to-top {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-189px) scale(.86); opacity: .18; }
+    }
+
+    @keyframes product-current-to-bottom {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(474px) scale(.86); opacity: .18; }
+    }
+
+    @keyframes product-in-from-bottom {
+      0% { transform: translateY(474px) scale(.86); opacity: .2; }
+      42% { opacity: .78; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    @keyframes product-in-from-top {
+      0% { transform: translateY(-189px) scale(.86); opacity: .2; }
+      42% { opacity: .78; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    @keyframes ghost-exit-top {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-126px) scale(.92); opacity: 0; }
+    }
+
+    @keyframes ghost-exit-bottom {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(126px) scale(.92); opacity: 0; }
+    }
+
+    @keyframes ghost-bottom-to-center {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      65% { opacity: .42; }
+      100% { transform: translate(-43px, -474px) scale(1.16); opacity: 0; }
+    }
+
+    @keyframes ghost-top-to-center {
+      0% { transform: translate(0, 0) scale(1); opacity: 1; }
+      65% { opacity: .42; }
+      100% { transform: translate(-43px, 189px) scale(1.16); opacity: 0; }
+    }
+
+    @keyframes strip-fold-out {
+      0% {
+        transform: scaleX(1);
+        opacity: 1;
+        filter: blur(0) brightness(1);
+      }
+      62% {
+        transform: scaleX(.18);
+        opacity: .58;
+        filter: blur(.25px) brightness(1.04);
+      }
+      100% {
+        transform: scaleX(.018);
+        opacity: 0;
+        filter: blur(.8px) brightness(1.12);
+      }
+    }
+
+    @keyframes strip-fold-in {
+      0% {
+        transform: scaleX(.018);
+        opacity: 0;
+        filter: blur(.8px) brightness(1.12);
+      }
+      38% {
+        transform: scaleX(.2);
+        opacity: .62;
+        filter: blur(.25px) brightness(1.05);
+      }
+      100% {
+        transform: scaleX(1);
+        opacity: 1;
+        filter: blur(0) brightness(1);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 1ms !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="slide-shell" aria-label="Интерактивный слайд продукции">
+    <section class="slide" id="slide">
+      <aside class="category-cube left" id="leftCube" aria-label="Предыдущий вид продукции">
+        <img class="cube-media" id="leftCubeImg" alt="">
+        <h2 class="cube-title" id="leftCubeTitle"></h2>
+      </aside>
+
+      <aside class="category-cube right" id="rightCube" aria-label="Следующий вид продукции">
+        <img class="cube-media" id="rightCubeImg" alt="">
+        <h2 class="cube-title" id="rightCubeTitle"></h2>
+      </aside>
+
+      <div class="center-panel" id="centerPanel" aria-hidden="true"></div>
+
+      <button class="nav-button left-arrow" id="prevCategory" type="button" aria-label="Предыдущий вид продукции"></button>
+      <button class="nav-button right-arrow" id="nextCategory" type="button" aria-label="Следующий вид продукции"></button>
+
+      <section class="strip" id="strip" aria-label="Примеры работ выбранного вида продукции">
+        <button class="nav-button up" id="prevProduct" type="button" aria-label="Предыдущий пример"></button>
+
+        <article class="ghost-card top" id="topGhost" aria-hidden="true">
+          <div class="ghost-thumb"></div>
+          <div class="ghost-line wide"></div>
+          <div class="ghost-line short"></div>
+        </article>
+
+        <article class="product-card" id="productCard">
+          <div class="product-photo">
+            <img id="productPhoto" alt="">
+          </div>
+          <div class="product-info">
+            <div class="model-badge" id="modelBadge"></div>
+            <img class="product-drawing" id="productDrawing" alt="">
+            <div class="product-copy">
+              <div class="product-kicker" id="productKicker"></div>
+              <h1 class="product-title" id="productTitle"></h1>
+            </div>
+          </div>
+        </article>
+
+        <article class="ghost-card bottom" id="bottomGhost" aria-hidden="true">
+          <div class="ghost-thumb"></div>
+          <div class="ghost-line wide"></div>
+          <div class="ghost-line short"></div>
+        </article>
+
+        <button class="nav-button down" id="nextProduct" type="button" aria-label="Следующий пример"></button>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const assets = {
+      bathroom: "assets/bathroom-scene.png",
+      drawing: "assets/product-door.png",
+      mirrorCube: "assets/cube-mirror.png",
+      stairsCube: "assets/cube-stairs.png"
+    };
+
+    const categories = [
+      {
+        title: "Зеркала с<br>подсветкой",
+        sideImage: assets.mirrorCube,
+        accent: "#d96dff",
+        products: [
+          {
+            model: "Модель 01",
+            tag: "Зеркала",
+            title: "Круглое зеркало<br>с теплой подсветкой"
+          },
+          {
+            model: "Модель 02",
+            tag: "Зеркала",
+            title: "Овальное зеркало<br>с контурной линией"
+          },
+          {
+            model: "Модель 03",
+            tag: "Зеркала",
+            title: "Зеркальная панель<br>со скрытым светом"
+          }
+        ]
+      },
+      {
+        title: "Душевые",
+        sideImage: assets.mirrorCube,
+        accent: "#d866ff",
+        products: [
+          {
+            model: "Модель 03",
+            tag: "Душевые",
+            title: "Распашная дверь<br>с боковой стенкой"
+          },
+          {
+            model: "Модель 04",
+            tag: "Душевые",
+            title: "Раздвижная дверь<br>в черном профиле"
+          },
+          {
+            model: "Модель 05",
+            tag: "Душевые",
+            title: "Угловая кабина<br>с прозрачным стеклом"
+          }
+        ]
+      },
+      {
+        title: "Лестницы",
+        sideImage: assets.stairsCube,
+        accent: "#d7a15a",
+        products: [
+          {
+            model: "Модель 07",
+            tag: "Лестницы",
+            title: "Стеклянное ограждение<br>с подсветкой"
+          },
+          {
+            model: "Модель 08",
+            tag: "Лестницы",
+            title: "Лестничный марш<br>со стеклом"
+          },
+          {
+            model: "Модель 09",
+            tag: "Лестницы",
+            title: "Стеклянные перила<br>на скрытом крепеже"
+          }
+        ]
+      },
+      {
+        title: "Стеклянные<br>перегородки",
+        sideImage: assets.stairsCube,
+        accent: "#8fc9ff",
+        products: [
+          {
+            model: "Модель 10",
+            tag: "Перегородки",
+            title: "Черная рамная<br>перегородка"
+          },
+          {
+            model: "Модель 11",
+            tag: "Перегородки",
+            title: "Матовая панель<br>до потолка"
+          },
+          {
+            model: "Модель 12",
+            tag: "Перегородки",
+            title: "Панель<br>с тонким профилем"
+          }
+        ]
+      }
+    ];
+
+    const slideShell = document.querySelector(".slide-shell");
+    const slide = document.getElementById("slide");
+    const centerPanel = document.getElementById("centerPanel");
+    const strip = document.getElementById("strip");
+    const productCard = document.getElementById("productCard");
+    const productPhoto = document.getElementById("productPhoto");
+    const productDrawing = document.getElementById("productDrawing");
+    const modelBadge = document.getElementById("modelBadge");
+    const productKicker = document.getElementById("productKicker");
+    const productTitle = document.getElementById("productTitle");
+    const leftCube = document.getElementById("leftCube");
+    const rightCube = document.getElementById("rightCube");
+    const leftCubeImg = document.getElementById("leftCubeImg");
+    const rightCubeImg = document.getElementById("rightCubeImg");
+    const leftCubeTitle = document.getElementById("leftCubeTitle");
+    const rightCubeTitle = document.getElementById("rightCubeTitle");
+    const topGhost = document.getElementById("topGhost");
+    const bottomGhost = document.getElementById("bottomGhost");
+
+    let categoryIndex = 1;
+    let productIndex = 0;
+    let wheelLocked = false;
+    let categoryLocked = false;
+    let productLocked = false;
+
+    function wrap(value, length) {
+      return (value + length) % length;
+    }
+
+    function currentCategory() {
+      return categories[categoryIndex];
+    }
+
+    function plain(text) {
+      return text.replace(/<br>/g, " ");
+    }
+
+    function setGhostPreviews() {
+      const cat = currentCategory();
+      const prev = wrap(productIndex - 1, cat.products.length);
+      const next = wrap(productIndex + 1, cat.products.length);
+      topGhost.dataset.model = cat.products[prev].model;
+      topGhost.dataset.title = plain(cat.products[prev].title);
+      topGhost.setAttribute("aria-label", `Предыдущая работа: ${plain(cat.products[prev].title)}`);
+      bottomGhost.dataset.model = cat.products[next].model;
+      bottomGhost.dataset.title = plain(cat.products[next].title);
+      bottomGhost.setAttribute("aria-label", `Следующая работа: ${plain(cat.products[next].title)}`);
+    }
+
+    function applyProductToMain(product, cat) {
+      productPhoto.src = assets.bathroom;
+      productPhoto.alt = plain(product.title);
+      productDrawing.src = assets.drawing;
+      productDrawing.alt = product.tag;
+      modelBadge.textContent = product.model;
+      productKicker.textContent = product.tag;
+      productTitle.innerHTML = product.title;
+      productCard.style.setProperty("--accent", cat.accent);
+      setGhostPreviews();
+    }
+
+    function createProductCard(product, cat) {
+      const card = document.createElement("article");
+      card.className = "product-card incoming-card";
+      card.style.setProperty("--accent", cat.accent);
+      card.innerHTML = `
+        <div class="product-photo">
+          <img src="${assets.bathroom}" alt="${plain(product.title)}">
+        </div>
+        <div class="product-info">
+          <div class="model-badge">${product.model}</div>
+          <img class="product-drawing" src="${assets.drawing}" alt="${product.tag}">
+          <div class="product-copy">
+            <div class="product-kicker">${product.tag}</div>
+            <h1 class="product-title">${product.title}</h1>
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+    function renderCategory(direction = 0) {
+      const left = categories[wrap(categoryIndex - 1, categories.length)];
+      const right = categories[wrap(categoryIndex + 1, categories.length)];
+
+      leftCubeImg.src = left.sideImage;
+      rightCubeImg.src = right.sideImage;
+      leftCubeTitle.innerHTML = left.title;
+      rightCubeTitle.innerHTML = right.title;
+
+      leftCube.style.setProperty("--slide-x", "170px");
+      rightCube.style.setProperty("--slide-x", "-170px");
+      strip.classList.remove("is-pulsing");
+      leftCube.classList.remove("is-pulsing");
+      rightCube.classList.remove("is-pulsing");
+
+      const openedCube = direction < 0 ? leftCube : rightCube;
+      if (direction !== 0) {
+        openedCube.classList.add("is-pulsing");
+        strip.classList.add("is-pulsing");
+        window.setTimeout(() => {
+          openedCube.classList.remove("is-pulsing");
+          strip.classList.remove("is-pulsing");
+        }, 560);
+      }
+
+      renderProduct(0);
+    }
+
+    function renderProduct(direction = 0) {
+      const cat = currentCategory();
+      const product = cat.products[productIndex];
+
+      if (direction === 0) {
+        applyProductToMain(product, cat);
+        productLocked = false;
+        return;
+      }
+
+      productLocked = true;
+      const incoming = createProductCard(product, cat);
+      strip.appendChild(incoming);
+      strip.classList.remove("product-next", "product-prev", "is-product-carousel");
+      void strip.offsetWidth;
+      strip.classList.add("is-product-carousel", direction > 0 ? "product-next" : "product-prev");
+
+      window.setTimeout(() => {
+        applyProductToMain(product, cat);
+        incoming.remove();
+        strip.classList.remove("is-product-carousel", "product-next", "product-prev");
+        productLocked = false;
+      }, 530);
+    }
+
+    function prepareFold(delta) {
+      strip.style.transformOrigin = "50% 50%";
+      centerPanel.style.transformOrigin = "50% 50%";
+    }
+
+    function shiftCategory(delta) {
+      if (categoryLocked || productLocked) return;
+
+      categoryLocked = true;
+      prepareFold(delta);
+
+      const openedCube = delta < 0 ? leftCube : rightCube;
+      leftCube.classList.remove("is-pulsing");
+      rightCube.classList.remove("is-pulsing");
+      openedCube.classList.add("is-pulsing");
+      slide.classList.remove("is-category-next", "is-category-prev");
+      slide.classList.add(delta > 0 ? "is-category-next" : "is-category-prev");
+
+      strip.classList.remove("is-pulsing", "is-folding-out", "is-folding-in");
+      centerPanel.classList.remove("is-folding", "is-folding-out", "is-folding-in");
+      void strip.offsetWidth;
+      void centerPanel.offsetWidth;
+      strip.classList.add("is-folding", "is-folding-out");
+      centerPanel.classList.add("is-folding", "is-folding-out");
+
+      window.setTimeout(() => {
+        categoryIndex = wrap(categoryIndex + delta, categories.length);
+        productIndex = 0;
+        renderCategory(0);
+
+        strip.classList.remove("is-folding-out");
+        centerPanel.classList.remove("is-folding-out");
+        void strip.offsetWidth;
+        void centerPanel.offsetWidth;
+        strip.classList.add("is-folding-in");
+        centerPanel.classList.add("is-folding-in");
+      }, 430);
+
+      window.setTimeout(() => {
+        strip.classList.remove("is-folding", "is-folding-in");
+        centerPanel.classList.remove("is-folding", "is-folding-in");
+        slide.classList.remove("is-category-next", "is-category-prev");
+        leftCube.classList.remove("is-pulsing");
+        rightCube.classList.remove("is-pulsing");
+        categoryLocked = false;
+      }, 1040);
+    }
+
+    function shiftProduct(delta) {
+      if (categoryLocked || productLocked) return;
+      const cat = currentCategory();
+      productIndex = wrap(productIndex + delta, cat.products.length);
+      renderProduct(delta);
+    }
+
+    function resizeSlide() {
+      const scale = Math.min(window.innerWidth / 1661, window.innerHeight / 947, 1);
+      document.documentElement.style.setProperty("--scale", scale.toFixed(4));
+      slideShell.style.width = `${1661 * scale}px`;
+      slideShell.style.height = `${947 * scale}px`;
+    }
+
+    document.getElementById("prevCategory").addEventListener("click", () => shiftCategory(-1));
+    document.getElementById("nextCategory").addEventListener("click", () => shiftCategory(1));
+    document.getElementById("prevProduct").addEventListener("click", () => shiftProduct(-1));
+    document.getElementById("nextProduct").addEventListener("click", () => shiftProduct(1));
+    leftCube.addEventListener("click", () => shiftCategory(-1));
+    rightCube.addEventListener("click", () => shiftCategory(1));
+
+    strip.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      if (wheelLocked || Math.abs(event.deltaY) < 12) return;
+      wheelLocked = true;
+      shiftProduct(event.deltaY > 0 ? 1 : -1);
+      window.setTimeout(() => {
+        wheelLocked = false;
+      }, 560);
+    }, { passive: false });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") shiftCategory(-1);
+      if (event.key === "ArrowRight") shiftCategory(1);
+      if (event.key === "ArrowUp") shiftProduct(-1);
+      if (event.key === "ArrowDown") shiftProduct(1);
+    });
+
+    window.addEventListener("resize", resizeSlide);
+    resizeSlide();
+    renderCategory(0);
+  </script>
+</body>
+</html>

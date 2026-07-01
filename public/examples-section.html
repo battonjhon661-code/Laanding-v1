@@ -4,10 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Media Center</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&display=swap" media="print" onload="this.media='all'">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400&display=swap">
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
 <style>
   @property --pos { syntax: "<number>"; inherits: true; initial-value: 0; }
 
@@ -104,8 +105,10 @@
   .citem {
     --ang: calc(mod((calc(var(--i) - var(--pos)) * var(--step)) + 3.14159265rad, 6.28318531rad) - 3.14159265rad);
     --c: cos(var(--ang));
+    /* z-index: distance from center → closer = higher; no React re-render needed */
     --raw: mod(calc(var(--i) - round(var(--pos))), var(--M));
     z-index: calc(round(60 - min(var(--raw), calc(var(--M) - var(--raw))) * 5));
+    /* height driven by CSS so CItem doesn't re-render on posAccum change */
     height: var(--citem-h);
     position: absolute; left: 50%; top: 50%;
     border-radius: 8px; overflow: hidden; cursor: pointer;
@@ -211,21 +214,24 @@
   @media (max-width: 768px) {
     body { background: #ffffff; overflow: auto; }
     #root { height: auto; min-height: 100vh; }
+
     .m-view {
       display: flex; flex-direction: column; align-items: center;
-      padding: 18px 16px 44px; font-family: 'Manrope', sans-serif;
+      padding: 18px 16px 44px;
+      font-family: 'Manrope', sans-serif;
       color: #222222;
     }
-    .m-title { text-align: center; margin-bottom: 20px; }
+    .m-title { text-align: center; margin-bottom: 15px; }
     .m-title h2 {
-      font-size: clamp(24px, 7vw, 32px); line-height: 1.08; font-weight: 400;
-      letter-spacing: 0.01em; text-transform: uppercase; margin: 0 0 12px; color: #111;
+      font-size: 30px; line-height: 1.25; font-weight: 500;
+      letter-spacing: 0; text-transform: uppercase; margin: 0 0 10px;
     }
     .m-title p {
-      font-size: clamp(13px, 3.6vw, 15px); line-height: 1.55; font-weight: 300;
-      color: rgba(0,0,0,0.45); max-width: 320px; margin: 0 auto;
+      font-size: 17px; line-height: 1.42; font-weight: 400;
+      color: #555555; max-width: 390px; margin: 0 auto;
     }
-    /* card stack */
+
+    /* --- card stack --- */
     .wm-stack {
       position: relative;
       width: 406px; max-width: calc(100vw - 32px);
@@ -236,17 +242,23 @@
       top: 9px; left: 14px;
       width: 380px; max-width: 100%;
       height: 437px; border-radius: 22px;
-      background: #ffffff; box-shadow: 0 5px 17px rgba(0,0,0,0.2);
+      background: #ffffff;
+      box-shadow: 0 5px 17px rgba(0,0,0,0.2);
     }
-    .wm-stack::after { top: 23px; left: 28px; height: 409px; opacity: 0.82; }
+    .wm-stack::after {
+      top: 23px; left: 28px; height: 409px; opacity: 0.82;
+    }
     .wm-card {
       position: relative; z-index: 2;
-      width: 380px; max-width: 100%; height: 455px;
+      width: 380px; max-width: 100%;
+      height: 455px;
       padding: 28px 24px 18px 20px;
-      border-radius: 21px; background: #ffffff;
+      border-radius: 21px;
+      background: #ffffff;
       box-shadow: 0 5px 16px rgba(0,0,0,0.23);
     }
-    /* photo frame */
+
+    /* --- photo frame --- */
     .wm-photo {
       position: relative; height: 409px;
       overflow: visible; border-radius: 11px;
@@ -258,34 +270,44 @@
       background-repeat: no-repeat;
     }
     .wm-photo::before {
-      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      content: ""; position: absolute; inset: 0;
+      border-radius: inherit;
       background: linear-gradient(180deg,rgba(0,0,0,0) 56%,rgba(0,0,0,0.45) 100%);
       pointer-events: none;
     }
-    /* tab badge */
+
+    /* --- category tab badge --- */
     .wm-tab {
       position: absolute; z-index: 5;
-      top: -20px; left: 50%; transform: translateX(-50%);
-      width: auto; padding: 0 22px; height: 46px;
-      display: grid; place-items: center; white-space: nowrap;
-      border: 4px solid #ffffff; border-radius: 10px;
+      top: -20px; left: 65px;
+      width: 188px; height: 50px;
+      display: grid; place-items: center;
+      border: 5px solid #ffffff; border-radius: 12px;
       background: #1f1f1f; background-clip: padding-box;
-      color: #ffffff; font-size: 16px; line-height: 1;
-      font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #ffffff; font-size: 20px; line-height: 1;
+      font-weight: 700; text-transform: uppercase;
       box-shadow: 0 2px 3px rgba(0,0,0,0.16);
     }
-    /* vertical thumb strip */
-    .wm-thumbs { position: absolute; z-index: 4; top: 8px; right: 13px; width: 60px; }
-    .wm-thumb-vp { width: 60px; height: 327px; overflow: hidden; border-radius: 10px; }
+
+    /* --- vertical thumbnail strip --- */
+    .wm-thumbs {
+      position: absolute; z-index: 4;
+      top: 8px; right: 13px; width: 60px;
+    }
+    .wm-thumb-vp {
+      width: 60px; height: 327px;
+      overflow: hidden; border-radius: 10px;
+    }
     .wm-thumb-track {
       display: grid; gap: 8px;
       transition: transform 0.28s ease; will-change: transform;
     }
     .wm-thumb {
-      position: relative; width: 60px; height: 59px;
+      position: relative;
+      width: 60px; height: 59px;
       padding: 0; overflow: hidden;
-      border: 3px solid rgba(221,221,216,0.72); border-radius: 10px;
-      -webkit-appearance: none; appearance: none;
+      border: 3px solid rgba(221,221,216,0.72);
+      border-radius: 10px; -webkit-appearance: none; appearance: none;
       background: var(--wm-tp) center / cover no-repeat;
       box-shadow: 0 1px 5px rgba(0,0,0,0.26), inset 0 0 0 1px rgba(255,255,255,0.18);
       cursor: pointer; flex-shrink: 0;
@@ -299,34 +321,41 @@
       box-shadow: 0 1px 6px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.28);
     }
     .wm-counter {
-      margin-top: 8px; border-color: rgba(88,88,88,0.82);
+      margin-top: 8px;
+      border-color: rgba(88,88,88,0.82);
       display: grid; place-items: center;
       color: #ffffff; font-size: 18px; font-weight: 500;
     }
     .wm-counter::after { background: rgba(0,0,0,0.55); }
     .wm-counter span { position: relative; z-index: 1; }
-    /* caption */
+
+    /* --- photo caption --- */
     .wm-caption {
-      position: absolute; z-index: 4; left: 8px; bottom: 13px; margin: 0;
+      position: absolute; z-index: 4;
+      left: 8px; bottom: 13px; margin: 0;
       color: #ffffff; font-size: 20px; line-height: 1.1;
       font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.58);
     }
-    /* category dots */
+
+    /* --- category dots --- */
     .m-dots { display: flex; gap: 6px; margin-top: 18px; align-items: center; }
     .m-dot {
-      height: 6px; width: 6px; border-radius: 3px; background: rgba(0,0,0,0.2);
-      cursor: pointer; border: none; padding: 0;
+      height: 6px; width: 6px; border-radius: 3px;
+      background: rgba(0,0,0,0.2); cursor: pointer; border: none; padding: 0;
       transition: background 0.2s, width 0.25s cubic-bezier(0.22,1,0.36,1);
     }
     .m-dot.active { background: #111; width: 20px; }
+  }
+
+  @media (max-width: 420px) {
+    .wm-tab { left: 50%; transform: translateX(-50%); }
   }
 </style>
 </head>
 <body>
 <div id="root"></div>
-<script>
+<script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback, useLayoutEffect } = React;
-const h = React.createElement;
 
 /* ---------- seeded mosaic generator ---------- */
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
@@ -337,59 +366,50 @@ function makeMosaic(seed, hr, sr, lr){
   }
   return out;
 }
+const HUE_FAMILIES = {
+  spotlight: [195, 255], movies: [205, 360], music: [0, 360],
+  tv: [180, 265], photos: [25, 210], programs: [150, 285], tasks: [200, 250],
+};
 
 /* ---------- data ---------- */
 const CATS = [
   { id:"title", label:"Виды работ", isTitle:true, subs:[] },
   { id:"shower", label:"Душевые", subs:[
-      "Дверь (1 полотно)", "Угловая (2 стекла)", "Угловая (3 стекла)",
-      "Складная", "Трапециевидная", "Т-образная",
+      "Тёмно-серое стекло · золото", "Бронзовое стекло · хром", "Матовое стекло · хром",
+      "Серое стекло · чёрная фурнитура", "Зелёное стекло · хром", "Рифлёное стекло · бронза",
+      "Тёмно-серое стекло · хром", "Стекло-интим · хром",
     ], photos: [
-    "assets/examples/shower_room/1_door.png",
-    "assets/examples/shower_room/2_angle_2.png",
-    "assets/examples/shower_room/3_angle_3.png",
-    "assets/examples/shower_room/4_collapsible.png",
-    "assets/examples/shower_room/5_trapezoid.png",
-    "assets/examples/shower_room/6_T-type.png",
+    "assets/examples/shower_room/1_dark_grey_gold.webp",
+    "assets/examples/shower_room/2_bronze_chrome.webp",
+    "assets/examples/shower_room/3_matte_clear_chrome.webp",
+    "assets/examples/shower_room/4_grey_black.webp",
+    "assets/examples/shower_room/5_green_clear_chrome.webp",
+    "assets/examples/shower_room/6_ribbed_bronze.webp",
+    "assets/examples/shower_room/7_dark_grey_chrome.webp",
+    "assets/examples/shower_room/8_privacy_chrome.webp",
   ] },
-  { id:"mirrors_light", label:"Зеркала с подсветкой", subs:[
-      "Круглая", "Р-образная", "Овальная", "Эллипс", "Квадратная", "Арочная",
-    ], photos: [
-    "assets/examples/mirrors_light/1_circle.png",
-    "assets/examples/mirrors_light/2_R-type.png",
-    "assets/examples/mirrors_light/3_oval.png",
-    "assets/examples/mirrors_light/4_ellipse.png",
-    "assets/examples/mirrors_light/5_square.png",
-    "assets/examples/mirrors_light/6_arch.png",
+  { id:"mirrors_light", label:"Зеркала с подсветкой", subs:["Квадратное"], photos: [
+    "assets/examples/mirrors_light/1_square.webp",
   ] },
-  { id:"stairs", label:"Лестницы", subs:[
-      "На точечных опорах", "На стойках", "Профильная",
-    ], photos: [
-    "assets/examples/stairs/1_points.png",
-    "assets/examples/stairs/2_racks.png",
-    "assets/examples/stairs/3_profile.png",
-  ] },
+  { id:"spotlight", label:"Spotlight", subs:["обзор", "что нового", "избранное"] },
+  { id:"movies", label:"Movies", subs:["ещё фильмы", "библиотека фильмов", "play dvd", "поиск"] },
+  { id:"music", label:"Music", subs:["ещё музыка", "музыкальная библиотека", "play all", "радио", "поиск"] },
+  { id:"tv", label:"TV", subs:["прямой эфир", "записанное", "телегид", "настройка"] },
+  { id:"photos", label:"Photos + Video", subs:["видео", "библиотека фото", "избранное", "слайд-шоу"] },
+  { id:"programs", label:"Programs", subs:["ещё приложения", "библиотека", "поиск"] },
+  { id:"tasks", label:"Tasks", subs:["синхронизация", "настройки", "выключение"] },
 ];
-const DEFAULT_CAT = 0;
-const N = CATS.length;
-// Rendered as several repeated copies of CATS so the rail always has real
-// slots to slide into in either direction; `ai` (the absolute index into
-// this array) periodically gets recentered back into the middle copy once
-// scrolling settles (see resetRef below), so it never has to grow without
-// bound. COPIES=5 gives a wide buffer (2*N steps either way) so even a fast
-// continuous scroll burst can't outrun the recenter and run off the rendered
-// array — which is what made the carousel appear to "disappear".
-const COPIES = 5;
-const MID = Math.floor(COPIES / 2);
-const RAIL_CATS = Array.from({ length: COPIES }, () => CATS).flat();
-const DEFAULT_AI = MID * N + DEFAULT_CAT;
+const DEFAULT_CAT = 0; // title card centered on load
+const N = CATS.length;           // 8 — real item count
+const TRIPLE = [...CATS, ...CATS, ...CATS]; // 3 copies for infinite loop
+const DEFAULT_AI = N + DEFAULT_CAT; // start in middle copy
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 function ringOffset(i, pos, n){ let d = ((i - pos) % n + n) % n; if(d > n/2) d -= n; return d; }
 const wrap = (v, n) => ((v % n) + n) % n;
 function ringSize(n){ let M = n; while(M < 10) M += n; return M; }
 
-/* geometry */
+/* geometry (design px, scaled by u) */
 const PREV_W = 470, PREV_H = 602;
 const TILE_W = 360, TILE_H = 360, CENTER_H = 540;
 const RADIUS = 326;
@@ -403,20 +423,22 @@ function catPhoto(ci, subIdx){
 }
 
 const Mosaic = React.memo(function Mosaic({ src }){
-  return h("div", { className: "mosaic-wrap" },
-    h("img", { src: src, alt: "", draggable: "false", loading: "lazy" })
+  return (
+    <div className="mosaic-wrap"><img src={src} alt="" draggable="false" /></div>
   );
 });
 
+/* CItem is memoized — only re-renders when isC (center status) or width/capSize changes,
+   NOT on every posAccum tick (z-index and height are CSS-driven via parent vars) */
 const CItem = React.memo(function CItem({ c, isC, tw, capSize, sub, src, onPick }){
-  return h("div", {
-    className: "citem" + (isC ? " center" : ""),
-    onClick: () => onPick(c),
-    style: { width: tw, "--i": c }
-  },
-    h(Mosaic, { src: src }),
-    h("div", { className: "tile-glow" }),
-    h("div", { className: "cap", style: { fontSize: capSize } }, sub)
+  return (
+    <div className={"citem" + (isC ? " center" : "")}
+         onClick={() => onPick(c)}
+         style={{ width: tw, "--i": c }}>
+      <Mosaic src={src} />
+      <div className="tile-glow" />
+      <div className="cap" style={{ fontSize: capSize }}>{sub}</div>
+    </div>
   );
 });
 
@@ -429,386 +451,51 @@ function Carousel({ ci, posAccum, u, onPick, onStepSub }){
   const capSize = 17.5 * u;
   const btnSize = 46 * u, inset = 8 * u;
   const halfW = tw / 2, halfH = (CENTER_H * u) / 2;
-  return h("div", {
-    className: "carousel",
-    style: {
-      width: tw, height: TILE_H * u,
-      "--pos": posAccum, "--R": R + "px", "--step": step + "rad",
-      "--M": M,
-      "--citem-h": (TILE_H * u) + "px",
-      "--citem-ch": (CENTER_H * u) + "px",
-    }
-  },
-    ...Array.from({ length: M }, (_, c) =>
-      h(CItem, {
-        key: c,
-        c: c, isC: c === center, tw: tw, capSize: capSize,
-        sub: subs[c % n],
-        src: catPhoto(ci, c % n),
-        onPick: onPick
-      })
-    ),
-    n > 1 && h("div", {
-      className: "csub-arrow csub-up",
-      style: {
-        width: btnSize, height: btnSize,
-        left: "50%", top: "50%",
-        transform: "translate(calc(-50% + " + (halfW - inset) + "px), calc(-50% - " + (halfH - inset) + "px))",
-      },
-      onClick: (e) => { e.stopPropagation(); onStepSub(-1); },
-      "aria-label": "Предыдущий пункт",
-    },
-      h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
-        h("polyline", { points: "6 15 12 9 18 15" })
-      )
-    ),
-    n > 1 && h("div", {
-      className: "csub-arrow csub-down",
-      style: {
-        width: btnSize, height: btnSize,
-        left: "50%", top: "50%",
-        transform: "translate(calc(-50% + " + (halfW - inset) + "px), calc(-50% + " + (halfH - inset) + "px))",
-      },
-      onClick: (e) => { e.stopPropagation(); onStepSub(1); },
-      "aria-label": "Следующий пункт",
-    },
-      h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
-        h("polyline", { points: "6 9 12 15 18 9" })
-      )
-    )
-  );
-}
-
-function App(){
-  const [ai, setAi] = useState(DEFAULT_AI);
-  const realAi = ai % N;
-  const [selMap, setSelMap] = useState(() => {
-    const o = {}; CATS.forEach((c, i) => { o[i] = c.subs.length > 1 ? 1 : 0; }); return o;
-  });
-  const [posAccum, setPosAccum] = useState(selMap[DEFAULT_CAT]);
-  const [dim, setDim] = useState({ w: window.innerWidth, h: window.innerHeight });
-  const u = clamp(Math.min(dim.w / 1920, dim.h / 1080), 0.55, 1.15);
-
-  const railRef = useRef(null);
-  const [shift, setShift] = useState(() => {
-    const u0 = clamp(Math.min(window.innerWidth / 1920, window.innerHeight / 1080), 0.55, 1.15);
-    const sw = PREV_W * u0;
-    return Math.round(window.innerWidth / 2 - sw / 2 - DEFAULT_AI * (sw + GAP * u0));
-  });
-  const [instant, setInstant] = useState(false);
-
-  const [spread, setSpread] = useState(false);
-  const [spreadDone, setSpreadDone] = useState(false);
-  const spreadRef = useRef(false);
-
-  useEffect(() => {
-    if (!spread) return;
-    const t = setTimeout(() => setSpreadDone(true), 900);
-    return () => clearTimeout(t);
-  }, [spread]);
-
-  const posRef = useRef(posAccum); posRef.current = posAccum;
-  const aiRef = useRef(ai); aiRef.current = ai;
-  const selMapRef = useRef(selMap); selMapRef.current = selMap;
-  const visibilityRef = useRef(0);
-  const [visible, setVisible] = useState(false);
-
-  const [autoEnabled, setAutoEnabled] = useState(true);
-  const [animKey, setAnimKey] = useState(0);
-  const idleRef = useRef(null);
-
-  const onUserInteract = useCallback(() => {
-    setAutoEnabled(false);
-    clearTimeout(idleRef.current);
-    idleRef.current = setTimeout(() => {
-      setAutoEnabled(true);
-      setAnimKey(k => k + 1);
-    }, 3000);
-  }, []);
-
-  const onStripEnd = useCallback(() => {
-    setAi(v => v + 1);
-    setAnimKey(k => k + 1);
-  }, []);
-
-  useEffect(() => {
-    const sw = PREV_W * u, gapPx = GAP * u;
-    setShift(Math.round(dim.w / 2 - sw / 2 - ai * (sw + gapPx)));
-  }, [ai, dim, u]);
-
-  // Recenters `ai` back into the middle copy once the slide transition has
-  // settled. Deliberately scheduled only once per "burst" (not reset on
-  // every step) — resetting on each step meant fast continuous scrolling
-  // (steps less than 570ms apart) postponed this forever, letting `ai` drift
-  // past the rendered RAIL_CATS array entirely. The recenter target is also
-  // computed with a full modulo wrap so it self-corrects regardless of how
-  // far `ai` drifted before this got to run, not just by a single ±N shift.
-  const resetRef = useRef(null);
-  useEffect(() => {
-    if (resetRef.current) return;
-    resetRef.current = setTimeout(() => {
-      resetRef.current = null;
-      const cur = aiRef.current;
-      if (cur < MID * N || cur >= (MID + 1) * N) {
-        setInstant(true);
-        setAi(MID * N + wrap(cur, N));
-      }
-    }, 570);
-  }, [ai]);
-  useEffect(() => () => clearTimeout(resetRef.current), []);
-
-  useEffect(() => {
-    if (!instant) return;
-    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setInstant(false)));
-    return () => cancelAnimationFrame(raf);
-  }, [instant]);
-
-  useLayoutEffect(() => {
-    const v = selMapRef.current[ai % N];
-    posRef.current = v; setPosAccum(v);
-  }, [ai]);
-
-  useEffect(() => {
-    const onResize = () => setDim({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  const stepCat = useCallback((dir) => setAi(v => v + dir), []);
-
-  const stepSub = useCallback((dir) => {
-    const a = aiRef.current % N, n = CATS[a].subs.length;
-    if (!n) return;
-    const np = posRef.current + dir;
-    posRef.current = np; setPosAccum(np);
-    setSelMap(m => ({ ...m, [a]: wrap(np, n) }));
-  }, []);
-
-  const stepSubUI = useCallback((dir) => { stepSub(dir); onUserInteract(); }, [stepSub, onUserInteract]);
-
-  const pickSub = useCallback((cell) => {
-    const a = aiRef.current % N, n = CATS[a].subs.length;
-    if (!n) return;
-    const M = ringSize(n);
-    const off = ringOffset(cell, wrap(posRef.current, M), M);
-    const np = posRef.current + off;
-    posRef.current = np; setPosAccum(np);
-    setSelMap(m => ({ ...m, [a]: cell % n }));
-    onUserInteract();
-  }, [onUserInteract]);
-
-  const extAccum = useRef(0), extCool = useRef(0);
-
-  useEffect(() => {
-    const onMsg = (e) => {
-      if (!e.data) return;
-      if (e.data.type === 'visibility') {
-        const nowVisible = e.data.ratio >= 0.8;
-        const wasVisible = visibilityRef.current >= 0.8;
-        visibilityRef.current = e.data.ratio;
-        setVisible(nowVisible);
-        if (nowVisible && !wasVisible) {
-          setAnimKey(k => k + 1);
-          if (!spreadRef.current) {
-            spreadRef.current = true;
-            setTimeout(() => setSpread(true), 100);
-          }
-        }
-        return;
-      }
-      if (e.data.type === 'swipeX') { stepCat(e.data.dir); onUserInteract(); return; }
-      if (e.data.type === 'wheelX') {
-        const now = performance.now();
-        if (now < extCool.current) return;
-        extAccum.current += e.data.delta;
-        if (extAccum.current > 80)       { stepCat(1);  extAccum.current = 0; extCool.current = now + 220; onUserInteract(); }
-        else if (extAccum.current < -80) { stepCat(-1); extAccum.current = 0; extCool.current = now + 220; onUserInteract(); }
-      }
-    };
-    window.addEventListener('message', onMsg);
-    return () => window.removeEventListener('message', onMsg);
-  }, [stepCat, onUserInteract]);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault();
-      if(e.key === "ArrowLeft")       { stepCat(-1); onUserInteract(); }
-      else if(e.key === "ArrowRight") { stepCat(1);  onUserInteract(); }
-      else if(e.key === "ArrowUp")    { stepSub(-1); onUserInteract(); }
-      else if(e.key === "ArrowDown")  { stepSub(1);  onUserInteract(); }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [stepCat, stepSub, onUserInteract]);
-
-  const accum = useRef(0), cool = useRef(0), lastT = useRef("cat");
-  useEffect(() => {
-    const onWheel = (e) => {
-      const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
-      const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-      const inSubs = Math.abs(e.clientX - cx) < 0.5 * PREV_W * u + 40 &&
-                     Math.abs(e.clientY - cy) < 0.5 * PREV_H * u + 60;
-      const hasSubs = CATS[aiRef.current % N].subs.length > 0;
-      if (!horizontal && (!inSubs || !hasSubs)) return;
-      e.preventDefault();
-      const delta = horizontal ? e.deltaX : e.deltaY;
-      if(lastT.current !== (horizontal ? "cat" : "sub")){ accum.current = 0; lastT.current = horizontal ? "cat" : "sub"; }
-      accum.current += delta;
-      const now = performance.now();
-      if(now < cool.current) return;
-      const TH = horizontal ? 80 : 45;
-      const step = horizontal ? stepCat : stepSub;
-      if(accum.current > TH){       step(1);  accum.current = 0; cool.current = now + 220; onUserInteract(); }
-      else if(accum.current < -TH){ step(-1); accum.current = 0; cool.current = now + 220; onUserInteract(); }
-    };
-    window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel);
-  }, [stepCat, stepSub, u, onUserInteract]);
-
-  useEffect(() => {
-    let sx = 0, sy = 0;
-    const onStart = (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; };
-    const onEnd = (e) => {
-      const dx = e.changedTouches[0].clientX - sx;
-      const dy = e.changedTouches[0].clientY - sy;
-      if (Math.abs(dx) > Math.abs(dy) * 1.1 && Math.abs(dx) > 30) {
-        dx < 0 ? stepCat(1) : stepCat(-1);
-        onUserInteract();
-      } else if (Math.abs(dy) > Math.abs(dx) * 1.1 && Math.abs(dy) > 30) {
-        const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-        const inSubs = Math.abs(sx - cx) < 0.5 * PREV_W * u + 40 &&
-                       Math.abs(sy - cy) < 0.5 * PREV_H * u + 60;
-        const hasSubs = CATS[aiRef.current % N].subs.length > 0;
-        if (inSubs && hasSubs) { dy < 0 ? stepSub(1) : stepSub(-1); onUserInteract(); }
-      }
-    };
-    window.addEventListener("touchstart", onStart, { passive: true });
-    window.addEventListener("touchend", onEnd, { passive: true });
-    return () => {
-      window.removeEventListener("touchstart", onStart);
-      window.removeEventListener("touchend", onEnd);
-    };
-  }, [stepCat, stepSub, u, onUserInteract]);
-
-  const slotW = PREV_W * u, slotH = PREV_H * u;
-
-  return h("div", { className: "stage" },
-    h("button", {
-      className: "nav-arrow nav-prev", "aria-label": "Предыдущая категория",
-      onClick: () => { stepCat(-1); onUserInteract(); }
-    },
-      h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
-        h("polyline", { points: "15 18 9 12 15 6" })
-      )
-    ),
-    h("button", {
-      className: "nav-arrow nav-next", "aria-label": "Следующая категория",
-      onClick: () => { stepCat(1); onUserInteract(); }
-    },
-      h("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
-        h("polyline", { points: "9 18 15 12 9 6" })
-      )
-    ),
-    h("div", { className: "rail-wrap", style: { height: slotH } },
-      h("div", {
-        className: "rail", ref: railRef,
-        style: Object.assign(
-          { transform: "translateX(" + shift + "px)", gap: GAP * u },
-          instant ? { transition: "none" } : {}
-        )
-      },
-        ...RAIL_CATS.map(function(c, tripleI) {
-          const realI = tripleI % N;
-          const focused = tripleI === ai;
-          const coverPhoto = c.isTitle ? null : catPhoto(realI, selMap[realI] || 0);
-          const dist = Math.abs(tripleI - DEFAULT_AI);
-
-          let slotTransform, slotOpacity, slotDelay;
-          if (!spread) {
-            const dxToTitle = (DEFAULT_AI - tripleI) * (slotW + GAP * u);
-            if (c.isTitle) {
-              slotTransform = "scale(1)";
-              slotOpacity = 1;
-            } else if (dist <= 3) {
-              const peek = dist * 5;
-              slotTransform = "translateX(" + (dxToTitle + peek) + "px) scale(" + (1 - dist * 0.012) + ")";
-              slotOpacity = [0, 0.52, 0.26, 0.1][dist];
-            } else {
-              slotTransform = "translateX(" + dxToTitle + "px) scale(0.74)";
-              slotOpacity = 0;
-            }
-            slotDelay = "0ms";
-          } else {
-            slotTransform = "scale(" + (focused ? 1 : 0.74) + ")";
-            slotOpacity = focused ? 1 : 0.82;
-            slotDelay = spreadDone ? "0ms" : (Math.min(dist, 6) * 38) + "ms";
-          }
-
-          return h("div", {
-            key: tripleI,
-            className: "slot" + (focused ? " focused" : " side"),
-            onClick: () => { if(!focused){ setAi(tripleI); onUserInteract(); } },
-            style: {
-              width: slotW, height: slotH,
-              transform: slotTransform,
-              opacity: slotOpacity,
-              filter: focused ? "none" : "saturate(0.85) brightness(0.9)",
-              transitionDelay: slotDelay,
-            }
-          },
-            c.isTitle
-              ? h("div", { className: "title-card", style: { width: slotW, height: slotH } },
-                  h("div", { className: "tc-inner", style: { opacity: spread ? 1 : 0, transitionDelay: spread ? "180ms" : "0ms" } },
-                    h("div", { className: "tc-eyebrow" }, "/ Проекты"),
-                    h("h2", { className: "tc-h" }, "Виды", h("br", null), "работ"),
-                    h("p", { className: "tc-desc" },
-                      "Реализованные проекты: зеркала, душевые перегородки, стеклянные полки и ограждения для дома и бизнеса."
-                    )
-                  )
-                )
-              : h(React.Fragment, null,
-                  h("div", { className: "preview", style: { width: slotW, height: slotH } },
-                    h(Mosaic, { src: coverPhoto }),
-                    h("div", { className: "tile-glow" }),
-                    h("div", { className: "tile-scrim" })
-                  ),
-                  focused ? h(Carousel, { key: "car-" + c.id + "-" + tripleI, ci: realI, posAccum: posAccum, u: u, onPick: pickSub, onStepSub: stepSubUI }) : null,
-                  h("div", {
-                    className: "cat-name" + (focused ? " under" : ""),
-                    style: {
-                      transform: "translate(-50%, " + ((focused ? (CENTER_H / 2 + 34) : 0) * u) + "px)",
-                      fontSize: (focused ? 35 : 33) * u
-                    }
-                  }, c.label)
-                )
-          );
-        })
-      )
-    ),
-    h("div", { className: "auto-strips" },
-      ...CATS.map(function(_, ci) {
-        return h("div", {
-          key: ci,
-          className: "auto-strip" + (ci === realAi ? " active" : ""),
-          onClick: () => { setAi(MID * N + ci); onUserInteract(); }
-        },
-          ci === realAi && autoEnabled && visible
-            ? h("div", { key: animKey, className: "auto-strip-fill", onAnimationEnd: onStripEnd })
-            : null
-        );
-      })
-    ),
-    h("div", { className: "hint" },
-      h("kbd", null, "←"),
-      h("kbd", null, "→"),
-      h("span", null, "категории"),
-      h("span", { className: "sep" }, "•"),
-      h("kbd", null, "↑"),
-      h("kbd", null, "↓"),
-      h("span", null, "подкатегории"),
-      h("span", { className: "sep" }, "•"),
-      h("span", null, "или колёсико мыши")
-    )
+  return (
+    <div className="carousel"
+         style={{
+           width: tw, height: TILE_H * u,
+           "--pos": posAccum, "--R": R + "px", "--step": step + "rad",
+           "--M": M,
+           "--citem-h": (TILE_H * u) + "px",
+           "--citem-ch": (CENTER_H * u) + "px",
+         }}>
+      {Array.from({ length: M }, (_, c) => (
+        <CItem key={c}
+               c={c} isC={c === center} tw={tw} capSize={capSize}
+               sub={subs[c % n]}
+               src={catPhoto(ci, c % n)}
+               onPick={onPick} />
+      ))}
+      {n > 1 && (
+        <div className="csub-arrow csub-up"
+             style={{
+               width: btnSize, height: btnSize,
+               left: "50%", top: "50%",
+               transform: `translate(calc(-50% + ${halfW - inset}px), calc(-50% - ${halfH - inset}px))`,
+             }}
+             onClick={(e) => { e.stopPropagation(); onStepSub(-1); }}
+             aria-label="Предыдущий пункт">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 15 12 9 18 15"/>
+          </svg>
+        </div>
+      )}
+      {n > 1 && (
+        <div className="csub-arrow csub-down"
+             style={{
+               width: btnSize, height: btnSize,
+               left: "50%", top: "50%",
+               transform: `translate(calc(-50% + ${halfW - inset}px), calc(-50% + ${halfH - inset}px))`,
+             }}
+             onClick={(e) => { e.stopPropagation(); onStepSub(1); }}
+             aria-label="Следующий пункт">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -852,40 +539,47 @@ function MobileCard({ cat }) {
   const hiddenBelow = photos.length - (firstVisible + VISIBLE);
   const counterSrc  = photos[firstVisible + VISIBLE] || '';
 
-  return h("div", { className: "wm-stack" },
-    h("div", { className: "wm-card" },
-      h("div", { className: "wm-photo", style: { '--wm-img': mainPhoto ? `url("${mainPhoto}")` : 'none' } },
-        h("div", { className: "wm-tab" }, cat.label),
-        photos.length > 0
-          ? h("div", { className: "wm-thumbs", ref: thumbsRef,
-              onTouchStart: onThumbTouchStart, onTouchEnd: onThumbTouchEnd },
-              h("div", { className: "wm-thumb-vp" },
-                h("div", { className: "wm-thumb-track",
-                    style: { transform: `translateY(-${firstVisible * STEP}px)` } },
-                  ...photos.map((src, i) =>
-                    h("button", {
-                      key: i,
-                      className: "wm-thumb" + (i === activeIdx ? " is-active" : ""),
-                      style: { '--wm-tp': `url("${src}")` },
-                      tabIndex: i >= firstVisible && i < firstVisible + VISIBLE ? 0 : -1,
-                      "aria-pressed": String(i === activeIdx),
-                      onClick: () => setActiveIdx(i)
-                    })
-                  )
-                )
-              ),
-              hiddenBelow > 0
-                ? h("button", {
-                    className: "wm-thumb wm-counter",
-                    style: { '--wm-tp': counterSrc ? `url("${counterSrc}")` : 'none' },
-                    onClick: () => moveThumbs(1)
-                  }, h("span", null, "+" + hiddenBelow))
-                : null
-            )
-          : null,
-        h("p", { className: "wm-caption" }, caption)
-      )
-    )
+  return (
+    <div className="wm-stack">
+      <div className="wm-card">
+        <div className="wm-photo" style={{ '--wm-img': mainPhoto ? `url("${mainPhoto}")` : 'none' }}>
+          <div className="wm-tab">{cat.label}</div>
+
+          {photos.length > 0 && (
+            <div className="wm-thumbs" ref={thumbsRef}
+              onTouchStart={onThumbTouchStart}
+              onTouchEnd={onThumbTouchEnd}
+            >
+              <div className="wm-thumb-vp">
+                <div className="wm-thumb-track"
+                  style={{ transform: `translateY(-${firstVisible * STEP}px)` }}
+                >
+                  {photos.map((src, i) => (
+                    <button key={i}
+                      className={"wm-thumb" + (i === activeIdx ? " is-active" : "")}
+                      style={{ '--wm-tp': `url("${src}")` }}
+                      tabIndex={i >= firstVisible && i < firstVisible + VISIBLE ? 0 : -1}
+                      aria-pressed={String(i === activeIdx)}
+                      onClick={() => setActiveIdx(i)}
+                    />
+                  ))}
+                </div>
+              </div>
+              {hiddenBelow > 0 && (
+                <button className="wm-thumb wm-counter"
+                  style={{ '--wm-tp': counterSrc ? `url("${counterSrc}")` : 'none' }}
+                  onClick={() => moveThumbs(1)}
+                >
+                  <span>+{hiddenBelow}</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          <p className="wm-caption">{caption}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -908,23 +602,24 @@ function MobileView() {
 
   if (!cats.length) return null;
 
-  return h("div", { className: "m-view", onTouchStart: onTouchStart, onTouchEnd: onTouchEnd },
-    h("div", { className: "m-title" },
-      h("h2", null, "Виды работ"),
-      h("p", null, "Реализованные проекты: зеркала, душевые перегородки, стеклянные полки и ограждения для дома и бизнеса.")
-    ),
-    h(MobileCard, { key: cats[catIdx].id, cat: cats[catIdx] }),
-    cats.length > 1
-      ? h("div", { className: "m-dots" },
-          ...cats.map((_, i) =>
-            h("button", {
-              key: i,
-              className: "m-dot" + (i === catIdx ? " active" : ""),
-              onClick: () => setCatIdx(i)
-            })
-          )
-        )
-      : null
+  return (
+    <div className="m-view" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="m-title">
+        <h2>Виды работ</h2>
+        <p>Реализованные проекты: зеркала, душевые перегородки, стеклянные полки и ограждения для дома и бизнеса.</p>
+      </div>
+      <MobileCard key={cats[catIdx].id} cat={cats[catIdx]} />
+      {cats.length > 1 && (
+        <div className="m-dots">
+          {cats.map((_, i) => (
+            <button key={i}
+              className={"m-dot" + (i === catIdx ? " active" : "")}
+              onClick={() => setCatIdx(i)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -936,10 +631,342 @@ function RootApp() {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-  return isMobile ? h(MobileView, null) : h(App, null);
+  return isMobile ? <MobileView /> : <App />;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(h(RootApp, null));
+function App(){
+  const [ai, setAi] = useState(DEFAULT_AI);
+  const realAi = ai % N;
+  const [selMap, setSelMap] = useState(() => {
+    const o = {}; CATS.forEach((c, i) => { o[i] = c.subs.length > 1 ? 1 : 0; }); return o;
+  });
+  const [posAccum, setPosAccum] = useState(selMap[DEFAULT_CAT]);
+  const [dim, setDim] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const u = clamp(Math.min(dim.w / 1920, dim.h / 1080), 0.55, 1.15);
+
+  const railRef = useRef(null);
+  /* init shift immediately so there's no first-frame jump */
+  const [shift, setShift] = useState(() => {
+    const u0 = clamp(Math.min(window.innerWidth / 1920, window.innerHeight / 1080), 0.55, 1.15);
+    const sw = PREV_W * u0;
+    return Math.round(window.innerWidth / 2 - sw / 2 - DEFAULT_AI * (sw + GAP * u0));
+  });
+  const [instant, setInstant] = useState(false);
+
+  /* deck-spread entrance animation */
+  const [spread, setSpread] = useState(false);
+  const [spreadDone, setSpreadDone] = useState(false);
+  const spreadRef = useRef(false);
+
+  useEffect(() => {
+    if (!spread) return;
+    const t = setTimeout(() => setSpreadDone(true), 900);
+    return () => clearTimeout(t);
+  }, [spread]);
+
+  const posRef = useRef(posAccum); posRef.current = posAccum;
+  const aiRef = useRef(ai); aiRef.current = ai;
+  const selMapRef = useRef(selMap); selMapRef.current = selMap;
+  const visibilityRef = useRef(0);
+  const [visible, setVisible] = useState(false);
+
+  const [autoEnabled, setAutoEnabled] = useState(true);
+  const [animKey, setAnimKey] = useState(0);
+  const idleRef = useRef(null);
+
+  const onUserInteract = useCallback(() => {
+    setAutoEnabled(false);
+    clearTimeout(idleRef.current);
+    idleRef.current = setTimeout(() => {
+      setAutoEnabled(true);
+      setAnimKey(k => k + 1);
+    }, 3000);
+  }, []);
+
+  /* autoplay: advance without wrapping — reset effect handles the loopback */
+  const onStripEnd = useCallback(() => {
+    setAi(v => v + 1);
+    setAnimKey(k => k + 1);
+  }, []);
+
+  /* position rail by formula — no DOM read, works for any triple-array index */
+  useEffect(() => {
+    const sw = PREV_W * u, gapPx = GAP * u;
+    setShift(Math.round(dim.w / 2 - sw / 2 - ai * (sw + gapPx)));
+  }, [ai, dim, u]);
+
+  /* after each transition: silently teleport from 1st/3rd copy back to middle copy */
+  const resetRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(resetRef.current);
+    resetRef.current = setTimeout(() => {
+      const cur = aiRef.current;
+      if (cur < N || cur >= 2 * N) {
+        setInstant(true);
+        setAi(v => v < N ? v + N : v - N);
+      }
+    }, 570);
+    return () => clearTimeout(resetRef.current);
+  }, [ai]);
+
+  /* re-enable transition on the next paint after an instant jump */
+  useEffect(() => {
+    if (!instant) return;
+    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setInstant(false)));
+    return () => cancelAnimationFrame(raf);
+  }, [instant]);
+
+  /* snap posAccum when entering a category */
+  useLayoutEffect(() => {
+    const v = selMapRef.current[ai % N];
+    posRef.current = v; setPosAccum(v);
+    // eslint-disable-next-line
+  }, [ai]);
+
+  useEffect(() => {
+    const onResize = () => setDim({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  /* stepCat no longer wraps — triple array + reset effect handle looping */
+  const stepCat = useCallback((dir) => setAi(v => v + dir), []);
+
+  const stepSub = useCallback((dir) => {
+    const a = aiRef.current % N, n = CATS[a].subs.length;
+    if (!n) return;
+    const np = posRef.current + dir;
+    posRef.current = np; setPosAccum(np);
+    setSelMap(m => ({ ...m, [a]: wrap(np, n) }));
+  }, []);
+
+  const stepSubUI = useCallback((dir) => { stepSub(dir); onUserInteract(); }, [stepSub, onUserInteract]);
+
+  const pickSub = useCallback((cell) => {
+    const a = aiRef.current % N, n = CATS[a].subs.length;
+    if (!n) return;
+    const M = ringSize(n);
+    const off = ringOffset(cell, wrap(posRef.current, M), M);
+    const np = posRef.current + off;
+    posRef.current = np; setPosAccum(np);
+    setSelMap(m => ({ ...m, [a]: cell % n }));
+    onUserInteract();
+  }, [onUserInteract]);
+
+  /* accumulator for wheel events forwarded from parent page (when iframe is partially visible) */
+  const extAccum = useRef(0), extCool = useRef(0);
+
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (!e.data) return;
+      if (e.data.type === 'visibility') {
+        const nowVisible = e.data.ratio >= 0.8;
+        const wasVisible = visibilityRef.current >= 0.8;
+        visibilityRef.current = e.data.ratio;
+        setVisible(nowVisible);
+        if (nowVisible && !wasVisible) {
+          setAnimKey(k => k + 1);
+          if (!spreadRef.current) {
+            spreadRef.current = true;
+            setTimeout(() => setSpread(true), 100);
+          }
+        }
+        return;
+      }
+      if (e.data.type === 'swipeX') { stepCat(e.data.dir); onUserInteract(); return; }
+      if (e.data.type === 'wheelX') {
+        const now = performance.now();
+        if (now < extCool.current) return;
+        extAccum.current += e.data.delta;
+        if (extAccum.current > 80)       { stepCat(1);  extAccum.current = 0; extCool.current = now + 220; onUserInteract(); }
+        else if (extAccum.current < -80) { stepCat(-1); extAccum.current = 0; extCool.current = now + 220; onUserInteract(); }
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [stepCat, onUserInteract]);
+
+  /* keyboard */
+  useEffect(() => {
+    const onKey = (e) => {
+      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault();
+      if(e.key === "ArrowLeft")       { stepCat(-1); onUserInteract(); }
+      else if(e.key === "ArrowRight") { stepCat(1);  onUserInteract(); }
+      else if(e.key === "ArrowUp")    { stepSub(-1); onUserInteract(); }
+      else if(e.key === "ArrowDown")  { stepSub(1);  onUserInteract(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [stepCat, stepSub, onUserInteract]);
+
+  /* wheel — horizontal always navigates categories */
+  const accum = useRef(0), cool = useRef(0), lastT = useRef("cat");
+  useEffect(() => {
+    const onWheel = (e) => {
+      const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+      const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+      const inSubs = Math.abs(e.clientX - cx) < 0.5 * PREV_W * u + 40 &&
+                     Math.abs(e.clientY - cy) < 0.5 * PREV_H * u + 60;
+      const hasSubs = CATS[aiRef.current % N].subs.length > 0;
+      if (!horizontal && (!inSubs || !hasSubs)) return;
+      e.preventDefault();
+      const delta = horizontal ? e.deltaX : e.deltaY;
+      if(lastT.current !== (horizontal ? "cat" : "sub")){ accum.current = 0; lastT.current = horizontal ? "cat" : "sub"; }
+      accum.current += delta;
+      const now = performance.now();
+      if(now < cool.current) return;
+      const TH = horizontal ? 80 : 45;
+      const step = horizontal ? stepCat : stepSub;
+      if(accum.current > TH){       step(1);  accum.current = 0; cool.current = now + 220; onUserInteract(); }
+      else if(accum.current < -TH){ step(-1); accum.current = 0; cool.current = now + 220; onUserInteract(); }
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, [stepCat, stepSub, u, onUserInteract]);
+
+  /* touch swipe — left/right always navigates categories, up/down in center navigates subs */
+  useEffect(() => {
+    let sx = 0, sy = 0;
+    const onStart = (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; };
+    const onEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > Math.abs(dy) * 1.1 && Math.abs(dx) > 30) {
+        dx < 0 ? stepCat(1) : stepCat(-1);
+        onUserInteract();
+      } else if (Math.abs(dy) > Math.abs(dx) * 1.1 && Math.abs(dy) > 30) {
+        const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+        const inSubs = Math.abs(sx - cx) < 0.5 * PREV_W * u + 40 &&
+                       Math.abs(sy - cy) < 0.5 * PREV_H * u + 60;
+        const hasSubs = CATS[aiRef.current % N].subs.length > 0;
+        if (inSubs && hasSubs) { dy < 0 ? stepSub(1) : stepSub(-1); onUserInteract(); }
+      }
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchend", onEnd);
+    };
+  }, [stepCat, stepSub, u, onUserInteract]);
+
+  const slotW = PREV_W * u, slotH = PREV_H * u;
+
+  return (
+    <div className="stage">
+      {/* always-visible left/right arrows for category navigation */}
+      <button className="nav-arrow nav-prev" aria-label="Предыдущая категория"
+              onClick={() => { stepCat(-1); onUserInteract(); }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <button className="nav-arrow nav-next" aria-label="Следующая категория"
+              onClick={() => { stepCat(1); onUserInteract(); }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+
+      <div className="rail-wrap" style={{ height: slotH }}>
+        <div className="rail" ref={railRef} style={{
+          transform: `translateX(${shift}px)`, gap: GAP * u,
+          ...(instant ? { transition: 'none' } : {}),
+        }}>
+          {TRIPLE.map((c, tripleI) => {
+            const realI = tripleI % N;
+            const focused = tripleI === ai;
+            const coverPhoto = c.isTitle ? null : catPhoto(realI, selMap[realI] || 0);
+            const dist = Math.abs(tripleI - DEFAULT_AI);
+
+            /* deck-spread styles */
+            let slotTransform, slotOpacity, slotDelay;
+            if (!spread) {
+              const dxToTitle = (DEFAULT_AI - tripleI) * (slotW + GAP * u);
+              if (c.isTitle) {
+                slotTransform = 'scale(1)';
+                slotOpacity = 1;
+              } else if (dist <= 3) {
+                const peek = dist * 5;
+                slotTransform = `translateX(${dxToTitle + peek}px) scale(${1 - dist * 0.012})`;
+                slotOpacity = [0, 0.52, 0.26, 0.1][dist];
+              } else {
+                slotTransform = `translateX(${dxToTitle}px) scale(0.74)`;
+                slotOpacity = 0;
+              }
+              slotDelay = '0ms';
+            } else {
+              slotTransform = `scale(${focused ? 1 : 0.74})`;
+              slotOpacity = focused ? 1 : 0.82;
+              slotDelay = spreadDone ? '0ms' : `${Math.min(dist, 6) * 38}ms`;
+            }
+
+            return (
+              <div key={tripleI}
+                   className={"slot" + (focused ? " focused" : " side")}
+                   onClick={() => { if(!focused){ setAi(tripleI); onUserInteract(); } }}
+                   style={{
+                     width: slotW, height: slotH,
+                     transform: slotTransform,
+                     opacity: slotOpacity,
+                     filter: focused ? "none" : "saturate(0.85) brightness(0.9)",
+                     transitionDelay: slotDelay,
+                   }}>
+                {c.isTitle ? (
+                  <div className="title-card" style={{ width: slotW, height: slotH }}>
+                    <div className="tc-inner" style={{ opacity: spread ? 1 : 0, transitionDelay: spread ? '180ms' : '0ms' }}>
+                      <div className="tc-eyebrow">/ Проекты</div>
+                      <h2 className="tc-h">Виды<br/>работ</h2>
+                      <p className="tc-desc">
+                        Реализованные проекты: зеркала, душевые перегородки, стеклянные полки и ограждения для дома и бизнеса.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="preview" style={{ width: slotW, height: slotH }}>
+                      <Mosaic src={coverPhoto} />
+                      <div className="tile-glow" />
+                      <div className="tile-scrim" />
+                    </div>
+                    {focused && (
+                      <Carousel key={"car-" + c.id + "-" + tripleI} ci={realI} posAccum={posAccum} u={u} onPick={pickSub} onStepSub={stepSubUI} />
+                    )}
+                    <div className={"cat-name" + (focused ? " under" : "")}
+                         style={{ transform: `translate(-50%, ${(focused ? (CENTER_H / 2 + 34) : 0) * u}px)`, fontSize: (focused ? 35 : 33) * u }}>
+                      {c.label}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="auto-strips">
+        {CATS.map((_, ci) => (
+          <div key={ci} className={"auto-strip" + (ci === realAi ? " active" : "")}
+               onClick={() => { setAi(N + ci); onUserInteract(); }}>
+            {ci === realAi && autoEnabled && visible && (
+              <div key={animKey} className="auto-strip-fill" onAnimationEnd={onStripEnd} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="hint">
+        <kbd>←</kbd><kbd>→</kbd><span>категории</span>
+        <span className="sep">•</span>
+        <kbd>↑</kbd><kbd>↓</kbd><span>подкатегории</span>
+        <span className="sep">•</span>
+        <span>или колёсико мыши</span>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<RootApp />);
 </script>
 </body>
 </html>

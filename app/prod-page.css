@@ -568,6 +568,67 @@
     #slide2.lights-on #slide2-text .s2-heading  { color: #fff; }
     #slide2.lights-on #slide2-text .s2-sub      { color: rgba(255,255,255,.5); }
 
+    /* Slide2 CTA button */
+    @keyframes s2BtnSheen {
+      0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+      8%   { opacity: 1; }
+      92%  { opacity: 1; }
+      100% { transform: translateX(320%) skewX(-18deg); opacity: 0; }
+    }
+    @keyframes s2CtaAppear {
+      from { opacity: 0; transform: translateY(22px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .s2-cta {
+      position: relative;
+      overflow: hidden;
+      margin-top: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 28px;
+      padding: 0 40px;
+      height: 56px;
+      align-self: flex-start;
+      border: 1px solid #171717;
+      border-radius: 14px;
+      background: #171717;
+      color: #ffffff;
+      cursor: pointer;
+      font-family: 'Manrope', sans-serif;
+      font-size: 13px;
+      font-weight: 650;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      box-shadow: 0 6px 16px rgba(0,0,0,.12);
+      opacity: 0;
+      pointer-events: none;
+      transition: background .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+    .s2-cta::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      left: 0; width: 45%;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,0.22), rgba(255,255,255,0.08), transparent);
+      animation: s2BtnSheen 2.8s cubic-bezier(.4,0,.6,1) infinite;
+      pointer-events: none;
+    }
+    #slide2.lights-on .s2-cta {
+      pointer-events: auto;
+      animation: s2CtaAppear 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+    }
+    #slide2.lights-on .s2-cta:hover {
+      background: #292929;
+      box-shadow: 0 9px 22px rgba(0,0,0,.22);
+      transform: translateY(-2px);
+    }
+    #slide2.lights-on .s2-cta:hover::before { animation-duration: 1.6s; }
+    #slide2.lights-on .s2-cta:active {
+      background: #111111;
+      box-shadow: 0 3px 8px rgba(0,0,0,.12);
+      transform: translateY(0);
+    }
+
     /* Line reveal animation */
     .s2-line {
       display: block;
@@ -1279,6 +1340,13 @@
     overflow: hidden;
     contain: layout paint;
     box-shadow: 0 -20px 50px rgba(0,0,0,.28);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .mat-block img,
+  .mat-block video {
+    -webkit-user-drag: none;
+    pointer-events: none;
   }
   .mat-stage {
     width: 1920px;

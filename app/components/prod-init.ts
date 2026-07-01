@@ -1299,4 +1299,40 @@ export function initProdScripts(): void {
       requestAnimationFrame(function() { rowEl.style.transition = 'transform .55s cubic-bezier(.2,.8,.2,1)'; });
     }
   })();
+
+
+    // Mat block: block native image/video interactions (drag, right-click save)
+    (function() {
+      var block = document.querySelector('.mat-block');
+      if (!block) return;
+      block.addEventListener('dragstart',   function(e) { e.preventDefault(); }, false);
+      block.addEventListener('contextmenu', function(e) { e.preventDefault(); }, false);
+      block.querySelectorAll('img, video').forEach(function(el) { el.draggable = false; });
+    })();
+
+    // Slide2 CTA: scroll to footer + flash messenger buttons
+    (function() {
+      var btn = document.getElementById('s2-cta-btn');
+      if (!btn) return;
+      // After entrance animation — restore normal hover/transform behaviour
+      btn.addEventListener('animationend', function(e) {
+        if (e.animationName === 's2CtaAppear') {
+          btn.style.opacity = '1';
+          btn.style.animation = '';
+        }
+      });
+      btn.addEventListener('click', function() {
+        var footer = document.querySelector('.site-footer') || document.querySelector('footer');
+        if (footer) footer.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(function() {
+          var btns = document.querySelectorAll('.footer-msg-btn');
+          btns.forEach(function(b) {
+            b.classList.remove('msg-pulse');
+            void b.offsetWidth;
+            b.classList.add('msg-pulse');
+            b.addEventListener('animationend', function() { b.classList.remove('msg-pulse'); }, { once: true });
+          });
+        }, 650);
+      });
+    })();
 }

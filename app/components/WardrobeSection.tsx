@@ -365,11 +365,19 @@ export default function WardrobeSection() {
     if (!d.active) return;
     d.active = false;
     if (wrapRef.current) wrapRef.current.style.cursor = "grab";
+    // Tap detection: pointer capture steals the click event from cards inside,
+    // so we handle navigation here when there was almost no movement.
+    if (Math.abs(e.clientX - d.startX) < 8) {
+      const tappedExtIdx = Math.max(0, Math.min(3 * count - 1,
+        Math.round((d.startX - d.startTx - CARD_W / 2) / STRIDE)));
+      snapTo(tappedExtIdx, true);
+      return;
+    }
     const vw = wrapRef.current?.clientWidth ?? 375;
     const floatIdx = (vw / 2 - CARD_W / 2 - txRef.current) / STRIDE;
     const target   = Math.round(floatIdx - d.velX * 0.22);
     snapTo(target, true);
-  }, [snapTo]);
+  }, [snapTo, count]);
 
   // ── Card click / dot click ────────────────────────────────────────────────────
 
@@ -440,6 +448,7 @@ export default function WardrobeSection() {
               isActive={extIdx === activeExtIdx}
               onClick={() => scrollToReal(extIdx % count)}
               showNew={!item.video && activeTab !== "УСЛУГИ"}
+              isMobile={isMobile}
             />
           ))}
         </div>
@@ -458,13 +467,13 @@ export default function WardrobeSection() {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-function CardItem({ item, isActive, onClick, showNew }: { item: Item; isActive: boolean; onClick: () => void; showNew?: boolean }) {
+function CardItem({ item, isActive, onClick, showNew, isMobile }: { item: Item; isActive: boolean; onClick: () => void; showNew?: boolean; isMobile?: boolean }) {
   return (
-    <div onClick={onClick} style={{ flexShrink: 0, width: CARD_W, height: 248, borderRadius: 16, overflow: "hidden", position: "relative", background: "#111", cursor: "pointer", transform: isActive ? "scale(1)" : "scale(0.91)", opacity: isActive ? 1 : 0.52, boxShadow: isActive ? "0 8px 48px rgba(0,0,0,0.75)" : "0 2px 12px rgba(0,0,0,0.35)", transition: "transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s ease, box-shadow .35s ease" }}>
-      <img src={item.preview} alt={item.name} loading={isActive ? "eager" : "lazy"} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+    <div onClick={onClick} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ flexShrink: 0, width: CARD_W, height: 248, borderRadius: 16, overflow: "hidden", position: "relative", background: "#111", cursor: "pointer", transform: isActive ? "scale(1)" : "scale(0.91)", opacity: isActive ? 1 : 0.52, boxShadow: isActive ? "0 8px 48px rgba(0,0,0,0.75)" : "0 2px 12px rgba(0,0,0,0.35)", transition: "transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s ease, box-shadow .35s ease" }}>
+      <img src={item.preview} alt={item.name} loading={isActive ? "eager" : "lazy"} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
       {isActive && item.video && !isMobile && (
         <video key={item.video} src={item.video} muted autoPlay loop playsInline
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
       )}
       {showNew && (
         <div style={{ position: "absolute", top: 10, right: 10, padding: "4px 8px", borderRadius: 6, background: "rgba(244,241,236,0.92)", backdropFilter: "blur(4px)", pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
