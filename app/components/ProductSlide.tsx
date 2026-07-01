@@ -54,6 +54,159 @@ const CATS = [
   ]},
 ];
 
+function initMobile(section: HTMLElement) {
+  section.style.height = 'auto';
+  section.style.overflow = 'visible';
+  section.style.touchAction = 'auto';
+  section.style.width = '100%';
+
+  const el = document.createElement('div');
+  el.className = 'exs-mobile';
+  el.style.display = 'block';
+  section.appendChild(el);
+
+  // Hide desktop elements
+  const heading = section.querySelector('.exs-heading') as HTMLElement;
+  const stageArea = section.querySelector('.exs-stage-area') as HTMLElement;
+  if (heading) heading.style.display = 'none';
+  if (stageArea) stageArea.style.display = 'none';
+
+  let exmCat = 0, exmWork = 0;
+  let dragStartX = 0, dragStartY = 0, dragActive = false;
+
+  function circDiff(i: number, a: number, t: number) {
+    let d = i - a;
+    if (d > t / 2) d -= t;
+    if (d < t / -2) d += t;
+    return d;
+  }
+  function posClass(i: number) {
+    const t = CATS[exmCat].subs.length;
+    const d = circDiff(i, exmWork, t);
+    if (d === 0) return 'exm-center';
+    if (d === -1) return 'exm-left';
+    if (d === 1) return 'exm-right';
+    return d < 0 ? 'exm-far-left' : 'exm-far-right';
+  }
+
+  el.innerHTML =
+    '<div class="exm-eyebrow">ПОПУЛЯРНЫЕ РАБОТЫ</div>'
+    + '<h2 class="exm-main-title">ПРИМЕРЫ РАБОТ</h2>'
+    + '<h3 class="exm-cat-title" id="exmCatTitle"></h3>'
+    + '<p class="exm-cat-sub">Выберите категорию по вашему вкусу</p>'
+    + '<div class="exm-carousel" id="exmCarousel"></div>'
+    + '<div class="exm-pagination" id="exmPagination"></div>'
+    + '<h3 class="exm-cats-title">Категории</h3>'
+    + '<p class="exm-cats-sub">Выберите категорию по вашему вкусу</p>'
+    + '<div class="exm-cats-list" id="exmCatsList"></div>';
+
+  const carouselEl = document.getElementById('exmCarousel')!;
+  const paginationEl = document.getElementById('exmPagination')!;
+  const catTitleEl = document.getElementById('exmCatTitle')!;
+  const catsListEl = document.getElementById('exmCatsList')!;
+
+  function renderCarousel() {
+    const works = CATS[exmCat].subs;
+    catTitleEl.textContent = CATS[exmCat].label;
+    carouselEl.innerHTML = works.map((w, i) =>
+      '<article class="exm-card ' + posClass(i) + '" data-index="' + i + '">'
+      + '<div class="exm-card-img"><img src="' + w.img + '" alt=""></div>'
+      + '<div class="exm-card-body"><h4 class="exm-card-title">' + w.title + '</h4>'
+      + '<button class="exm-card-btn" type="button"><span>Хочу обсудить проект</span><span class="arrow"><svg width="20" height="8" viewBox="0 0 26 10" fill="none"><path d="M0 5h24M20 1l4 4-4 4" stroke="currentColor" stroke-width="1.2"/></svg></span></button></div>'
+      + '</article>'
+    ).join('');
+    paginationEl.innerHTML = works.map((_, i) =>
+      '<button type="button" class="' + (i === exmWork ? 'active' : '') + '"></button>'
+    ).join('');
+  }
+
+  function renderCats() {
+    catsListEl.innerHTML = CATS.map((cat, i) => {
+      const img = cat.cover;
+      return '<button class="exm-cat-item ' + (i === exmCat ? 'is-active' : '') + '" data-index="' + i + '">'
+        + '<img src="' + img + '" alt="">'
+        + '<span>' + cat.label + '</span>'
+        + '</button>';
+    }).join('');
+  }
+
+  function updatePositions() {
+    const cards = carouselEl.querySelectorAll('.exm-card');
+    for (let i = 0; i < cards.length; i++) {
+      cards[i].className = 'exm-card ' + posClass(i);
+    }
+    const dots = paginationEl.querySelectorAll('button');
+    for (let j = 0; j < dots.length; j++) {
+      dots[j].className = j === exmWork ? 'active' : '';
+    }
+  }
+
+  function showWork(i: number) {
+    const t = CATS[exmCat].subs.length;
+    exmWork = ((i % t) + t) % t;
+    updatePositions();
+  }
+
+  function selectCat(i: number) {
+    exmCat = i;
+    exmWork = 0;
+    renderCarousel();
+    renderCats();
+  }
+
+  carouselEl.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.exm-card-btn');
+    if (btn) {
+      const footer = document.querySelector('.site-footer') || document.querySelector('footer');
+      if (footer) footer.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    const card = (e.target as HTMLElement).closest('.exm-card');
+    if (!card) return;
+    if (card.classList.contains('exm-left')) showWork(exmWork - 1);
+    if (card.classList.contains('exm-right')) showWork(exmWork + 1);
+  });
+
+  paginationEl.addEventListener('click', (e) => {
+    const dot = (e.target as HTMLElement).closest('button');
+    if (!dot) return;
+    const dots = Array.from(paginationEl.children);
+    showWork(dots.indexOf(dot));
+  });
+
+  catsListEl.addEventListener('click', (e) => {
+    const item = (e.target as HTMLElement).closest('.exm-cat-item') as HTMLElement;
+    if (!item) return;
+    selectCat(Number(item.dataset.index));
+  });
+
+  carouselEl.addEventListener('touchstart', (e) => {
+    if (!e.touches.length) return;
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+    dragActive = true;
+  }, { passive: true });
+
+  carouselEl.addEventListener('touchend', (e) => {
+    if (!dragActive || !e.changedTouches.length) return;
+    dragActive = false;
+    const dx = e.changedTouches[0].clientX - dragStartX;
+    const dy = e.changedTouches[0].clientY - dragStartY;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) showWork(exmWork + 1);
+    else showWork(exmWork - 1);
+  });
+
+  renderCats();
+  renderCarousel();
+
+  return () => {
+    if (el.parentNode) el.parentNode.removeChild(el);
+    if (heading) heading.style.display = '';
+    if (stageArea) stageArea.style.display = '';
+  };
+}
+
 export default function ProductSlide() {
   const stageRef = useRef(null);
   const sectionRef = useRef(null);
@@ -66,7 +219,9 @@ export default function ProductSlide() {
 
     const mob = window.innerWidth <= 768;
 
-    const GCOLS = mob ? 2 : 4;
+    if (mob) return initMobile(section);
+
+    const GCOLS = 4;
     const GROWS = 2; // 2 rows on both mobile and desktop → portrait intro cells
     // параметры карусели
     const W = stage.offsetWidth || window.innerWidth;

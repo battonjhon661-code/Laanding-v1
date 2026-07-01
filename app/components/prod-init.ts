@@ -997,41 +997,136 @@ export function initProdScripts(): void {
     function renderMobile() {
       var el = document.getElementById('exs-mobile');
       if (!el) return;
-      var h = '<div style="text-align:center;margin-bottom:14px"><h2 style="font-size:18px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">Виды работ</h2>'
-            + '<p style="font-size:12px;line-height:1.5;color:rgba(0,0,0,.5)">Зеркала, душевые перегородки, стеклянные ограждения</p></div>';
-      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-      CATS.forEach(function(cat, ci) {
-        h += '<div style="border-radius:10px;overflow:hidden;background:#0d0d0d">'
-           + '<div style="position:relative;aspect-ratio:292/404;overflow:hidden" id="exsm-vp-'+ci+'">';
-        cat.subs.forEach(function(su, pi) {
-          h += '<div class="exs-photo-item '+(pi===0?'state-current':'state-below')+'" style="background-image:url(\''+su.img+'\')"></div>';
-        });
-        if (cat.subs.length > 1) {
-          h += '<div style="position:absolute;bottom:5px;right:5px;display:flex;flex-direction:column;gap:3px;z-index:5">'
-             + '<button onclick="exsMStep('+ci+',-1)" style="width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer">'
-             + '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="18 15 12 9 6 15"/></svg></button>'
-             + '<button onclick="exsMStep('+ci+',1)" style="width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer">'
-             + '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg></button>'
-             + '</div>';
+
+      var exmCat = 0, exmWork = 0;
+      var exmDragStartX = 0, exmDragStartY = 0, exmDragActive = false;
+
+      function exmCircDiff(i, a, t) {
+        var d = i - a;
+        if (d > t / 2) d -= t;
+        if (d < t / -2) d += t;
+        return d;
+      }
+      function exmPosClass(i) {
+        var t = CATS[exmCat].subs.length;
+        var d = exmCircDiff(i, exmWork, t);
+        if (d === 0) return 'exm-center';
+        if (d === -1) return 'exm-left';
+        if (d === 1) return 'exm-right';
+        return d < 0 ? 'exm-far-left' : 'exm-far-right';
+      }
+
+      el.innerHTML =
+        '<div class="exm-eyebrow">ПОПУЛЯРНЫЕ РАБОТЫ</div>'
+      + '<h2 class="exm-main-title">ПРИМЕРЫ РАБОТ</h2>'
+      + '<h3 class="exm-cat-title" id="exmCatTitle"></h3>'
+      + '<p class="exm-cat-sub">Выберите категорию по вашему вкусу</p>'
+      + '<div class="exm-carousel" id="exmCarousel"></div>'
+      + '<div class="exm-pagination" id="exmPagination"></div>'
+      + '<h3 class="exm-cats-title">Категории</h3>'
+      + '<p class="exm-cats-sub">Выберите категорию по вашему вкусу</p>'
+      + '<div class="exm-cats-list" id="exmCatsList"></div>';
+
+      var carouselEl = document.getElementById('exmCarousel');
+      var paginationEl = document.getElementById('exmPagination');
+      var catTitleEl = document.getElementById('exmCatTitle');
+      var catsListEl = document.getElementById('exmCatsList');
+
+      function exmRenderCarousel() {
+        var works = CATS[exmCat].subs;
+        catTitleEl.textContent = CATS[exmCat].label;
+        carouselEl.innerHTML = works.map(function(w, i) {
+          return '<article class="exm-card ' + exmPosClass(i) + '" data-index="' + i + '">'
+            + '<div class="exm-card-img"><img src="' + w.img + '" alt=""></div>'
+            + '<div class="exm-card-body"><h4 class="exm-card-title">' + w.title + '</h4>'
+            + '<button class="exm-card-btn" type="button"><span>Хочу обсудить проект</span><span class="arrow"><svg width="20" height="8" viewBox="0 0 26 10" fill="none"><path d="M0 5h24M20 1l4 4-4 4" stroke="currentColor" stroke-width="1.2"/></svg></span></button></div>'
+            + '</article>';
+        }).join('');
+        paginationEl.innerHTML = works.map(function(_, i) {
+          return '<button type="button" class="' + (i === exmWork ? 'active' : '') + '"></button>';
+        }).join('');
+      }
+
+      function exmRenderCats() {
+        catsListEl.innerHTML = CATS.map(function(cat, i) {
+          var img = cat.cover;
+          return '<button class="exm-cat-item ' + (i === exmCat ? 'is-active' : '') + '" data-index="' + i + '">'
+            + '<img src="' + img + '" alt="">'
+            + '<span>' + cat.label + '</span>'
+            + '</button>';
+        }).join('');
+      }
+
+      function exmUpdatePositions() {
+        var cards = carouselEl.querySelectorAll('.exm-card');
+        for (var i = 0; i < cards.length; i++) {
+          cards[i].className = 'exm-card ' + exmPosClass(i);
         }
-        h += '</div>'
-           + '<div style="padding:6px 9px;color:rgba(255,255,255,.6);font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-family:Manrope,sans-serif" id="exsm-lbl-'+ci+'">'+cat.label+'</div>'
-           + '</div>';
+        var dots = paginationEl.querySelectorAll('button');
+        for (var j = 0; j < dots.length; j++) {
+          dots[j].className = j === exmWork ? 'active' : '';
+        }
+      }
+
+      function exmShowWork(i) {
+        var t = CATS[exmCat].subs.length;
+        exmWork = ((i % t) + t) % t;
+        exmUpdatePositions();
+      }
+
+      function exmSelectCat(i) {
+        exmCat = i;
+        exmWork = 0;
+        exmRenderCarousel();
+        exmRenderCats();
+      }
+
+      carouselEl.addEventListener('click', function(e) {
+        var btn = e.target.closest('.exm-card-btn');
+        if (btn) {
+          var footer = document.querySelector('.site-footer') || document.querySelector('footer');
+          if (footer) footer.scrollIntoView({ behavior: 'smooth' });
+          return;
+        }
+        var card = e.target.closest('.exm-card');
+        if (!card) return;
+        if (card.classList.contains('exm-left')) exmShowWork(exmWork - 1);
+        if (card.classList.contains('exm-right')) exmShowWork(exmWork + 1);
       });
-      h += '</div>';
-      el.innerHTML = h;
+
+      paginationEl.addEventListener('click', function(e) {
+        var dot = e.target.closest('button');
+        if (!dot) return;
+        var dots = [].slice.call(paginationEl.children);
+        exmShowWork(dots.indexOf(dot));
+      });
+
+      catsListEl.addEventListener('click', function(e) {
+        var item = e.target.closest('.exm-cat-item');
+        if (!item) return;
+        exmSelectCat(Number(item.dataset.index));
+      });
+
+      carouselEl.addEventListener('touchstart', function(e) {
+        if (!e.touches.length) return;
+        exmDragStartX = e.touches[0].clientX;
+        exmDragStartY = e.touches[0].clientY;
+        exmDragActive = true;
+      }, { passive: true });
+
+      carouselEl.addEventListener('touchend', function(e) {
+        if (!exmDragActive || !e.changedTouches.length) return;
+        exmDragActive = false;
+        var dx = e.changedTouches[0].clientX - exmDragStartX;
+        var dy = e.changedTouches[0].clientY - exmDragStartY;
+        if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+        if (dx < 0) exmShowWork(exmWork + 1);
+        else exmShowWork(exmWork - 1);
+      });
+
+      exmRenderCats();
+      exmRenderCarousel();
     }
-    var exsMIdx = CATS.map(function(){ return 0; });
-    window.exsMStep = function(ci, dir) {
-      var n = CATS[ci].subs.length;
-      exsMIdx[ci] = ((exsMIdx[ci]+dir)+n)%n;
-      var vp = document.getElementById('exsm-vp-'+ci);
-      if (!vp) return;
-      var cur = exsMIdx[ci];
-      vp.querySelectorAll('.exs-photo-item').forEach(function(el,i){
-        el.className='exs-photo-item '+(i===cur?'state-current':i<cur?'state-above':'state-below');
-      });
-    };
 
     function initDesktop() {
       var STEP = 540, VSTEP = 310, WIN = 1, BUCKET = 3;

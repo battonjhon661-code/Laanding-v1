@@ -2393,8 +2393,139 @@
   /* ─── Mobile (≤768px) ────────────────────────────────────── */
   @media (max-width: 768px) {
 
-    /* Виды работ: mobile cards use cover so images fill the card area */
-    .exs-mobile .exs-photo-item { background-size: cover; }
+    /* ── New mobile examples section ──────────────── */
+    .exs-prod-section .exs-mobile {
+      font-family: 'Manrope', sans-serif;
+      background: #fff;
+      padding: 48px 0 40px;
+      overflow: hidden;
+    }
+    .exs-mobile .exm-eyebrow {
+      color: #909094;
+      font-size: clamp(11px, 2.8vw, 15px);
+      font-weight: 500;
+      letter-spacing: .38em;
+      text-align: center;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .exs-mobile .exm-main-title {
+      color: #17181b;
+      font-size: clamp(24px, 6.2vw, 36px);
+      font-weight: 300;
+      text-align: center;
+      margin: 0 0 28px;
+      text-transform: uppercase;
+    }
+    .exs-mobile .exm-cat-title {
+      color: #141519;
+      font-size: clamp(18px, 4.6vw, 22px);
+      font-weight: 800;
+      margin: 0 0 4px;
+      padding: 0 20px;
+    }
+    .exs-mobile .exm-cat-sub {
+      color: #8e909b;
+      font-size: clamp(11px, 2.8vw, 13px);
+      font-weight: 600;
+      margin: 0 0 16px;
+      padding: 0 20px;
+    }
+    .exm-carousel {
+      position: relative;
+      width: 100%;
+      height: clamp(340px, 70vw, 480px);
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .exm-card {
+      position: absolute;
+      top: 0;
+      width: clamp(200px, 44vw, 300px);
+      height: 100%;
+      overflow: hidden;
+      border: 0;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(0,0,0,.12);
+      cursor: grab;
+      padding: 0;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      transition: left 320ms ease, opacity 320ms ease, transform 320ms ease;
+    }
+    .exm-card:active { cursor: grabbing; }
+    .exm-card-img {
+      flex: 0 0 72%;
+      overflow: hidden;
+      border-radius: 16px;
+      margin: 6px 6px 0;
+    }
+    .exm-card-img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .exm-card::after { display: none; }
+    .exm-card-body {
+      flex: 1;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 12px 14px 14px;
+      gap: 10px;
+    }
+    .exm-card-title {
+      margin: 0; color: #17181b;
+      font-size: clamp(12px, 3.2vw, 15px);
+      font-weight: 700; line-height: 1.18;
+    }
+    .exm-card-btn {
+      position: relative;
+      width: 100%;
+      height: clamp(34px, 7vw, 42px);
+      border: 1px solid #171717; border-radius: 12px;
+      background: #171717; color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      padding: 0;
+      font-family: 'Manrope', sans-serif;
+      font-size: clamp(9px, 2.4vw, 11px);
+      font-weight: 650; letter-spacing: .02em; white-space: nowrap;
+      box-shadow: 0 6px 16px rgba(0,0,0,.18);
+      overflow: hidden;
+      transition: background .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+    .exm-card-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      left: 0; width: 45%;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,0.22), rgba(255,255,255,0.08), transparent);
+      animation: s2BtnSheen 2.8s cubic-bezier(.4,0,.6,1) infinite;
+      pointer-events: none;
+    }
+    .exm-card-btn:active { background: #111; box-shadow: 0 3px 8px rgba(0,0,0,.12); }
+    .exm-card-btn .arrow { display: inline-flex; align-items: center; flex-shrink: 0; }
+    .exm-card-btn .arrow svg { display: block; }
+    .exm-card.exm-center { left: 50%; transform: translateX(-50%); z-index: 3; }
+    .exm-card.exm-left   { left: calc(50% - clamp(200px, 44vw, 300px) - 8px); transform: translateX(-50%); z-index: 2; }
+    .exm-card.exm-right  { left: calc(50% + clamp(200px, 44vw, 300px) + 8px); transform: translateX(-50%); z-index: 2; }
+    .exm-card.exm-far-left  { left: calc(50% - clamp(200px, 44vw, 300px) * 2 - 16px); transform: translateX(-50%); opacity: 0; pointer-events: none; z-index: 1; }
+    .exm-card.exm-far-right { left: calc(50% + clamp(200px, 44vw, 300px) * 2 + 16px); transform: translateX(-50%); opacity: 0; pointer-events: none; z-index: 1; }
+    .exm-pagination { display: flex; justify-content: center; gap: 10px; margin: 16px 0 0; }
+    .exm-pagination button { display: block; width: 32px; height: 4px; border: 0; border-radius: 999px; background: #d6d6d6; cursor: pointer; padding: 0; transition: background 220ms ease; }
+    .exm-pagination button.active { background: #171717; }
+    .exm-cats-title { position: relative; z-index: 1; color: #141519; font-size: clamp(18px, 4.6vw, 22px); font-weight: 800; margin: 28px 0 4px; padding: 0 20px; }
+    .exm-cats-sub { position: relative; z-index: 1; color: #8e909b; font-size: clamp(11px, 2.8vw, 13px); font-weight: 600; margin: 0 0 14px; padding: 0 20px; }
+    .exm-cats-list {
+      position: relative; z-index: 2;
+      display: flex; gap: 12px;
+      overflow-x: auto; overflow-y: visible; scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      padding: 6px 20px 8px;
+    }
+    .exm-cats-list::-webkit-scrollbar { display: none; }
+    .exm-cat-item { flex: 0 0 auto; width: clamp(72px, 16vw, 96px); border: 0; background: transparent; color: inherit; cursor: pointer; padding: 0; text-align: center; }
+    .exm-cat-item img { display: block; width: 100%; aspect-ratio: 1/1; border-radius: 12px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,.08); transition: box-shadow 220ms ease, transform 220ms ease; }
+    .exm-cat-item span { display: block; margin-top: 8px; color: #292a2e; font-size: clamp(10px, 2.6vw, 13px); font-weight: 600; line-height: 1.15; transition: color 220ms ease; }
+    .exm-cat-item.is-active img { box-shadow: 0 0 0 3px #171717, 0 8px 20px rgba(0,0,0,.16); transform: translateY(-2px); }
+    .exm-cat-item.is-active span { color: #111; font-weight: 800; }
 
     /* Desktop materials/cabinet block hidden on mobile — replaced by WardrobeSection */
     .mat-block { display: none; }
