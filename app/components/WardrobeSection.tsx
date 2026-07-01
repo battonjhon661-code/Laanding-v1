@@ -156,6 +156,10 @@ const CARD_W   = 220;
 const CARD_GAP = 10;
 const STRIDE   = CARD_W + CARD_GAP;
 const SNAP_MS  = 300;
+// Only cards within this many slots of the active one get a real <img>/<video> mounted.
+// With 3 copies of the catalog always in the DOM, mounting every card's full-res image
+// at once (up to ~120 images for the mirrors tab) is what was causing mobile jank/crashes.
+const RENDER_RADIUS = 6;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -446,6 +450,7 @@ export default function WardrobeSection() {
               key={`${activeTab}-${extIdx}`}
               item={item}
               isActive={extIdx === activeExtIdx}
+              shouldRender={Math.abs(extIdx - activeExtIdx) <= RENDER_RADIUS}
               onClick={() => scrollToReal(extIdx % count)}
               showNew={!item.video && activeTab !== "УСЛУГИ"}
               isMobile={isMobile}
@@ -467,10 +472,12 @@ export default function WardrobeSection() {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-function CardItem({ item, isActive, onClick, showNew, isMobile }: { item: Item; isActive: boolean; onClick: () => void; showNew?: boolean; isMobile?: boolean }) {
+function CardItem({ item, isActive, shouldRender, onClick, showNew, isMobile }: { item: Item; isActive: boolean; shouldRender: boolean; onClick: () => void; showNew?: boolean; isMobile?: boolean }) {
   return (
     <div onClick={onClick} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ flexShrink: 0, width: CARD_W, height: 248, borderRadius: 16, overflow: "hidden", position: "relative", background: "#111", cursor: "pointer", transform: isActive ? "scale(1)" : "scale(0.91)", opacity: isActive ? 1 : 0.52, boxShadow: isActive ? "0 8px 48px rgba(0,0,0,0.75)" : "0 2px 12px rgba(0,0,0,0.35)", transition: "transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s ease, box-shadow .35s ease" }}>
-      <img src={item.preview} alt={item.name} loading={isActive ? "eager" : "lazy"} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
+      {shouldRender && (
+        <img src={item.preview} alt={item.name} loading={isActive ? "eager" : "lazy"} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
+      )}
       {isActive && item.video && !isMobile && (
         <video key={item.video} src={item.video} muted autoPlay loop playsInline
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
