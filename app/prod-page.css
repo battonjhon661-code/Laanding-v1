@@ -2451,8 +2451,8 @@
     .mat-track { padding: 0 8px; }
     .mat-cell { flex: 0 0 72%; max-width: 220px; }
 
-    /* Mirror section — compact on mobile */
-    .mirror-section { min-height: auto; }
+    /* Mirror section — half-screen on mobile */
+    .mirror-section { min-height: 50svh; }
     .mirror-text .section__title { font-size: clamp(19px, 5.6vw, 27px); }
     .mirror-section::before {
       background-image: url('/assets/background-5-mobile.webp');
