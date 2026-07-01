@@ -2397,7 +2397,7 @@
     .exs-prod-section .exs-mobile {
       font-family: 'Manrope', sans-serif;
       background: #fff;
-      padding: 48px 0 40px;
+      padding: 24px 0 40px;
       overflow: hidden;
     }
     .exs-mobile .exm-eyebrow {
@@ -2414,7 +2414,7 @@
       font-size: clamp(24px, 6.2vw, 36px);
       font-weight: 300;
       text-align: center;
-      margin: 0 0 28px;
+      margin: 0 0 14px;
       text-transform: uppercase;
     }
     .exs-mobile .exm-cat-title {
