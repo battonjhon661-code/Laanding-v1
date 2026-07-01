@@ -177,7 +177,7 @@ export default function WardrobeSection() {
   const trackRef  = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
 
-  const drag       = useRef({ active: false, startX: 0, startTx: 0, velX: 0, lastX: 0, lastT: 0 });
+  const drag       = useRef({ active: false, startX: 0, startY: 0, startTx: 0, velX: 0, lastX: 0, lastT: 0, axis: '' as '' | 'x' | 'y' });
   const txRef      = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -285,11 +285,6 @@ export default function WardrobeSection() {
       txRef.current = newTx;
       track.style.transform = `translateX(${newTx}px)`;
 
-      const vwNow = wrapRef.current?.clientWidth ?? 375;
-      const nearest = Math.max(0, Math.min(3 * count - 1,
-        Math.round((vwNow / 2 - CARD_W / 2 - newTx) / STRIDE)));
-      setActiveExtIdx(prev => prev === nearest ? prev : nearest);
-
       if (wheelTimer.current) clearTimeout(wheelTimer.current);
       wheelTimer.current = setTimeout(() => {
         const vw = wrapRef.current?.clientWidth ?? 375;
@@ -301,6 +296,38 @@ export default function WardrobeSection() {
     wrap.addEventListener("wheel", onWheel, { passive: false });
     return () => wrap.removeEventListener("wheel", onWheel);
   }, [snapTo, count]);
+
+  // ── Touch: lock axis & block vertical scroll during horizontal swipe ────────
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      drag.current.startY = t.clientY;
+      drag.current.axis = '';
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const d = drag.current;
+      if (!d.active) return;
+      const t = e.touches[0];
+      if (!d.axis) {
+        const dx = Math.abs(t.clientX - d.startX);
+        const dy = Math.abs(t.clientY - d.startY);
+        if (dx > 8 || dy > 8) d.axis = dx >= dy ? 'x' : 'y';
+      }
+      if (d.axis === 'x') e.preventDefault();
+    };
+
+    wrap.addEventListener('touchstart', onTouchStart, { passive: true });
+    wrap.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => {
+      wrap.removeEventListener('touchstart', onTouchStart);
+      wrap.removeEventListener('touchmove', onTouchMove);
+    };
+  }, []);
 
   // ── Slide down from under hero ───────────────────────────────────────────────
   useEffect(() => {
@@ -341,36 +368,34 @@ export default function WardrobeSection() {
     const d = drag.current;
     d.active   = true;
     d.startX   = e.clientX;
+    d.startY   = e.clientY;
     d.startTx  = txRef.current;
     d.velX     = 0;
     d.lastX    = e.clientX;
     d.lastT    = e.timeStamp;
+    d.axis     = '';
     wrap.style.cursor = "grabbing";
   }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
     if (!d.active) return;
+    if (d.axis === 'y') return;
     const newTx = d.startTx + (e.clientX - d.startX);
     txRef.current = newTx;
     if (trackRef.current) trackRef.current.style.transform = `translateX(${newTx}px)`;
-    const vw = wrapRef.current?.clientWidth ?? 375;
-    const nearest = Math.max(0, Math.min(3 * count - 1,
-      Math.round((vw / 2 - CARD_W / 2 - newTx) / STRIDE)));
-    setActiveExtIdx(prev => prev === nearest ? prev : nearest);
     const dt = e.timeStamp - d.lastT;
     if (dt > 0) d.velX = (e.clientX - d.lastX) / dt;
     d.lastX = e.clientX;
     d.lastT = e.timeStamp;
-  }, [count]);
+  }, []);
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
     if (!d.active) return;
     d.active = false;
     if (wrapRef.current) wrapRef.current.style.cursor = "grab";
-    // Tap detection: pointer capture steals the click event from cards inside,
-    // so we handle navigation here when there was almost no movement.
+    if (d.axis === 'y') return;
     if (Math.abs(e.clientX - d.startX) < 8) {
       const tappedExtIdx = Math.max(0, Math.min(3 * count - 1,
         Math.round((d.startX - d.startTx - CARD_W / 2) / STRIDE)));
