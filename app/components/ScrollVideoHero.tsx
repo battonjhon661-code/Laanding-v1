@@ -908,7 +908,7 @@ export default function ScrollVideoHero() {
         cursor: isDragging ? "grabbing" : isMobile ? "default" : "ew-resize",
         userSelect: "none",
         fontFamily: "'Manrope', sans-serif",
-        zIndex: 1,
+        zIndex: isMobile ? 2 : 1,
       } as React.CSSProperties}
     >
       {isMobile ? (

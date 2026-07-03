@@ -419,7 +419,7 @@ export default function WardrobeSection() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <section ref={sectionRef} style={{ position: "relative", zIndex: 0, background: "#0a0b0a", overflow: "hidden", paddingBottom: 32, marginTop: -24, paddingTop: 24 }}>
+    <section ref={sectionRef} className="wrd-section" style={{ position: "relative", zIndex: 0, background: "#0a0b0a", overflow: "hidden", paddingBottom: 32, marginTop: -24, paddingTop: 24 }}>
       <style>{`.wrd-tabs::-webkit-scrollbar { display: none; }`}</style>
 
       {/* Top shadow */}

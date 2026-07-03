@@ -35,9 +35,21 @@ export default function ProdPage() {
 
   const before = html.slice(0, markerIdx);
   const afterRaw = html.slice(markerIdx + MARKER.length);
-  // Remove exs-section (первый </section> в after-блоке)
-  const exsEnd = afterRaw.indexOf('</section>');
-  const afterExs = exsEnd !== -1 ? afterRaw.slice(exsEnd + '</section>'.length) : afterRaw;
+
+  let afterExs = afterRaw;
+  const sectionOpen = afterRaw.indexOf('<section');
+  if (sectionOpen !== -1) {
+    let depth = 0;
+    let i = sectionOpen;
+    while (i < afterRaw.length) {
+      const o = afterRaw.indexOf('<section', i + 1);
+      const c = afterRaw.indexOf('</section>', i + 1);
+      if (c === -1) break;
+      if (depth === 0 && i === sectionOpen) { depth = 1; i = sectionOpen + 8; continue; }
+      if (o !== -1 && o < c) { depth++; i = o + 8; }
+      else { depth--; if (depth === 0) { afterExs = afterRaw.slice(c + '</section>'.length); break; } i = c + 10; }
+    }
+  }
   const after = removeDivBlock(afterExs, '<div class="ba-wrap"');
 
   return (

@@ -9,6 +9,7 @@ export default function Home() {
       <div className="wardrobe-mobile-only" id="materials">
         <WardrobeSection />
       </div>
+      <div className="wrd-bottom-shadow" />
       <ProdPage />
     </main>
   );

@@ -84,7 +84,7 @@ export default function RootLayout({
               name: "VIPGLASS",
               description: "Интерьерное стекло премиум-качества — зеркала, душевые перегородки, стеклянные ограждения и полки.",
               url: "https://vipglass.ru",
-              telephone: "+7 (999) 999-99-99",
+              telephone: "+7 (495) 999-00-99",
               image: "https://vipglass.ru/bedroom.png",
               address: {
                 "@type": "PostalAddress",
