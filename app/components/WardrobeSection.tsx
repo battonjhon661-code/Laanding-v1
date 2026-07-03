@@ -74,7 +74,6 @@ const CATALOG: Record<Tab, Item[]> = {
     { name: "Прозрачное",           preview: `${G}2_Clear_Glass.webp`,                          video: `${G}2_Clear_Glass.webm` },
     { name: "Серое",                preview: `${G}3_Grey_Tinted_Glass.webp`,                    video: `${G}3_Grey_Tinted_Glass.webm` },
     { name: "Тёмно-серое",          preview: `${G}4_Dark_Grey_Tinted_Glass.webp`,               video: `${G}4_Dark_Grey_Tinted_Glass.webm` },
-    { name: "Бронзовое",            preview: `${G}5_Bronze_Tinted_Glass.webp`,                  video: `${G}5_Bronze_Tinted_Glass.webm` },
     { name: "Чёрное",               preview: `${G}6_Black_Tinted_Glass.webp`,                   video: `${G}6_Black_Tinted_Glass.webm` },
     { name: "Матовое",              preview: `${G}7_Matte_Common_Glass.webp`,                   video: `${G}7_Matte_Common_Glass.webm` },
     { name: "Матовое прозрачное",   preview: `${G}8_Matte_Clear_Glass.webp`,                    video: `${G}8_Matte_Clear_Glass.webm` },
@@ -96,6 +95,7 @@ const CATALOG: Record<Tab, Item[]> = {
     { name: "Stemalit Оранжевый",   preview: `${G}24_Stemalit_Tangerine.webp`,                  video: `${G}24_Stemalit_Tangerine.webm` },
     { name: "Stemalit Фиолет",      preview: `${G}25_Stemalit_Purple.webp`,                     video: `${G}25_Stemalit_Purple.webm` },
     { name: "Волновое",             preview: `${G}26_Wave_Glass.webp`,                          video: `${G}26_Wave_Glass.webm` },
+    { name: "Бронзовое",            preview: `${G}5_Bronze_Tinted_Glass.webp` },
   ],
   ТРИПЛЕКС: [
     { name: "Прозрачный",         preview: "/wardrobe/triplex/01_clear.webp" },
@@ -165,7 +165,7 @@ const RENDER_RADIUS = 6;
 
 export default function WardrobeSection() {
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<Tab>("ЗЕРКАЛА");
+  const [activeTab, setActiveTab] = useState<Tab>("СТЕКЛА");
   // activeExtIdx = index in the extended (5-copy) array that is currently centred
   const [activeExtIdx, setActiveExtIdx] = useState(0);
 
