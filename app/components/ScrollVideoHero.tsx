@@ -178,7 +178,7 @@ const ZONE_HOTSPOTS: Hotspot[][] = [
   // 8 Детская
   [
     { left: "44%", top: "40%", label: "Рифлёное стекло" },
-    { left: "68%", top: "40%", label: "Состаренное зеркало", tipLeft: true },
+    { left: "68%", top: "52%", label: "Состаренное зеркало", tipLeft: true },
     { left: "83%", top: "34%", label: "Декоративные зеркала", tipLeft: true },
   ],
   // 9 Ванная
