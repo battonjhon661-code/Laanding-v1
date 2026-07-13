@@ -780,6 +780,41 @@
     min-height: 100vh;
   }
 
+  /* ── Mirror → Footer Reveal ──────────────────────────────── */
+  .mr-stage {
+    position: relative;
+    /* height set by JS: 100vh + footer natural height */
+  }
+  .mr-sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .mr-over {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    will-change: transform;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+  }
+  .mr-over .mirror-standalone-wrap {
+    height: 100%;
+  }
+  .mr-over .mirror-section {
+    height: 100%;
+    min-height: unset;
+  }
+  .mr-under {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    will-change: transform;
+  }
+
   /* ── Examples section v2 — Responsive Carousel ──────────── */
   .exs-prod-section {
     position: relative;

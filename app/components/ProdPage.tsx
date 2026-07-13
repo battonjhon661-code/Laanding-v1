@@ -2,6 +2,7 @@ import prodContent from "./prod-content.json";
 import ProdScripts from "./ProdScripts";
 import ProductSlide from "./ProductSlide";
 import CircleReveal from "./CircleReveal";
+import MirrorReveal from "./MirrorReveal";
 
 const MARKER = "<!--PRODUCT_SLIDE-->";
 
@@ -57,13 +58,28 @@ export default function ProdPage() {
   const navHtml = pStackIdx !== -1 ? before.slice(0, pStackIdx) : before;
   const slide2Html = pStackIdx !== -1 ? before.slice(pStackIdx) : '';
 
+  const mirrorIdx = after.indexOf('<div class="mirror-standalone-wrap"');
+  const footerIdx = after.indexOf('<footer class="site-footer"');
+  const canReveal = mirrorIdx !== -1 && footerIdx !== -1 && footerIdx > mirrorIdx;
+
+  const beforeMirror = canReveal ? after.slice(0, mirrorIdx) : '';
+  const mirrorHtml   = canReveal ? after.slice(mirrorIdx, footerIdx) : '';
+  const footerHtml   = canReveal ? after.slice(footerIdx) : '';
+
   return (
     <>
       <div dangerouslySetInnerHTML={{ __html: navHtml }} />
       <CircleReveal darkHtml={slide2Html}>
         <ProductSlide />
       </CircleReveal>
-      <div dangerouslySetInnerHTML={{ __html: after }} />
+      {canReveal ? (
+        <>
+          {beforeMirror.trim() && <div dangerouslySetInnerHTML={{ __html: beforeMirror }} />}
+          <MirrorReveal mirrorHtml={mirrorHtml} footerHtml={footerHtml} />
+        </>
+      ) : (
+        <div dangerouslySetInnerHTML={{ __html: after }} />
+      )}
       <ProdScripts />
     </>
   );
