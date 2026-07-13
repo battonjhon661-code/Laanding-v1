@@ -1,6 +1,7 @@
 import prodContent from "./prod-content.json";
 import ProdScripts from "./ProdScripts";
 import ProductSlide from "./ProductSlide";
+import CircleReveal from "./CircleReveal";
 
 const MARKER = "<!--PRODUCT_SLIDE-->";
 
@@ -52,10 +53,16 @@ export default function ProdPage() {
   }
   const after = removeDivBlock(afterExs, '<div class="ba-wrap"');
 
+  const pStackIdx = before.indexOf('<div class="parallax-stack">');
+  const navHtml = pStackIdx !== -1 ? before.slice(0, pStackIdx) : before;
+  const slide2Html = pStackIdx !== -1 ? before.slice(pStackIdx) : '';
+
   return (
     <>
-      <div dangerouslySetInnerHTML={{ __html: before }} />
-      <ProductSlide />
+      <div dangerouslySetInnerHTML={{ __html: navHtml }} />
+      <CircleReveal darkHtml={slide2Html}>
+        <ProductSlide />
+      </CircleReveal>
       <div dangerouslySetInnerHTML={{ __html: after }} />
       <ProdScripts />
     </>

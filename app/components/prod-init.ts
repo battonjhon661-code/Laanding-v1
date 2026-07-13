@@ -29,7 +29,7 @@ export function initProdScripts(): void {
       if (!slide2) return;
       function check() {
         const rect = slide2.getBoundingClientRect();
-        if (rect.top < window.innerHeight * 0.3) {
+        if (rect.top < window.innerHeight * 0.15) {
           slide2.classList.add('lights-on');
         } else {
           slide2.classList.remove('lights-on');

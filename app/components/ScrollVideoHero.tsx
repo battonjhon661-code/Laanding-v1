@@ -8,6 +8,8 @@ const SWIPE_THRESHOLD_DRAG  = 80;  // px of horizontal drag before release trigg
 const WHEEL_IDLE_RESET_MS   = 220; // reset wheel accumulator after this much silence
 const AUTO_DELAY            = 5000;
 const MIN_PRELOADER_MS      = 300; // just enough to avoid a flash-of-loader on instant/cached loads
+const INTRO_DELAY_MS        = 200;  // pause after preloader before off→bedroom reveal starts
+const INTRO_FADE_MS         = 800;  // crossfade duration
 const TRANSITION_MS         = 950;  // целевая длительность одиночного перехода (как раньше у animateToPos)
 const SNAP_FADE_MS          = 150;  // half-duration of the cross-fade used for distant (2+ zone) jumps — no video
 // Source clips run ~4s each. At the old budget (250/260) a 9-room jump squeezed
@@ -296,6 +298,8 @@ export default function ScrollVideoHero() {
   const [isDragging, setIsDragging]     = useState(false);
   const [phase, setPhase]               = useState<"loading" | "ready">("loading");
   const [loadPct, setLoadPct]           = useState(0);
+  const [introRevealed, setIntroRevealed] = useState(false);
+  const [introComplete, setIntroComplete] = useState(false);
   const [activeZone, setActiveZone]     = useState(0);
   // `displayZone` is what the still-image layer actually shows. It's set to
   // the move's *final* destination up front, while that image is still
@@ -712,8 +716,15 @@ export default function ScrollVideoHero() {
       img.src = zone.imageSrc;
     }));
 
+    const introImg = new Promise<void>((resolve) => {
+      const img = new window.Image();
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = "/locations/off.png";
+    });
+
     const timeout = new Promise<void>((resolve) => setTimeout(resolve, 8000));
-    Promise.race([Promise.all(promises), timeout]).then(async () => {
+    Promise.race([Promise.all([...promises, introImg]), timeout]).then(async () => {
       if (cancelled) return;
       const remaining = MIN_PRELOADER_MS - (performance.now() - loadStart);
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
@@ -727,15 +738,32 @@ export default function ScrollVideoHero() {
     };
   }, []);
 
-  // Start auto-advance + prefetch neighbors once loaded
+  // Intro reveal: off.png → bedroom crossfade
   useEffect(() => {
-    if (phase === "ready") {
+    if (phase !== "ready" || introRevealed) return;
+    transitioningRef.current = true;
+    const t = setTimeout(() => setIntroRevealed(true), INTRO_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [phase, introRevealed]);
+
+  useEffect(() => {
+    if (!introRevealed || introComplete) return;
+    const t = setTimeout(() => {
+      setIntroComplete(true);
+      transitioningRef.current = false;
+    }, INTRO_FADE_MS);
+    return () => clearTimeout(t);
+  }, [introRevealed, introComplete]);
+
+  // Start auto-advance + prefetch neighbors once intro finishes
+  useEffect(() => {
+    if (phase === "ready" && introComplete) {
       prefetchNeighbors(0);
       scheduleAutoAdvance();
       scheduleHsRef.current();
     }
     return cancelAutoAdvance;
-  }, [phase, scheduleAutoAdvance, cancelAutoAdvance, prefetchNeighbors]);
+  }, [phase, introComplete, scheduleAutoAdvance, cancelAutoAdvance, prefetchNeighbors]);
 
   // ── Interaction: wheel + drag, both as swipe triggers (no scrubbing) ────────
   useEffect(() => {
@@ -871,6 +899,20 @@ export default function ScrollVideoHero() {
     />
   );
 
+  const introOverlay = phase === "ready" && !introComplete && (
+    <img
+      src="/locations/off.png"
+      alt=""
+      style={{
+        position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+        objectFit: "cover", zIndex: 3,
+        opacity: introRevealed ? 0 : 1,
+        transition: `opacity ${INTRO_FADE_MS}ms ease`,
+        pointerEvents: "none",
+      }}
+    />
+  );
+
   const videoBuffers = phase === "ready" && (
     <>
       <video
@@ -925,6 +967,7 @@ export default function ScrollVideoHero() {
             {lcpPlaceholder}
             {stillImage}
             {videoBuffers}
+            {introOverlay}
 
             {phase === "ready" && hotspotZone !== null && (
               <ZoneHotspots key={hotspotZone} zone={hotspotZone} isMobile />
@@ -982,7 +1025,7 @@ export default function ScrollVideoHero() {
             )}
 
             {/* Text + CTA */}
-            {phase === "ready" && <HeroText variant="block" />}
+            {phase === "ready" && <HeroText variant="block" visible={introRevealed} />}
           </div>
         </>
       ) : (
@@ -991,6 +1034,7 @@ export default function ScrollVideoHero() {
           {lcpPlaceholder}
           {stillImage}
           {videoBuffers}
+          {introOverlay}
 
           {/* legibility veils */}
           <div style={{
@@ -1008,8 +1052,8 @@ export default function ScrollVideoHero() {
 
           {phase === "ready" && (
             <>
-              <Chapters activeZone={activeZone} onJump={(i) => goToZone(i)} />
-              <HeroText />
+              <Chapters activeZone={activeZone} onJump={(i) => goToZone(i)} appeared={introRevealed} />
+              <HeroText visible={introRevealed} />
               {hotspotZone !== null && (
                 <ZoneHotspots key={hotspotZone} zone={hotspotZone} />
               )}
@@ -1046,15 +1090,24 @@ function Chapters({
   activeZone,
   onJump,
   variant,
+  appeared = true,
 }: {
   activeZone: number;
   onJump: (i: number) => void;
   variant?: "flow";
+  appeared?: boolean;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [doneEntering, setDoneEntering] = useState(false);
   const isMobile = useIsMobile();
   const rowRef = useRef<HTMLDivElement>(null);
   const isFlow = variant === "flow";
+
+  useEffect(() => {
+    if (!appeared || doneEntering || isFlow || isMobile) return;
+    const t = setTimeout(() => setDoneEntering(true), N * 80 + 550);
+    return () => clearTimeout(t);
+  }, [appeared, doneEntering, isFlow, isMobile]);
 
   useEffect(() => {
     if (!isMobile && !isFlow) return;
@@ -1111,6 +1164,9 @@ function Chapters({
           const active = activeZone === i;
           const hot    = hovered === i;
           const thumbWidth = isFlow ? "72px" : isMobile ? "68px" : ("clamp(90px, 8vw, 124px)" as string);
+          const entering = !isFlow && !isMobile && !appeared;
+          const cascading = !isFlow && !isMobile && appeared && !doneEntering;
+          const entranceDelay = `${i * 0.08}s`;
           return (
             <button
               key={i}
@@ -1135,12 +1191,18 @@ function Chapters({
                   : isFlow
                     ? "0 2px 6px rgba(0,0,0,.1)"
                     : "0 6px 20px rgba(0,0,0,.4)",
-                opacity: active ? 1 : hot ? 0.85 : 0.44,
-                transform: active ? "scale(1.1)" : hot ? "scale(0.93)" : "scale(0.82)",
+                opacity: entering ? 0 : (active ? 1 : hot ? 0.85 : 0.44),
+                transform: entering
+                  ? "translateX(60px) scale(0.82)"
+                  : active ? "scale(1.1)" : hot ? "scale(0.93)" : "scale(0.82)",
                 filter: active
                   ? "saturate(1.1) brightness(1.05)"
                   : hot ? "saturate(0.95) brightness(0.9)" : "saturate(0.6) brightness(0.65)",
-                transition: `opacity .35s ${THUMB_EASE}, transform .35s ${THUMB_EASE}, filter .35s ${THUMB_EASE}, box-shadow .35s ${THUMB_EASE}`,
+                transition: entering
+                  ? "none"
+                  : cascading
+                    ? `opacity .55s ${THUMB_EASE} ${entranceDelay}, transform .55s ${THUMB_EASE} ${entranceDelay}, filter .35s ${THUMB_EASE}, box-shadow .35s ${THUMB_EASE}`
+                    : `opacity .35s ${THUMB_EASE}, transform .35s ${THUMB_EASE}, filter .35s ${THUMB_EASE}, box-shadow .35s ${THUMB_EASE}`,
                 fontFamily: "inherit",
               } as React.CSSProperties}
             >
@@ -1267,29 +1329,34 @@ function MinimalHeroButton({ onAction, isBlock }: { onAction: () => void; isBloc
 }
 
 // ── HeroText: overline + h1 + paragraph + CTA ────────────────────────────────
-function HeroText({ variant }: { variant?: "block" } = {}) {
+function HeroText({ variant, visible = true }: { variant?: "block"; visible?: boolean } = {}) {
   const isMobile = useIsMobile();
   const isBlock = variant === "block";
   const textInk  = isBlock ? "#1a1917"               : INK;
   const textDim  = isBlock ? "rgba(26,25,23,0.52)"   : DIM;
   const textLine = isBlock ? "rgba(26,25,23,0.22)"   : LINE;
   return (
-    <div style={(isBlock ? {
-      padding: "14px 20px calc(env(safe-area-inset-bottom,0px) + 18px)",
-      textAlign: "center",
-    } : isMobile ? {
-      position: "absolute",
-      left: "20px", right: "20px",
-      top: "clamp(84px, 13vh, 112px)",
-      maxWidth: "none",
-      zIndex: 30,
-    } : {
-      position: "absolute",
-      left: "clamp(28px, 3.2vw, 58px)",
-      bottom: "clamp(74px, 10vh, 108px)",
-      maxWidth: "min(56vw, 740px)",
-      zIndex: 30,
-    }) as React.CSSProperties}>
+    <div style={{
+      ...(isBlock ? {
+        padding: "14px 20px calc(env(safe-area-inset-bottom,0px) + 18px)",
+        textAlign: "center" as const,
+      } : isMobile ? {
+        position: "absolute" as const,
+        left: "20px", right: "20px",
+        top: "clamp(84px, 13vh, 112px)",
+        maxWidth: "none",
+        zIndex: 30,
+      } : {
+        position: "absolute" as const,
+        left: "clamp(28px, 3.2vw, 58px)",
+        bottom: "clamp(74px, 10vh, 108px)",
+        maxWidth: "min(56vw, 740px)",
+        zIndex: 30,
+      }),
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translateY(0)" : "translateY(28px)",
+      transition: "opacity 1.6s cubic-bezier(.25,.1,.25,1), transform 1.6s cubic-bezier(.15,.7,.2,1)",
+    } as React.CSSProperties}>
 
       <div style={{
         fontSize: isMobile ? "10.5px" : ("clamp(10px, .74vw, 12.5px)" as string),
