@@ -167,7 +167,10 @@ export default function WardrobeSection() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<Tab>("СТЕКЛА");
   // activeExtIdx = index in the extended (5-copy) array that is currently centred
-  const [activeExtIdx, setActiveExtIdx] = useState(0);
+  const [activeExtIdx, setActiveExtIdx] = useState(() => CATALOG["СТЕКЛА"].length);
+  const [revealed, setRevealed] = useState(false);
+  const [deckDone, setDeckDone] = useState(false);
+  const lastInteractionRef = useRef(0);
 
   const tabContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs         = useRef<(HTMLButtonElement | null)[]>([]);
@@ -285,6 +288,7 @@ export default function WardrobeSection() {
       txRef.current = newTx;
       track.style.transform = `translateX(${newTx}px)`;
 
+      lastInteractionRef.current = Date.now();
       if (wheelTimer.current) clearTimeout(wheelTimer.current);
       wheelTimer.current = setTimeout(() => {
         const vw = wrapRef.current?.clientWidth ?? 375;
@@ -329,22 +333,60 @@ export default function WardrobeSection() {
     };
   }, []);
 
-  // ── Slide down from under hero ───────────────────────────────────────────────
+  // ── Reveal: wait for hero to slide away, then trigger deck animation ────────
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
-    section.style.transform = 'translateY(-64px)';
     section.style.opacity = '0';
-    const obs = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      section.style.transition = 'transform 2s cubic-bezier(0.2,0.8,0.2,1), opacity 1.4s ease';
-      section.style.transform = 'translateY(0)';
-      section.style.opacity = '1';
-      obs.disconnect();
-    }, { threshold: 0.45 });
-    obs.observe(section);
-    return () => obs.disconnect();
+
+    const stage = document.querySelector('.hr-stage') as HTMLElement | null;
+
+    if (!stage) {
+      // Mobile layout — no sticky hero, use IntersectionObserver
+      const obs = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) return;
+        section.style.transition = 'opacity 0.5s ease';
+        section.style.opacity = '1';
+        setRevealed(true);
+        setTimeout(() => setDeckDone(true), 1800);
+        obs.disconnect();
+      }, { threshold: 0.15 });
+      obs.observe(section);
+      return () => obs.disconnect();
+    }
+
+    // Desktop — hero covers the section via .hr-over; track scroll progress
+    let done = false;
+    function check() {
+      if (done) return;
+      const rect = stage!.getBoundingClientRect();
+      const travel = stage!.offsetHeight - window.innerHeight;
+      if (travel <= 0) return;
+      const progress = Math.max(0, -rect.top / travel);
+      if (progress < 0.45) return;
+      done = true;
+      section!.style.transition = 'opacity 0.5s ease';
+      section!.style.opacity = '1';
+      setRevealed(true);
+      setTimeout(() => setDeckDone(true), 1800);
+      window.removeEventListener('scroll', check);
+    }
+
+    window.addEventListener('scroll', check, { passive: true });
+    check();
+    return () => window.removeEventListener('scroll', check);
   }, []);
+
+  // ── Autoplay every 4 seconds ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!revealed) return;
+    const id = setInterval(() => {
+      if (drag.current.active) return;
+      if (Date.now() - lastInteractionRef.current < 4000) return;
+      snapTo(activeExtIdxRef.current + 1, true);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [revealed, snapTo]);
 
   // ── Tab pill indicator ────────────────────────────────────────────────────────
 
@@ -363,6 +405,7 @@ export default function WardrobeSection() {
     const wrap  = wrapRef.current;
     const track = trackRef.current;
     if (!wrap || !track) return;
+    lastInteractionRef.current = Date.now();
     wrap.setPointerCapture(e.pointerId);
     track.style.transition = "none";
     const d = drag.current;
@@ -394,6 +437,7 @@ export default function WardrobeSection() {
     const d = drag.current;
     if (!d.active) return;
     d.active = false;
+    lastInteractionRef.current = Date.now();
     if (wrapRef.current) wrapRef.current.style.cursor = "grab";
     if (d.axis === 'y') return;
     if (Math.abs(e.clientX - d.startX) < 8) {
@@ -411,6 +455,7 @@ export default function WardrobeSection() {
   // ── Card click / dot click ────────────────────────────────────────────────────
 
   const scrollToReal = useCallback((realIdx: number) => {
+    lastInteractionRef.current = Date.now();
     snapTo(count + realIdx, true);
   }, [count, snapTo]);
 
@@ -430,7 +475,7 @@ export default function WardrobeSection() {
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.32) 100%)" }} />
 
       {/* Header */}
-      <div style={{ padding: "60px 20px 0", position: "relative", zIndex: 1, textAlign: "center" }}>
+      <div style={{ padding: "60px 20px 0", position: "relative", zIndex: 1, textAlign: "center", opacity: revealed ? 1 : 0, transform: revealed ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.8s ease 0.15s, transform 0.8s cubic-bezier(.2,.8,.2,1) 0.15s" }}>
         <h2 style={{ margin: 0, fontFamily: "'Manrope', sans-serif", fontSize: isMobile ? "clamp(19px, 5.6vw, 27px)" : "clamp(26px, 7.5vw, 36px)", fontWeight: 400, lineHeight: 1.08, letterSpacing: ".01em", textTransform: "uppercase", color: "#f4f1ec" }}>
           Широкий выбор стекла и зеркал<br />для ваших проектов
         </h2>
@@ -440,7 +485,7 @@ export default function WardrobeSection() {
       </div>
 
       {/* Tabs */}
-      <div className="wrd-tabs" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "22px 20px 0", overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1 }}>
+      <div className="wrd-tabs" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "22px 20px 0", overflowX: "auto", scrollbarWidth: "none", position: "relative", zIndex: 1, opacity: revealed ? 1 : 0, transform: revealed ? "translateY(0)" : "translateY(16px)", transition: "opacity 0.6s ease 0.3s, transform 0.6s cubic-bezier(.2,.8,.2,1) 0.3s" }}>
         <div ref={tabContainerRef} style={{ position: "relative", display: "inline-flex", alignItems: "center", background: "#111", borderRadius: 12, padding: 3 }}>
           {ind && (
             <div style={{ position: "absolute", top: 3, bottom: 3, left: ind.left, width: ind.width, background: "#f4f1ec", borderRadius: 9, transition: "left 0.28s cubic-bezier(.4,0,.2,1), width 0.28s cubic-bezier(.4,0,.2,1)", pointerEvents: "none", zIndex: 0 }} />
@@ -448,7 +493,7 @@ export default function WardrobeSection() {
           {TABS.map((tab, i) => {
             const isActive = activeTab === tab;
             return (
-              <button key={tab} ref={el => { tabRefs.current[i] = el; }} onClick={() => setActiveTab(tab)}
+              <button key={tab} ref={el => { tabRefs.current[i] = el; }} onClick={() => { setActiveTab(tab); lastInteractionRef.current = Date.now(); }}
                 style={{ position: "relative", zIndex: 1, flexShrink: 0, padding: "7px 14px", borderRadius: 9, border: "none", background: "transparent", color: isActive ? "#0a0b0a" : "rgba(244,241,236,0.48)", fontFamily: "'Manrope', sans-serif", fontSize: 11, fontWeight: isActive ? 600 : 500, letterSpacing: ".16em", cursor: "pointer", transition: "color .22s ease" }}>
                 {tab}
               </button>
@@ -470,25 +515,58 @@ export default function WardrobeSection() {
           ref={trackRef}
           style={{ display: "flex", gap: CARD_GAP, willChange: "transform" }}
         >
-          {extItems.map((item, extIdx) => (
-            <CardItem
-              key={`${activeTab}-${extIdx}`}
-              item={item}
-              isActive={extIdx === activeExtIdx}
-              shouldRender={Math.abs(extIdx - activeExtIdx) <= RENDER_RADIUS}
-              onClick={() => scrollToReal(extIdx % count)}
-              showNew={!item.video && activeTab !== "УСЛУГИ"}
-            />
-          ))}
+          {extItems.map((item, extIdx) => {
+            const dist = extIdx - activeExtIdx;
+            const absDist = Math.abs(dist);
+            const inDeck = absDist <= 4;
+            const deckOffsetX = (!revealed && inDeck) ? -dist * STRIDE : 0;
+            const deckRot = (!revealed && inDeck) ? (dist > 0 ? 1 : -1) * Math.min(5, 1.5 + absDist) : 0;
+            const staggerDelay = inDeck ? (0.08 + absDist * 0.09) : 0;
+            return (
+              <CardItem
+                key={`${activeTab}-${extIdx}`}
+                item={item}
+                isActive={extIdx === activeExtIdx}
+                shouldRender={absDist <= RENDER_RADIUS}
+                onClick={() => scrollToReal(extIdx % count)}
+                showNew={!item.video && activeTab !== "УСЛУГИ"}
+                deckOffsetX={deckOffsetX}
+                deckRotation={deckRot}
+                staggerDelay={staggerDelay}
+                deckDone={deckDone}
+              />
+            );
+          })}
         </div>
       </div>
 
-      {/* Dots */}
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 4, paddingTop: 2, position: "relative", zIndex: 1 }}>
-        {items.map((_, i) => (
-          <button key={i} onClick={() => scrollToReal(i)}
-            style={{ width: realActiveIdx === i ? 14 : 5, height: 4, borderRadius: 2, border: "none", background: realActiveIdx === i ? "#f4f1ec" : "rgba(244,241,236,0.22)", padding: 0, cursor: "pointer", transition: "width .3s ease, background .3s ease" }} />
-        ))}
+      {/* Dots — sliding window of 5 */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", paddingTop: 2, position: "relative", zIndex: 1 }}>
+        {items.map((_, i) => {
+          let dist = Math.abs(i - realActiveIdx);
+          if (dist > count / 2) dist = count - dist;
+          const isActive = dist === 0;
+          const visible = dist <= 2;
+          const edgeFade = dist === 2 ? 0.45 : 1;
+          return (
+            <button key={i} onClick={() => scrollToReal(i)}
+              style={{
+                width: visible ? (isActive ? 14 : 5) : 0,
+                height: 4,
+                borderRadius: 2,
+                border: "none",
+                background: isActive ? "#f4f1ec" : "rgba(244,241,236,0.22)",
+                padding: 0,
+                margin: visible ? "0 2px" : 0,
+                cursor: visible ? "pointer" : "default",
+                opacity: visible ? edgeFade : 0,
+                transition: "width .3s ease, background .3s ease, opacity .3s ease, margin .3s ease",
+                flexShrink: 0,
+                overflow: "hidden",
+              }}
+            />
+          );
+        })}
       </div>
     </section>
   );
@@ -496,9 +574,22 @@ export default function WardrobeSection() {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-function CardItem({ item, isActive, shouldRender, onClick, showNew }: { item: Item; isActive: boolean; shouldRender: boolean; onClick: () => void; showNew?: boolean }) {
+function CardItem({ item, isActive, shouldRender, onClick, showNew, deckOffsetX = 0, deckRotation = 0, staggerDelay = 0, deckDone = true }: { item: Item; isActive: boolean; shouldRender: boolean; onClick: () => void; showNew?: boolean; deckOffsetX?: number; deckRotation?: number; staggerDelay?: number; deckDone?: boolean }) {
+  const hasDeck = deckOffsetX !== 0 || deckRotation !== 0;
+  const baseScale = isActive ? "scale(1)" : "scale(0.91)";
+  const deckParts = [
+    deckOffsetX ? `translateX(${deckOffsetX}px)` : "",
+    deckRotation ? `rotate(${deckRotation}deg)` : "",
+  ].filter(Boolean);
+  const transform = [...deckParts, baseScale].join(" ");
+  const transition = hasDeck
+    ? "box-shadow .35s ease"
+    : deckDone
+      ? "transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s ease, box-shadow .35s ease"
+      : `transform 1s cubic-bezier(.16,1,.3,1) ${staggerDelay}s, opacity 0.6s ease ${staggerDelay}s, box-shadow .35s ease`;
+  const absDist = hasDeck ? Math.round(Math.abs(deckOffsetX) / STRIDE) : 0;
   return (
-    <div onClick={onClick} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ flexShrink: 0, width: CARD_W, height: 248, borderRadius: 16, overflow: "hidden", position: "relative", background: "#111", cursor: "pointer", transform: isActive ? "scale(1)" : "scale(0.91)", opacity: isActive ? 1 : 0.52, boxShadow: isActive ? "0 8px 48px rgba(0,0,0,0.75)" : "0 2px 12px rgba(0,0,0,0.35)", transition: "transform .35s cubic-bezier(.2,.8,.2,1), opacity .35s ease, box-shadow .35s ease" }}>
+    <div onClick={onClick} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} style={{ flexShrink: 0, width: CARD_W, height: 248, borderRadius: 16, overflow: "hidden", position: "relative", background: "#111", cursor: "pointer", transform, opacity: isActive ? 1 : 0.52, boxShadow: isActive ? "0 8px 48px rgba(0,0,0,0.75)" : "0 2px 12px rgba(0,0,0,0.35)", transition, zIndex: hasDeck ? (100 - absDist) : undefined }}>
       {shouldRender && (
         <img src={item.preview} alt={item.name} loading={isActive ? "eager" : "lazy"} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
       )}

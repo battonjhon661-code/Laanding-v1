@@ -25,3 +25,30 @@ html, body {
   margin-top: -1px;
   box-shadow: 0 14px 40px rgba(0,0,0,0.5);
 }
+
+/* ── Hero → Wardrobe Reveal ──────────────────────────────── */
+.hr-stage {
+  position: relative;
+}
+.hr-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  isolation: isolate;
+}
+.hr-over {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  will-change: transform;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+}
+.hr-under {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  will-change: transform;
+}
