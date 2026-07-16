@@ -27,7 +27,15 @@ export function initProdScripts(): void {
     (function () {
       const slide2 = document.getElementById('slide2');
       if (!slide2) return;
+      const lid = document.querySelector('.hero-lid');
       function check() {
+        if (lid) {
+          const lidRect = lid.getBoundingClientRect();
+          if (lidRect.bottom > window.innerHeight * 0.15) {
+            slide2.classList.remove('lights-on');
+            return;
+          }
+        }
         const rect = slide2.getBoundingClientRect();
         if (rect.top < window.innerHeight * 0.15) {
           slide2.classList.add('lights-on');

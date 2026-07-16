@@ -43,3 +43,20 @@ html, body {
   z-index: 2;
   box-shadow: 0 -24px 64px rgba(0, 0, 0, 0.3);
 }
+
+/* ── Slide2 emerges from under Hero+Wardrobe ───────────────── */
+.hero-lid {
+  position: relative;
+  z-index: 2;
+}
+.slide-from-under {
+  position: relative;
+  z-index: 1;
+  margin-top: -100vh;
+}
+
+@media (max-width: 768px) {
+  .slide-from-under {
+    margin-top: 0;
+  }
+}

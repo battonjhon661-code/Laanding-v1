@@ -39,10 +39,13 @@ export default function CircleReveal({
 
     function update() {
       const rect = stage!.getBoundingClientRect();
-      const scrollable = stage!.offsetHeight - window.innerHeight;
+      const offsetPx = window.innerHeight * 2;
+      const totalScroll = stage!.offsetHeight - window.innerHeight;
+      const scrollable = totalScroll - offsetPx;
       if (scrollable <= 0) { ticking = false; return; }
 
-      const raw = clamp(-rect.top / scrollable, 0, 1);
+      const scrolled = Math.max(0, -rect.top - offsetPx);
+      const raw = clamp(scrolled / scrollable, 0, 1);
       const eased = easeOutCubic(raw);
       const topInset = (1 - eased) * 100;
 

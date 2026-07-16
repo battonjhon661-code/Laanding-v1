@@ -744,7 +744,7 @@
   /* ── Circle Reveal Transition (Slide2 → ProductSlide) ──── */
   .cr-stage {
     position: relative;
-    height: 260vh;
+    height: 460vh;
   }
   .cr-sticky {
     position: sticky;

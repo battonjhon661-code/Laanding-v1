@@ -6,13 +6,17 @@ import ProdPage from "./components/ProdPage";
 export default function Home() {
   return (
     <main id="hero">
-      <HeroReveal hero={<ScrollVideoHero />}>
-        <div id="materials">
-          <WardrobeSection />
-        </div>
-      </HeroReveal>
-      <div className="wrd-bottom-shadow" />
-      <ProdPage />
+      <div className="hero-lid">
+        <HeroReveal hero={<ScrollVideoHero />}>
+          <div id="materials">
+            <WardrobeSection />
+          </div>
+        </HeroReveal>
+        <div className="wrd-bottom-shadow" />
+      </div>
+      <div className="slide-from-under">
+        <ProdPage />
+      </div>
     </main>
   );
 }

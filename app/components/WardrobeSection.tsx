@@ -356,12 +356,13 @@ export default function WardrobeSection() {
     }
 
     // Desktop — hero covers the section via .hr-over; track scroll progress
+    const heroEl = stage!.querySelector('.hr-sticky') as HTMLElement | null;
     let done = false;
     function check() {
       if (done) return;
-      const rect = stage!.getBoundingClientRect();
-      const travel = stage!.offsetHeight - window.innerHeight;
+      const travel = heroEl ? heroEl.offsetHeight : (stage!.offsetHeight - window.innerHeight);
       if (travel <= 0) return;
+      const rect = stage!.getBoundingClientRect();
       const progress = Math.max(0, -rect.top / travel);
       if (progress < 0.05) return;
       done = true;
