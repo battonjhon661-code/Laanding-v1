@@ -767,7 +767,7 @@
     position: absolute;
     inset: 0;
     z-index: 2;
-    clip-path: circle(0px at 50% 50%);
+    clip-path: inset(100% 0 0 0);
     will-change: clip-path;
     pointer-events: none;
     background: #fff;
@@ -821,7 +821,7 @@
     width: 100vw;
     margin-left: calc(50% - 50vw);
     overflow: hidden;
-    background: #fff;
+    background: #fff url('/background-examples.png') center / cover no-repeat;
     font-family: 'Manrope', sans-serif;
   }
 
@@ -839,7 +839,7 @@
     line-height: 1.06;
     letter-spacing: .01em;
     text-transform: uppercase;
-    color: #0c0c0d;
+    color: #fff;
     margin: 0 0 12px;
     font-family: 'Manrope', sans-serif;
   }
@@ -857,7 +857,7 @@
     font-family: 'Manrope', sans-serif;
     font-size: 22px;
     font-weight: 800;
-    color: #141519;
+    color: #fff;
     text-align: center;
     margin: 0 0 8px;
   }
@@ -898,7 +898,7 @@
   .exd-sidebar {
     width: 320px;
     flex-shrink: 0;
-    background: rgba(248,248,248,.85);
+    background: #fff;
     border: 1px solid rgba(230,230,230,.6);
     border-radius: 16px;
     padding: 24px 22px;
@@ -1038,17 +1038,17 @@
 
   @media (max-width: 768px) {
     .exs-mobile { display: block; }
-    .exs-prod-section { width: 100%; margin-left: 0; }
+    .exs-prod-section { width: 100%; margin-left: 0; background-image: url('/background-examples-mobile.png'); }
   }
   .exs-mobile {
     font-family: 'Manrope', sans-serif;
-    background: #fff;
+    background: transparent;
     padding: 64px 0 48px;
     overflow: hidden;
   }
   .exs-mobile .exm-main-title {
     font-family: 'Manrope', sans-serif;
-    color: #17181b;
+    color: #fff;
     font-size: clamp(24px, 3.2vw, 44px);
     font-weight: 300;
     text-align: center;
@@ -1057,7 +1057,7 @@
   }
   .exs-mobile .exm-cat-title {
     font-family: 'Manrope', sans-serif;
-    color: #141519;
+    color: #fff;
     font-size: clamp(18px, 2vw, 24px);
     font-weight: 800;
     margin: 0 0 4px;
@@ -1066,7 +1066,7 @@
   }
   .exs-mobile .exm-cat-sub {
     font-family: 'Manrope', sans-serif;
-    color: #8e909b;
+    color: rgba(255,255,255,0.6);
     font-size: clamp(11px, 1.2vw, 14px);
     font-weight: 600;
     margin: 0 0 16px;
@@ -1176,13 +1176,13 @@
   .exm-pagination button.active { background: #171717; }
   .exm-cats-title {
     font-family: 'Manrope', sans-serif;
-    position: relative; z-index: 1; color: #141519;
+    position: relative; z-index: 1; color: #fff;
     font-size: clamp(18px, 2vw, 22px); font-weight: 800;
     margin: 32px 0 4px; padding: 0 20px; text-align: center;
   }
   .exm-cats-sub {
     font-family: 'Manrope', sans-serif;
-    position: relative; z-index: 1; color: #8e909b;
+    position: relative; z-index: 1; color: rgba(255,255,255,0.6);
     font-size: clamp(11px, 1.2vw, 14px); font-weight: 600;
     margin: 0 0 14px; padding: 0 20px; text-align: center;
   }
@@ -1209,12 +1209,12 @@
   }
   .exm-cat-item span {
     font-family: 'Manrope', sans-serif;
-    display: block; margin-top: 8px; color: #292a2e;
+    display: block; margin-top: 8px; color: rgba(255,255,255,0.7);
     font-size: clamp(10px, 1.1vw, 14px); font-weight: 600;
     line-height: 1.15; transition: color 220ms ease;
   }
-  .exm-cat-item.is-active img { box-shadow: 0 0 0 3px #171717, 0 8px 20px rgba(0,0,0,.16); transform: translateY(-2px); }
-  .exm-cat-item.is-active span { color: #111; font-weight: 800; }
+  .exm-cat-item.is-active img { box-shadow: 0 0 0 3px #fff, 0 8px 20px rgba(0,0,0,.16); transform: translateY(-2px); }
+  .exm-cat-item.is-active span { color: #fff; font-weight: 800; }
 
   @media (max-width: 768px) {
     .exs-mobile { padding: 24px 0 40px; }

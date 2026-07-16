@@ -363,7 +363,7 @@ export default function WardrobeSection() {
       const travel = stage!.offsetHeight - window.innerHeight;
       if (travel <= 0) return;
       const progress = Math.max(0, -rect.top / travel);
-      if (progress < 0.45) return;
+      if (progress < 0.05) return;
       done = true;
       section!.style.transition = 'opacity 0.5s ease';
       section!.style.opacity = '1';

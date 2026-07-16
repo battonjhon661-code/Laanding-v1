@@ -357,7 +357,7 @@ export default function ProductSlide() {
       ref={sectionRef}
       className="exs-prod-section"
       id="exs-section"
-      style={{ position: 'relative', overflow: 'hidden', background: '#fff' }}
+      style={{ position: 'relative', overflow: 'hidden' }}
     >
       <div className="exd-wrap">
         <div className="exd-header">

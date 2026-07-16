@@ -74,7 +74,7 @@ export default function ProdPage() {
       </CircleReveal>
       {canReveal ? (
         <>
-          {beforeMirror.trim() && <div dangerouslySetInnerHTML={{ __html: beforeMirror }} />}
+          {beforeMirror.replace(/<!--[\s\S]*?-->/g, '').trim() && <div dangerouslySetInnerHTML={{ __html: beforeMirror }} />}
           <MirrorReveal mirrorHtml={mirrorHtml} footerHtml={footerHtml} />
         </>
       ) : (

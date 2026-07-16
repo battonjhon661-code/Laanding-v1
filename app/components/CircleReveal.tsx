@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, ReactNode } from "react";
+import { useEffect, useRef, useState, ReactNode } from "react";
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
@@ -18,8 +18,18 @@ export default function CircleReveal({
   const stageRef = useRef<HTMLDivElement>(null);
   const lightRef = useRef<HTMLDivElement>(null);
   const darkRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) return;
     const stage = stageRef.current;
     const light = lightRef.current;
     const dark = darkRef.current;
@@ -34,9 +44,9 @@ export default function CircleReveal({
 
       const raw = clamp(-rect.top / scrollable, 0, 1);
       const eased = easeOutCubic(raw);
-      const maxR = Math.hypot(window.innerWidth / 2, window.innerHeight / 2) * 1.16;
+      const topInset = (1 - eased) * 100;
 
-      light!.style.clipPath = `circle(${(eased * maxR).toFixed(1)}px at 50% 50%)`;
+      light!.style.clipPath = `inset(${topInset.toFixed(2)}% 0 0 0)`;
       light!.style.pointerEvents = raw > 0.85 ? "auto" : "none";
       dark!.style.opacity = (1 - raw * 0.5).toFixed(4);
       ticking = false;
@@ -57,7 +67,16 @@ export default function CircleReveal({
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, []);
+  }, [isMobile]);
+
+  if (isMobile) {
+    return (
+      <>
+        <div dangerouslySetInnerHTML={{ __html: darkHtml }} />
+        {children}
+      </>
+    );
+  }
 
   return (
     <div ref={stageRef} className="cr-stage">

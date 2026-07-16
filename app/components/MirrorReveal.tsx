@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
@@ -19,8 +19,18 @@ export default function MirrorReveal({
   const stageRef = useRef<HTMLDivElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) return;
     const stage = stageRef.current;
     const mirror = mirrorRef.current;
     const footer = footerRef.current;
@@ -62,7 +72,16 @@ export default function MirrorReveal({
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
     };
-  }, []);
+  }, [isMobile]);
+
+  if (isMobile) {
+    return (
+      <>
+        <div dangerouslySetInnerHTML={{ __html: mirrorHtml }} />
+        <div dangerouslySetInnerHTML={{ __html: footerHtml }} />
+      </>
+    );
+  }
 
   return (
     <div ref={stageRef} className="mr-stage">

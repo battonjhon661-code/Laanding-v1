@@ -35,20 +35,11 @@ html, body {
   top: 0;
   height: 100vh;
   overflow: hidden;
-  isolation: isolate;
-}
-.hr-over {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  will-change: transform;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
-}
-.hr-under {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
   z-index: 1;
   will-change: transform;
+}
+.hr-under {
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 -24px 64px rgba(0, 0, 0, 0.3);
 }
