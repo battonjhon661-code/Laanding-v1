@@ -2,6 +2,8 @@ import ScrollVideoHero from "./components/ScrollVideoHero";
 import WardrobeSection from "./components/WardrobeSection";
 import HeroReveal from "./components/HeroReveal";
 import ProdPage from "./components/ProdPage";
+import VersionSwitcher from "./components/VersionSwitcher";
+import BlurGlassTransition from "./components/BlurGlassTransition";
 
 export default function Home() {
   return (
@@ -17,6 +19,8 @@ export default function Home() {
       <div className="slide-from-under">
         <ProdPage />
       </div>
+      <VersionSwitcher />
+      <BlurGlassTransition />
     </main>
   );
 }

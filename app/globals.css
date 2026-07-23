@@ -44,6 +44,142 @@ html, body {
   box-shadow: 0 -24px 64px rgba(0, 0, 0, 0.3);
 }
 
+/* Вариант 2: хиро — «крышка» сверху, шкаф закреплён под ней и открывается */
+.hr-stage--lid .hr-sticky {
+  z-index: 2;
+}
+.hr-stage--lid .hr-under {
+  position: sticky;
+  top: var(--hr-under-y, 0px);
+  margin-top: -100vh;
+  z-index: 1;
+  box-shadow: none;
+  overflow: hidden;
+  background: #0a0b0a;
+}
+[data-version="2"] .slide-from-under {
+  margin-top: 0;
+}
+
+[data-version="4"] .slide-from-under {
+  margin-top: 0;
+}
+
+/* Variant 4: vertical glass shutter for Slide2 -> Examples */
+.cr-stage--shutter {
+  --cr-shutter-p: 0;
+  --cr-panel-lines: 0;
+  height: 570vh;
+  z-index: 2;
+}
+html[data-version="4"] .cr-stage.cr-stage--shutter {
+  height: 570vh;
+  z-index: 2;
+}
+.cr-stage--shutter .cr-dark {
+  transform-origin: 50% 50%;
+  will-change: transform, opacity, -webkit-mask-image, mask-image;
+  -webkit-mask-image: repeating-linear-gradient(
+    90deg,
+    #000 0 var(--cr-panel-visible, 12.5vw),
+    transparent var(--cr-panel-visible, 12.5vw) 12.5vw
+  );
+  mask-image: repeating-linear-gradient(
+    90deg,
+    #000 0 var(--cr-panel-visible, 12.5vw),
+    transparent var(--cr-panel-visible, 12.5vw) 12.5vw
+  );
+}
+.cr-stage--shutter .cr-light {
+  clip-path: none;
+  opacity: 0;
+  transform-origin: 50% 50%;
+  will-change: opacity, transform;
+}
+.cr-stage--shutter .cr-sticky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: var(--cr-panel-lines, 0);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.20) 0 1px,
+      rgba(255,255,255,0.05) 1px 2px,
+      transparent 2px 12.5vw
+    ),
+    linear-gradient(90deg, rgba(255,255,255,0.08), transparent 22%, transparent 78%, rgba(255,255,255,0.08));
+  mix-blend-mode: screen;
+}
+
+/* Variant 4: light sweep from Examples into Mirror statement */
+.ls-stage {
+  --ls-p: 0;
+  --ls-glow: 0;
+  position: relative;
+  height: 210vh;
+  margin-top: -210vh;
+  z-index: 3;
+  background: transparent;
+}
+html[data-version="4"] .ls-stage {
+  margin-top: -210vh;
+}
+.ls-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  isolation: isolate;
+  background: transparent;
+}
+.ls-mirror {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  will-change: clip-path, opacity, transform;
+  transform-origin: 50% 50%;
+  background: #fff;
+}
+.ls-mirror .mirror-standalone-wrap,
+.ls-mirror .mirror-section {
+  height: 100%;
+  min-height: 100%;
+}
+.ls-beam {
+  position: absolute;
+  top: -24%;
+  bottom: -24%;
+  left: var(--ls-beam-left, -24%);
+  z-index: 3;
+  width: 20vw;
+  transform: skewX(-14deg);
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.86), rgba(118,207,255,0.28), transparent);
+  filter: blur(9px);
+  opacity: var(--ls-beam-opacity, 0.08);
+  mix-blend-mode: screen;
+}
+.ls-frost {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at var(--ls-focus-x, 0%) 48%, rgba(255,255,255,0.22), transparent 18%),
+    linear-gradient(90deg, rgba(255,255,255,0.06), transparent 24%, transparent 76%, rgba(255,255,255,0.08));
+  opacity: var(--ls-frost-opacity, 0);
+  mix-blend-mode: screen;
+}
+.ls-footer {
+  position: relative;
+  z-index: 1;
+  background: #0c0c0d;
+}
+
 /* ── Slide2 emerges from under Hero+Wardrobe ───────────────── */
 .hero-lid {
   position: relative;
@@ -59,4 +195,168 @@ html, body {
   .slide-from-under {
     margin-top: 0;
   }
+}
+
+/* ── Тестовый переключатель версий (временно) ──────────────── */
+.version-switcher {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 99999;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.version-switcher button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: #fff;
+  font: 600 14px/1 system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.version-switcher button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.version-switcher button.is-active {
+  background: #fff;
+  color: #000;
+}
+
+/* ── Вариант 0: стеклянный скролл-переход (песочница) ───────────
+   Переход НЕ отдельная секция между блоками, а нахлёст на стык:
+   - наезжает на закреплённый блок «Примеры работ» (margin-top: -100vh),
+     поэтому слайд-1 ложится ровно поверх него — второго examples нет;
+   - реальный блок-зеркало подтянут под хвост перехода (см. ниже),
+     поэтому слайд-2 стыкуется с ним — второго mirror нет.
+   Итог: examples замирает → рассыпается стеклом → собирается в mirror. */
+.vz-transition-section {
+  position: relative;
+  height: 260vh;
+  margin-top: -100vh;
+  background: transparent;
+  z-index: 1; /* НИЖЕ блока «Примеры работ» (cr-stage), чтобы реальный блок был сверху */
+}
+/* Блок «Примеры работ» держим над переходом — сквозь прозрачный холст виден он сам. */
+[data-version="0"] .cr-stage {
+  position: relative;
+  z-index: 3;
+}
+
+
+.vz-pin-stage {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100svh;
+  min-height: 520px;
+  overflow: hidden;
+  isolation: isolate;
+  /* Ребристый фон = фон блока «Примеры работ»: заполняет кадр, когда блок уехал
+     вверх, без чёрных провалов и бесшовно по текстуре. */
+  background: #020511 url('/background-examples.png') center / cover no-repeat;
+}
+.vz-transition-section.is-footer-phase .vz-pin-stage {
+  background: #0c0c0d;
+}
+.vz-glass-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 3;
+  pointer-events: none;
+}
+.vz-footer-under {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  opacity: 0;
+  visibility: hidden;
+  will-change: transform, opacity;
+}
+/* Реальный блок-зеркало за холстом; проявляется в конце перехода (кроссфейд из JS). */
+.vz-mir {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  will-change: opacity, transform;
+  overflow: hidden;
+}
+.vz-mir .mirror-standalone-wrap,
+.vz-mir .mirror-section {
+  height: 100%;
+  min-height: 100%;
+}
+.vz-edge-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(12, 39, 69, 0) 0 46%, rgba(2, 5, 17, 0.36) 74%, rgba(2, 5, 17, 0.78) 100%),
+    linear-gradient(180deg, rgba(0, 4, 16, 0.5), rgba(0, 4, 16, 0) 22%, rgba(0, 4, 16, 0) 72%, rgba(0, 4, 16, 0.5));
+  mix-blend-mode: multiply;
+  z-index: 4;
+}
+.vz-scroll-meter {
+  position: fixed;
+  right: clamp(10px, 1.2vw, 22px);
+  top: 50%;
+  z-index: 4;
+  width: 6px;
+  height: clamp(46px, 6vh, 74px);
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: rgba(220, 232, 255, 0.08);
+  pointer-events: none;
+  overflow: hidden;
+}
+.vz-scroll-meter::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(var(--vz-progress, 0) * 100%);
+  border-radius: inherit;
+  background: rgba(195, 217, 255, 0.72);
+  box-shadow: 0 0 18px rgba(0, 170, 255, 0.65);
+}
+.vz-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  background: #020511;
+  color: rgba(231, 238, 255, 0.78);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 12px;
+  transition: opacity 360ms ease, visibility 360ms ease;
+}
+.vz-loading.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Версия 3 — блоки монолитом, друг за другом.
+   Сами sticky-эффекты выключены в компонентах (useFlatLayout),
+   здесь остаётся только вёрстка уровня страницы. */
+[data-version="3"] .slide-from-under {
+  margin-top: 0;
+}
+[data-version="3"] .wrd-bottom-shadow {
+  box-shadow: none;
 }

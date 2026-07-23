@@ -43,3 +43,6 @@ next-env.d.ts
 # media: use webp/webm instead of png/mp4
 *.png
 *.mp4
+
+# dev server log
+dev.log

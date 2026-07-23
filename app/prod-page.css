@@ -746,6 +746,10 @@
     position: relative;
     height: 460vh;
   }
+  html[data-version="4"] .cr-stage.cr-stage--shutter {
+    height: 570vh;
+    z-index: 2;
+  }
   .cr-sticky {
     position: sticky;
     top: 0;
@@ -1229,3 +1233,39 @@
     .exm-cat-item { width: clamp(72px, 16vw, 96px); }
     .exm-cat-item span { font-size: clamp(10px, 2.6vw, 13px); }
   }
+
+/* ── Mobile scroll-reveal ────────────────────────────────────
+   Elements are tagged with .vg-rv by ProdScripts.tsx (mobile only)
+   and flipped to .vg-rv-in as they scroll into view. */
+@media (max-width: 900px) {
+  .vg-rv {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--vg-rv-delay, 0ms);
+    will-change: opacity, transform;
+  }
+  .vg-rv-in {
+    opacity: 1;
+    transform: none;
+  }
+  /* Horizontal strips read better sliding in from the side */
+  .vg-rv.vg-rv-side { transform: translateX(36px); }
+  .vg-rv.vg-rv-side.vg-rv-in { transform: none; }
+
+  /* Slightly larger lift for headings */
+  .vg-rv.vg-rv-lift { transform: translateY(40px); }
+  .vg-rv.vg-rv-lift.vg-rv-in { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vg-rv,
+  .vg-rv.vg-rv-side,
+  .vg-rv.vg-rv-lift {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

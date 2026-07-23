@@ -185,6 +185,10 @@ export function initProdScripts(): void {
         }
       });
       btn.addEventListener('click', function() {
+        if (window.__vipglassScrollToFooter) {
+          window.__vipglassScrollToFooter();
+          return;
+        }
         var footer = document.querySelector('.site-footer') || document.querySelector('footer');
         if (footer) footer.scrollIntoView({ behavior: 'smooth' });
         setTimeout(function() {

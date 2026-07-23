@@ -3,6 +3,8 @@ import ProdScripts from "./ProdScripts";
 import ProductSlide from "./ProductSlide";
 import CircleReveal from "./CircleReveal";
 import MirrorReveal from "./MirrorReveal";
+import VariantZeroTransition from "./VariantZeroTransition";
+import LightSweepMirrorReveal from "./LightSweepMirrorReveal";
 
 const MARKER = "<!--PRODUCT_SLIDE-->";
 
@@ -75,6 +77,11 @@ export default function ProdPage() {
       {canReveal ? (
         <>
           {beforeMirror.replace(/<!--[\s\S]*?-->/g, '').trim() && <div dangerouslySetInnerHTML={{ __html: beforeMirror }} />}
+          {/* В варианте 0 блок-зеркало и футер живут внутри VariantZeroTransition,
+              чтобы mirror не задваивался. В остальных вариантах переход = null,
+              а MirrorReveal рисует зеркало и футер как обычно. */}
+          <VariantZeroTransition mirrorHtml={mirrorHtml} footerHtml={footerHtml} />
+          <LightSweepMirrorReveal mirrorHtml={mirrorHtml} footerHtml={footerHtml} />
           <MirrorReveal mirrorHtml={mirrorHtml} footerHtml={footerHtml} />
         </>
       ) : (

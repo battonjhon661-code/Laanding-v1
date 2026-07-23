@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { scrollToFooterAndPulse } from './scrollToFooter';
 
 const CAT_ORDER = ['showers','mirrors','railings','partitions','loft','panels','canopies','shelves'];
 const CATS = {
@@ -58,16 +59,7 @@ const CATS = {
 const CATS_ARR = CAT_ORDER.map(id => ({ id, title: CATS[id].title, cover: CATS[id].cover, works: CATS[id].works }));
 
 function scrollToFooter() {
-  const footer = document.querySelector('.site-footer') || document.querySelector('footer');
-  if (footer) footer.scrollIntoView({ behavior: 'smooth' });
-  setTimeout(() => {
-    document.querySelectorAll('.footer-msg-btn').forEach(b => {
-      b.classList.remove('msg-pulse');
-      void (b as HTMLElement).offsetWidth;
-      b.classList.add('msg-pulse');
-      b.addEventListener('animationend', () => b.classList.remove('msg-pulse'), { once: true });
-    });
-  }, 650);
+  scrollToFooterAndPulse();
 }
 
 function circDiff(i: number, a: number, t: number) {
@@ -228,9 +220,9 @@ function initDesktop(section: HTMLElement) {
     if (e.key === 'ArrowLeft') carousel.showWork(workIndex.value - 1);
     if (e.key === 'ArrowRight') carousel.showWork(workIndex.value + 1);
   }
-  document.addEventListener('keydown', onKey);
-
   renderCats();
+
+  document.addEventListener('keydown', onKey);
 
   // Entrance animation — hide cards and force all to center
   const allCards = () => carouselEl.querySelectorAll('.exm-card') as NodeListOf<HTMLElement>;
@@ -240,24 +232,28 @@ function initDesktop(section: HTMLElement) {
     c.style.opacity = '0';
   });
 
-  const obs = new IntersectionObserver((entries) => {
-    if (!entries[0].isIntersecting) return;
-    obs.disconnect();
+  let entranceStarted = false;
+  const entranceTimers: ReturnType<typeof setTimeout>[] = [];
+  const savedVersion = window.localStorage.getItem('siteVersion');
+  const waitsForTransitionReveal = savedVersion === '0' || section.closest('.cr-stage--fade') !== null;
 
+  function startEntrance() {
+    if (entranceStarted) return;
+    entranceStarted = true;
     wrap.classList.add('exd-visible');
 
     // Step 1: center card fades in (at center position)
-    setTimeout(() => {
+    entranceTimers.push(setTimeout(() => {
       allCards().forEach(c => {
         if (c.classList.contains('exm-center')) {
           c.style.transition = 'opacity 0.6s ease';
           c.style.opacity = '1';
         }
       });
-    }, 700);
+    }, 700));
 
     // Step 2: side cards fly out from center to their positions
-    setTimeout(() => {
+    entranceTimers.push(setTimeout(() => {
       allCards().forEach(c => {
         if (!c.classList.contains('exm-center')) {
           c.style.transition = 'opacity 0.5s ease, transform 0.7s cubic-bezier(.22,1,.36,1)';
@@ -265,23 +261,41 @@ function initDesktop(section: HTMLElement) {
           c.style.opacity = '';
         }
       });
-    }, 1200);
+    }, 1200));
 
     // Cleanup — remove all inline overrides
-    setTimeout(() => {
+    entranceTimers.push(setTimeout(() => {
       allCards().forEach(c => {
         c.style.transition = '';
         c.style.transform = '';
         c.style.opacity = '';
       });
       wrap.classList.add('exd-anim-done');
-    }, 2600);
-  }, { threshold: 0.15 });
-  obs.observe(section);
+    }, 2600));
+  }
+
+  let obs: IntersectionObserver | null = null;
+  const onManualReveal = () => startEntrance();
+
+  if (waitsForTransitionReveal) {
+    section.addEventListener('vg:examples-reveal', onManualReveal);
+    if (wrap.dataset.vgRevealRequested === '1') {
+      requestAnimationFrame(startEntrance);
+    }
+  } else {
+    obs = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return;
+      obs?.disconnect();
+      startEntrance();
+    }, { threshold: 0.15 });
+    obs.observe(section);
+  }
 
   return () => {
     document.removeEventListener('keydown', onKey);
-    obs.disconnect();
+    section.removeEventListener('vg:examples-reveal', onManualReveal);
+    obs?.disconnect();
+    entranceTimers.forEach(clearTimeout);
   };
 }
 

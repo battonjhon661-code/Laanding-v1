@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Preloader from "./Preloader";
+import { scrollToFooterAndPulse } from "./scrollToFooter";
 
 const SWIPE_THRESHOLD_WHEEL = 60;  // px of accumulated wheel deltaX before a zone change triggers
 const SWIPE_THRESHOLD_DRAG  = 80;  // px of horizontal drag before release triggers a zone change
@@ -1240,23 +1241,7 @@ function Chapters({
 
 // ── Scroll to footer + flash messenger buttons ────────────────────────────────
 function gotoFooterAndFlash() {
-  document.querySelector(".site-footer")?.scrollIntoView({ behavior: "smooth" });
-  setTimeout(() => {
-    const btns = document.querySelectorAll<HTMLElement>(".footer-msg-btn");
-    btns.forEach((btn, idx) => {
-      setTimeout(() => {
-        btn.animate(
-          [
-            { transform: "scale(1)",    boxShadow: "0 0 0 0 rgba(255,255,255,.9),  0 0 0 0  rgba(255,255,255,.4)"  },
-            { transform: "scale(1.10)", boxShadow: "0 0 18px 4px rgba(255,255,255,.5), 0 0 0 10px rgba(255,255,255,.08)", offset: 0.22 },
-            { transform: "scale(1.04)", boxShadow: "0 0 28px 8px rgba(255,255,255,.14), 0 0 0 22px rgba(255,255,255,.02)", offset: 0.55 },
-            { transform: "scale(1)",    boxShadow: "0 0 0 0 rgba(255,255,255,0),  0 0 0 32px rgba(255,255,255,0)"  },
-          ],
-          { duration: 900, iterations: 3, easing: "ease-out" }
-        );
-      }, idx * 200);
-    });
-  }, 750);
+  scrollToFooterAndPulse({ mode: "animate" });
 }
 
 // ── Minimal Button (CTA) ─────────────────────────────────────────────────────

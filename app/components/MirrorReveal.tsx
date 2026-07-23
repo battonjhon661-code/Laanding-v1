@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { useFlatLayout, useSiteVersion } from "./useFlatLayout";
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
@@ -19,18 +20,13 @@ export default function MirrorReveal({
   const stageRef = useRef<HTMLDivElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const isFlat = useFlatLayout();
+  const version = useSiteVersion();
+  const isV0 = version === "0";
+  const isV4 = version === "4";
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  useEffect(() => {
-    if (isMobile) return;
+    if (isFlat || isV0 || isV4) return;
     const stage = stageRef.current;
     const mirror = mirrorRef.current;
     const footer = footerRef.current;
@@ -71,20 +67,31 @@ export default function MirrorReveal({
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
+      // These are written imperatively, so React will not clean them up if the
+      // node is reused by the mobile branch.
+      stage.style.height = "";
+      mirror.style.transform = "";
+      footer.style.transform = "";
     };
-  }, [isMobile]);
+  }, [isFlat, isV0, isV4]);
 
-  if (isMobile) {
+  if ((isV0 || isV4) && !isFlat) {
+    return null;
+  }
+
+  if (isFlat) {
+    // Keys keep React from reusing the .mr-stage node here, which would carry
+    // over the inline height the desktop effect sets on it.
     return (
       <>
-        <div dangerouslySetInnerHTML={{ __html: mirrorHtml }} />
-        <div dangerouslySetInnerHTML={{ __html: footerHtml }} />
+        <div key="mirror-mobile" dangerouslySetInnerHTML={{ __html: mirrorHtml }} />
+        <div key="footer-mobile" dangerouslySetInnerHTML={{ __html: footerHtml }} />
       </>
     );
   }
 
   return (
-    <div ref={stageRef} className="mr-stage">
+    <div key={isV0 ? "mr-stage-v0" : "mr-stage"} ref={stageRef} className="mr-stage">
       <div className="mr-sticky">
         <div
           ref={footerRef}
