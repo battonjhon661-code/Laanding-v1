@@ -1,26 +1,27 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const VERSIONS = ["0", "1", "2", "3", "4"] as const;
+const VERSIONS = ["1", "2", "3", "4", "5"] as const;
+const DEFAULT_VERSION = "1";
 const TITLES: Record<string, string> = {
-  "0": "Вариант 0 — песочница новых переходов",
-  "1": "Текущая версия (с переходами)",
-  "2": "Хиро-крышка + круговой переход",
-  "3": "Без переходов между блоками",
-  "4": "Шторка + световой проход",
+  "1": "Витрина вылетает справа",
+  "2": "Песочница новых переходов",
+  "3": "Шторка + световой проход",
+  "4": "Хиро-крышка + круговой переход",
+  "5": "Без переходов между блоками",
 };
 
 const RESET_SCROLL_KEY = "vipglassVersionReload";
 
 export default function VersionSwitcher() {
-  const [version, setVersion] = useState("1");
+  const [version, setVersion] = useState(DEFAULT_VERSION);
 
   useEffect(() => {
     const saved = localStorage.getItem("siteVersion");
     const nextVersion =
       saved && VERSIONS.includes(saved as (typeof VERSIONS)[number])
         ? saved
-        : "1";
+        : DEFAULT_VERSION;
 
     setVersion(nextVersion);
     document.documentElement.setAttribute("data-version", nextVersion);

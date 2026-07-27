@@ -19,7 +19,7 @@ function smoothstep(edge0: number, edge1: number, value: number) {
 export default function BlurGlassTransition() {
   const version = useSiteVersion();
   const isMobile = useIsMobile();
-  const active = version === "0" && !isMobile;
+  const active = version === "2" && !isMobile;
 
   useEffect(() => {
     if (!active) return;

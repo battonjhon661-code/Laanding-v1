@@ -71,7 +71,7 @@ export default function ProdPage() {
   return (
     <>
       <div dangerouslySetInnerHTML={{ __html: navHtml }} />
-      <CircleReveal darkHtml={slide2Html}>
+      <CircleReveal darkHtml={slide2Html} mirrorHtml={canReveal ? mirrorHtml : undefined}>
         <ProductSlide />
       </CircleReveal>
       {canReveal ? (
@@ -82,6 +82,8 @@ export default function ProdPage() {
               а MirrorReveal рисует зеркало и футер как обычно. */}
           <VariantZeroTransition mirrorHtml={mirrorHtml} footerHtml={footerHtml} />
           <LightSweepMirrorReveal mirrorHtml={mirrorHtml} footerHtml={footerHtml} />
+          {/* v5 shows the mirror statement inside CircleReveal (bg morph); here
+              MirrorReveal only renders the footer for it. */}
           <MirrorReveal mirrorHtml={mirrorHtml} footerHtml={footerHtml} />
         </>
       ) : (

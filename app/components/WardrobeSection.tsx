@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
+import { useSiteVersion } from "./useFlatLayout";
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(false);
@@ -165,6 +166,8 @@ const RENDER_RADIUS = 6;
 
 export default function WardrobeSection() {
   const isMobile = useIsMobile();
+  const siteVersion = useSiteVersion();
+  const isFlyoutVersion = siteVersion === "1";
   const [activeTab, setActiveTab] = useState<Tab>("СТЕКЛА");
   // activeExtIdx = index in the extended (5-copy) array that is currently centred
   const [activeExtIdx, setActiveExtIdx] = useState(() => CATALOG["СТЕКЛА"].length);
@@ -337,6 +340,14 @@ export default function WardrobeSection() {
   useEffect(() => {
     const section = sectionRef.current;
     if (!section) return;
+
+    if (isFlyoutVersion) {
+      section.style.opacity = '1';
+      setRevealed(true);
+      setDeckDone(true);
+      return;
+    }
+
     section.style.opacity = '0';
 
     const stage = document.querySelector('.hr-stage') as HTMLElement | null;
@@ -376,7 +387,7 @@ export default function WardrobeSection() {
     window.addEventListener('scroll', check, { passive: true });
     check();
     return () => window.removeEventListener('scroll', check);
-  }, []);
+  }, [isFlyoutVersion]);
 
   // ── Autoplay every 4 seconds ─────────────────────────────────────────────────
   useEffect(() => {

@@ -22,11 +22,13 @@ export default function MirrorReveal({
   const footerRef = useRef<HTMLDivElement>(null);
   const isFlat = useFlatLayout();
   const version = useSiteVersion();
-  const isV0 = version === "0";
-  const isV4 = version === "4";
+  const isV0 = version === "2";
+  const isV2 = version === "4";
+  const isV4 = version === "3";
+  const isV5 = version === "1";
 
   useEffect(() => {
-    if (isFlat || isV0 || isV4) return;
+    if (isFlat || isV0 || isV2 || isV4 || isV5) return;
     const stage = stageRef.current;
     const mirror = mirrorRef.current;
     const footer = footerRef.current;
@@ -73,11 +75,7 @@ export default function MirrorReveal({
       mirror.style.transform = "";
       footer.style.transform = "";
     };
-  }, [isFlat, isV0, isV4]);
-
-  if ((isV0 || isV4) && !isFlat) {
-    return null;
-  }
+  }, [isFlat, isV0, isV2, isV4, isV5]);
 
   if (isFlat) {
     // Keys keep React from reusing the .mr-stage node here, which would carry
@@ -88,6 +86,17 @@ export default function MirrorReveal({
         <div key="footer-mobile" dangerouslySetInnerHTML={{ __html: footerHtml }} />
       </>
     );
+  }
+
+  // v5 (bg morph) and v2 (wipe) show the mirror statement inside CircleReveal,
+  // so here we render only the footer that follows it.
+  if (isV5 || isV2) {
+    return <div key="footer-cr" dangerouslySetInnerHTML={{ __html: footerHtml }} />;
+  }
+
+  // v0/v4 have their own dedicated mirror transition components.
+  if (isV0 || isV4) {
+    return null;
   }
 
   return (

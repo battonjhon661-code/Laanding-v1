@@ -71,6 +71,42 @@ export default function ProdScripts() {
     };
   }, []);
 
+  // Variant 5: light up the "наше стекло" block gradually as it slides up into
+  // view (sync the second background with the reveal), instead of the default
+  // single lights-on toggle. Drives --s2-lights 0→1 by the block's position.
+  useEffect(() => {
+    // Not gated on version: only variant 5's CSS reads --s2-lights, so setting
+    // it always is harmless. #slide2 is looked up inside the handler (not once
+    // on mount) so it's robust to render timing / the node being re-created.
+    const clamp = (v: number) => Math.min(Math.max(v, 0), 1);
+    const update = () => {
+      const slide2 = document.getElementById("slide2");
+      if (!slide2) return;
+      const vh = window.innerHeight;
+      const flyout = document.querySelector(".hr-stage--flyout");
+      let p: number;
+      if (flyout) {
+        // v5: «наше стекло» запинено под хиро-лентой и открывается по мере того,
+        // как та уезжает вверх — свет разгорается вместе с открытием.
+        const bottom = flyout.getBoundingClientRect().bottom;
+        p = clamp(1 - bottom / vh);
+      } else {
+        // остальные версии: блок въезжает снизу — считаем по его позиции.
+        const top = slide2.getBoundingClientRect().top;
+        p = clamp((0.78 * vh - top) / ((0.78 - 0.12) * vh));
+      }
+      slide2.style.setProperty("--s2-lights", p.toFixed(3));
+    };
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
   // Mobile scroll-reveal. Most of this markup is injected imperatively
   // (ProductSlide builds .exs-mobile, MirrorReveal swaps in the footer), so we
   // rescan on DOM changes rather than tagging once on mount.

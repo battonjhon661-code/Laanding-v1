@@ -235,7 +235,10 @@ function initDesktop(section: HTMLElement) {
   let entranceStarted = false;
   const entranceTimers: ReturnType<typeof setTimeout>[] = [];
   const savedVersion = window.localStorage.getItem('siteVersion');
-  const waitsForTransitionReveal = savedVersion === '0' || section.closest('.cr-stage--fade') !== null;
+  // v5 pins «примеры» behind the dissolving «наше стекло», so the IO never
+  // reliably fires — CircleReveal fires vg:examples-reveal explicitly instead.
+  const waitsForTransitionReveal =
+    savedVersion === '2' || savedVersion === '1' || section.closest('.cr-stage--fade') !== null;
 
   function startEntrance() {
     if (entranceStarted) return;

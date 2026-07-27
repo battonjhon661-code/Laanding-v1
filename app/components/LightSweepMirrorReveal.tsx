@@ -22,7 +22,7 @@ export default function LightSweepMirrorReveal({
   const mirrorRef = useRef<HTMLDivElement>(null);
   const version = useSiteVersion();
   const isFlat = useFlatLayout();
-  const active = version === "4" && !isFlat;
+  const active = version === "3" && !isFlat;
 
   useEffect(() => {
     if (!active) return;

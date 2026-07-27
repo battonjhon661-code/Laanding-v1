@@ -19,8 +19,9 @@ export default function HeroReveal({
   const isFlat = useFlatLayout();
   const version = useSiteVersion();
   // Вариант 2: шкаф лежит ПОД хиро, хиро уезжает вверх как крышка.
-  const isLid = version === "2";
-  const isPlainBeforeSlide2 = version === "4";
+  const isLid = version === "4";
+  const isPlainBeforeSlide2 = version === "3";
+  const isFlyout = version === "1";
 
   useEffect(() => {
     if (isFlat || isPlainBeforeSlide2) return;
@@ -29,9 +30,135 @@ export default function HeroReveal({
     const stageEl = stageRef.current;
     if (!heroEl || !underEl || !stageEl) return;
 
-    let rafId: number;
+    let rafId = 0;
     let resizeObserver: ResizeObserver | null = null;
     let revealDistance = window.innerHeight;
+
+    if (isFlyout) {
+      // Scroll-hijack gate: while sitting on the hero, a scroll-down gesture
+      // does NOT move the page — it just plays the flyout animation in place.
+      // Only once the animation has settled and the gesture goes idle does the
+      // gate release, so the *next* scroll actually moves the page onward.
+      // Scrolling back up to the hero re-arms it so the transition can replay.
+      const OPEN_MS = 720; // matches the CSS transform transition (+margin)
+      const IDLE_MS = 180; // gesture must pause this long before releasing
+
+      let passed = false;      // true = gate released, page scrolls freely
+      let awayFromTop = false; // page has left the hero at least once
+      let openedAt = 0;
+      let lastIntent = 0;
+      let releaseTimer = 0;
+
+      const openFlyout = () => {
+        if (!stageEl.classList.contains("is-flyout-open")) {
+          stageEl.classList.add("is-flyout-open");
+          openedAt = performance.now();
+        }
+      };
+
+      const scheduleRelease = () => {
+        window.clearTimeout(releaseTimer);
+        releaseTimer = window.setTimeout(() => {
+          const now = performance.now();
+          if (now - openedAt >= OPEN_MS && now - lastIntent >= IDLE_MS) {
+            passed = true; // animation done + gesture idle → let the page move
+          } else {
+            scheduleRelease();
+          }
+        }, IDLE_MS);
+      };
+
+      const atTop = () => (window.scrollY || window.pageYOffset) <= 1;
+      const isOpen = () => stageEl.classList.contains("is-flyout-open");
+
+      const triggerDown = () => {
+        lastIntent = performance.now();
+        openFlyout();
+        scheduleRelease();
+      };
+
+      // Scroll-up while the flyout is in AND we're still on the hero: reverse it
+      // (fly the showcase back out) and re-arm — the fix for "can't hide it right
+      // after opening". Returns true when it handled/consumed the gesture.
+      const triggerUp = () => {
+        if (!isOpen() || !atTop()) return false;
+        stageEl.classList.remove("is-flyout-open");
+        window.clearTimeout(releaseTimer);
+        passed = false;
+        awayFromTop = false;
+        return true;
+      };
+
+      const onWheel = (e: WheelEvent) => {
+        // Horizontal wheel is a zone-swipe for the hero; leave it alone.
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+        if (e.deltaY < 0) {
+          // Upward: only meaningful right on the hero with the flyout showing.
+          if (atTop() && isOpen()) { e.preventDefault(); triggerUp(); }
+          return;
+        }
+        if (e.deltaY === 0) return;
+        if (passed) return; // gate open — let the page scroll down normally
+        e.preventDefault();
+        triggerDown();
+      };
+
+      const DOWN_KEYS = ["ArrowDown", "PageDown", "End", " ", "Spacebar"];
+      const UP_KEYS = ["ArrowUp", "PageUp", "Home"];
+      const onKey = (e: KeyboardEvent) => {
+        if (UP_KEYS.includes(e.key) && atTop() && isOpen()) {
+          e.preventDefault();
+          triggerUp();
+          return;
+        }
+        if (passed || !DOWN_KEYS.includes(e.key)) return;
+        e.preventDefault();
+        triggerDown();
+      };
+
+      let touchY = 0;
+      const onTouchStart = (e: TouchEvent) => {
+        touchY = e.touches[0]?.clientY ?? 0;
+      };
+      const onTouchMove = (e: TouchEvent) => {
+        const dy = touchY - (e.touches[0]?.clientY ?? 0); // >0 = scrolling down
+        if (dy < 0) {
+          if (atTop() && isOpen()) { e.preventDefault(); triggerUp(); }
+          return;
+        }
+        if (dy === 0 || passed) return;
+        e.preventDefault();
+        triggerDown();
+      };
+
+      const onScroll = () => {
+        const y = window.scrollY || window.pageYOffset;
+        if (y > 4) awayFromTop = true;
+        if (y <= 1 && awayFromTop && passed) {
+          // Back on the hero after leaving — re-arm and reset the transition.
+          passed = false;
+          awayFromTop = false;
+          stageEl.classList.remove("is-flyout-open");
+        }
+      };
+
+      window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+      window.addEventListener("keydown", onKey, { passive: false });
+      window.addEventListener("touchstart", onTouchStart, { passive: true });
+      window.addEventListener("touchmove", onTouchMove, { passive: false });
+      window.addEventListener("scroll", onScroll, { passive: true });
+
+      return () => {
+        window.clearTimeout(releaseTimer);
+        window.removeEventListener("wheel", onWheel, { capture: true } as EventListenerOptions);
+        window.removeEventListener("keydown", onKey);
+        window.removeEventListener("touchstart", onTouchStart);
+        window.removeEventListener("touchmove", onTouchMove);
+        window.removeEventListener("scroll", onScroll);
+        stageEl.classList.remove("is-flyout-open");
+      };
+    }
+
     const syncStageHeight = () => {
       if (isLid) {
         const underHeight = underEl!.offsetHeight;
@@ -79,7 +206,7 @@ export default function HeroReveal({
       underEl.style.opacity = "";
       underEl.style.filter = "";
     };
-  }, [isFlat, isLid, isPlainBeforeSlide2]);
+  }, [isFlat, isLid, isPlainBeforeSlide2, isFlyout]);
 
   if (isFlat || isPlainBeforeSlide2) {
     return (
@@ -87,6 +214,23 @@ export default function HeroReveal({
         {hero}
         {children}
       </>
+    );
+  }
+
+  if (isFlyout) {
+    return (
+      <div
+        key="hr-stage-flyout"
+        ref={stageRef}
+        className="hr-stage hr-stage--flyout"
+      >
+        <div ref={heroRef} className="hr-sticky">
+          {hero}
+          <div ref={underRef} className="hr-under">
+            {children}
+          </div>
+        </div>
+      </div>
     );
   }
 

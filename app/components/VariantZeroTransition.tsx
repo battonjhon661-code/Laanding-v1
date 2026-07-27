@@ -38,6 +38,12 @@ function GlassStage({ mirrorHtml, footerHtml }: { mirrorHtml: string; footerHtml
     const footerWrap = footerRef.current;
     if (!section || !canvas || !loader || !mirWrap || !footerWrap) return;
 
+    // Живой закреплённый блок «Примеры работ» (CircleReveal). Он лежит поверх
+    // холста, и по ходу перехода мы его гасим — элементы примеров тают на месте,
+    // а под ними тот же фон-подложка, который стекло превращает в зеркало.
+    const exSticky = document.querySelector(".cr-stage .cr-sticky") as HTMLElement | null;
+    const vignette = section.querySelector(".vz-edge-vignette") as HTMLElement | null;
+
     // Реальный блок-зеркало живёт за холстом; показываем его проявленным.
     const mirSection = mirWrap.querySelector(".mirror-section") as HTMLElement | null;
     if (mirSection) mirSection.classList.add("mirror-visible");
@@ -314,6 +320,15 @@ function GlassStage({ mirrorHtml, footerHtml }: { mirrorHtml: string; footerHtml
 
       const p = prefersReducedMotion ? targetProgress : easedProgress;
 
+      // Примеры тают в первой трети перехода: сначала пропадают карточки и текст,
+      // фон при этом не мигает — подложка pin-stage несёт ту же картинку.
+      const contentFade = smoothstep(0.04, 0.34, p);
+      if (exSticky) {
+        exSticky.style.opacity = (1 - contentFade).toFixed(3);
+        exSticky.style.pointerEvents = contentFade > 0.35 ? "none" : "";
+      }
+      if (vignette) vignette.style.opacity = contentFade.toFixed(3);
+
       // Кроссфейд в конце: холст (со снимком зеркала) гаснет, а реальный блок-зеркало
       // за ним проявляется. Снимок ≈ реальный блок, поэтому переход незаметен, и дальше
       // по скроллу продолжается уже сам блок — второго экрана зеркала нет.
@@ -521,6 +536,11 @@ function GlassStage({ mirrorHtml, footerHtml }: { mirrorHtml: string; footerHtml
       forceStyle.remove();
       section.style.height = "";
       section.classList.remove("is-footer-phase");
+      if (exSticky) {
+        exSticky.style.opacity = "";
+        exSticky.style.pointerEvents = "";
+      }
+      if (vignette) vignette.style.opacity = "";
       mirWrap.style.transform = "";
       footerWrap.style.transform = "";
       footerWrap.style.opacity = "";
@@ -555,6 +575,6 @@ export default function VariantZeroTransition({
 }) {
   const version = useSiteVersion();
   const isMobile = useIsMobile();
-  const active = version === "0" && !isMobile;
+  const active = version === "2" && !isMobile;
   return active ? <GlassStage mirrorHtml={mirrorHtml} footerHtml={footerHtml} /> : null;
 }

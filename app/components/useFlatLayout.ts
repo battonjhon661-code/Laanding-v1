@@ -40,5 +40,5 @@ export function useFlatLayout(): boolean {
   // Оба хука вызываем безусловно — `||` замкнул бы второй и сломал порядок хуков.
   const isMobile = useIsMobile();
   const version = useSiteVersion();
-  return isMobile || version === "3";
+  return isMobile || version === "5";
 }

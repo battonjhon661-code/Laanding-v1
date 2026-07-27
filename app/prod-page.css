@@ -271,6 +271,13 @@
     #slide2.lights-on::before {
       opacity: 1;
     }
+    /* Variant 5: the second ("lights on") background fades in gradually, driven
+       by --s2-lights as the block slides up into view (set in ProdScripts.tsx),
+       instead of a single class toggle. */
+    [data-version="1"] #slide2::before {
+      opacity: var(--s2-lights, 0) !important;
+      transition: none !important;
+    }
 
     /* Text panel — left-aligned, scrolls with block */
     #slide2-text {
@@ -746,7 +753,7 @@
     position: relative;
     height: 460vh;
   }
-  html[data-version="4"] .cr-stage.cr-stage--shutter {
+  html[data-version="3"] .cr-stage.cr-stage--shutter {
     height: 570vh;
     z-index: 2;
   }

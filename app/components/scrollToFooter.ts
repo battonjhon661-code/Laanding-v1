@@ -90,7 +90,7 @@ function waitForFooterReveal(
 export function scrollToFooterAndPulse(options: { mode?: PulseMode } = {}) {
   const mode = options.mode || "class";
   const root = document.documentElement;
-  const isVersionZero = root.getAttribute("data-version") === "0";
+  const isVersionZero = root.getAttribute("data-version") === "2";
   const isDesktop = !window.matchMedia("(max-width: 768px)").matches;
   const transition = document.querySelector<HTMLElement>(".vz-transition-section");
   const footer =
