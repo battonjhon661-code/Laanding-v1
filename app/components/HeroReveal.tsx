@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, ReactNode } from "react";
-import { useFlatLayout, useSiteVersion } from "./useFlatLayout";
+import { useFlatLayout, useIsMobile, useSiteVersion } from "./useFlatLayout";
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
@@ -17,14 +17,19 @@ export default function HeroReveal({
   const heroRef = useRef<HTMLDivElement>(null);
   const underRef = useRef<HTMLDivElement>(null);
   const isFlat = useFlatLayout();
+  const isMobile = useIsMobile();
   const version = useSiteVersion();
   // Вариант 2: шкаф лежит ПОД хиро, хиро уезжает вверх как крышка.
   const isLid = version === "4";
   const isPlainBeforeSlide2 = version === "3";
-  const isFlyout = version === "1";
+  // Вариант 6: тот же вылет витрины, что и в 1-м, только снизу вверх.
+  // Остальные блоки в 6-м идут монолитом (useFlatLayout), поэтому сюда
+  // пробрасываемся в обход flat-ветки.
+  const isFlyoutUp = version === "6" && !isMobile;
+  const isFlyout = version === "1" || isFlyoutUp;
 
   useEffect(() => {
-    if (isFlat || isPlainBeforeSlide2) return;
+    if ((isFlat && !isFlyoutUp) || isPlainBeforeSlide2) return;
     const heroEl = heroRef.current;
     const underEl = underRef.current;
     const stageEl = stageRef.current;
@@ -48,6 +53,9 @@ export default function HeroReveal({
       let openedAt = 0;
       let lastIntent = 0;
       let releaseTimer = 0;
+      // Phase 2 (v6 only): one-shot hero-exit animation on the first scroll
+      // after the flyout-up has settled.
+      let phase2done = !isFlyoutUp;
 
       const openFlyout = () => {
         if (!stageEl.classList.contains("is-flyout-open")) {
@@ -77,6 +85,37 @@ export default function HeroReveal({
         scheduleRelease();
       };
 
+      const triggerPhase2 = () => {
+        if (phase2done) return;
+        phase2done = true;
+
+        if (isFlyoutUp) {
+          // v6: dispatch event — IceFractureTransition handles the canvas animation
+          // and will scroll to slide2 itself when frost covers the screen.
+          window.dispatchEvent(new CustomEvent("vg:v6-ice-start"));
+          return;
+        }
+
+        const slideEl = document.querySelector(".slide-from-under") as HTMLElement | null;
+        stageEl.classList.add("is-hero-exit");
+        if (slideEl) slideEl.classList.add("is-entering");
+        window.setTimeout(() => {
+          // Disable transitions, snap to natural positions, then scroll.
+          stageEl.style.transition = "none";
+          if (slideEl) slideEl.style.transition = "none";
+          stageEl.classList.remove("is-hero-exit");
+          if (slideEl) slideEl.classList.remove("is-entering");
+          // Force layout flush so offsetTop is accurate after class removal.
+          void stageEl.offsetHeight;
+          const scrollTarget = slideEl ? slideEl.offsetTop : window.innerHeight;
+          window.scrollTo({ top: scrollTarget, behavior: "auto" });
+          requestAnimationFrame(() => {
+            stageEl.style.removeProperty("transition");
+            if (slideEl) slideEl.style.removeProperty("transition");
+          });
+        }, 720);
+      };
+
       // Scroll-up while the flyout is in AND we're still on the hero: reverse it
       // (fly the showcase back out) and re-arm — the fix for "can't hide it right
       // after opening". Returns true when it handled/consumed the gesture.
@@ -98,7 +137,11 @@ export default function HeroReveal({
           return;
         }
         if (e.deltaY === 0) return;
-        if (passed) return; // gate open — let the page scroll down normally
+        if (passed) {
+          // Phase 2 (v6): intercept the first downward scroll after flyout settles.
+          if (!phase2done && atTop()) { e.preventDefault(); triggerPhase2(); }
+          return;
+        }
         e.preventDefault();
         triggerDown();
       };
@@ -111,7 +154,11 @@ export default function HeroReveal({
           triggerUp();
           return;
         }
-        if (passed || !DOWN_KEYS.includes(e.key)) return;
+        if (!DOWN_KEYS.includes(e.key)) return;
+        if (passed) {
+          if (!phase2done && atTop()) { e.preventDefault(); triggerPhase2(); }
+          return;
+        }
         e.preventDefault();
         triggerDown();
       };
@@ -126,7 +173,11 @@ export default function HeroReveal({
           if (atTop() && isOpen()) { e.preventDefault(); triggerUp(); }
           return;
         }
-        if (dy === 0 || passed) return;
+        if (dy === 0) return;
+        if (passed) {
+          if (!phase2done && atTop()) { e.preventDefault(); triggerPhase2(); }
+          return;
+        }
         e.preventDefault();
         triggerDown();
       };
@@ -138,6 +189,7 @@ export default function HeroReveal({
           // Back on the hero after leaving — re-arm and reset the transition.
           passed = false;
           awayFromTop = false;
+          phase2done = !isFlyoutUp;
           stageEl.classList.remove("is-flyout-open");
         }
       };
@@ -206,23 +258,14 @@ export default function HeroReveal({
       underEl.style.opacity = "";
       underEl.style.filter = "";
     };
-  }, [isFlat, isLid, isPlainBeforeSlide2, isFlyout]);
-
-  if (isFlat || isPlainBeforeSlide2) {
-    return (
-      <>
-        {hero}
-        {children}
-      </>
-    );
-  }
+  }, [isFlat, isLid, isPlainBeforeSlide2, isFlyout, isFlyoutUp]);
 
   if (isFlyout) {
     return (
       <div
         key="hr-stage-flyout"
         ref={stageRef}
-        className="hr-stage hr-stage--flyout"
+        className={`hr-stage hr-stage--flyout${isFlyoutUp ? " hr-stage--flyout-up" : ""}`}
       >
         <div ref={heroRef} className="hr-sticky">
           {hero}
@@ -231,6 +274,15 @@ export default function HeroReveal({
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (isFlat || isPlainBeforeSlide2) {
+    return (
+      <>
+        {hero}
+        {children}
+      </>
     );
   }
 

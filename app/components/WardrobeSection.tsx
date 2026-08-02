@@ -167,7 +167,9 @@ const RENDER_RADIUS = 6;
 export default function WardrobeSection() {
   const isMobile = useIsMobile();
   const siteVersion = useSiteVersion();
-  const isFlyoutVersion = siteVersion === "1";
+  // Варианты 1 и 6: витрина сама вылетает панелью (справа / снизу), поэтому
+  // её элементы не проявляются по скроллу, а сразу едут вместе с ней.
+  const isFlyoutVersion = siteVersion === "1" || siteVersion === "6";
   const [activeTab, setActiveTab] = useState<Tab>("СТЕКЛА");
   // activeExtIdx = index in the extended (5-copy) array that is currently centred
   const [activeExtIdx, setActiveExtIdx] = useState(() => CATALOG["СТЕКЛА"].length);

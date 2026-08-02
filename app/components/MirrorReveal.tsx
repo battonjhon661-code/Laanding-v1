@@ -26,9 +26,9 @@ export default function MirrorReveal({
   const isV2 = version === "4";
   const isV4 = version === "3";
   const isV5 = version === "1";
-
+  const isV6 = version === "6";
   useEffect(() => {
-    if (isFlat || isV0 || isV2 || isV4 || isV5) return;
+    if (isFlat || isV0 || isV2 || isV4 || isV5 || isV6) return;
     const stage = stageRef.current;
     const mirror = mirrorRef.current;
     const footer = footerRef.current;
@@ -75,7 +75,7 @@ export default function MirrorReveal({
       mirror.style.transform = "";
       footer.style.transform = "";
     };
-  }, [isFlat, isV0, isV2, isV4, isV5]);
+  }, [isFlat, isV0, isV2, isV4, isV5, isV6]);
 
   if (isFlat) {
     // Keys keep React from reusing the .mr-stage node here, which would carry
@@ -88,9 +88,9 @@ export default function MirrorReveal({
     );
   }
 
-  // v5 (bg morph) and v2 (wipe) show the mirror statement inside CircleReveal,
+  // v5 (bg morph), v2 (wipe), v6 (sunburst) show the mirror inside CircleReveal,
   // so here we render only the footer that follows it.
-  if (isV5 || isV2) {
+  if (isV5 || isV2 || isV6) {
     return <div key="footer-cr" dangerouslySetInnerHTML={{ __html: footerHtml }} />;
   }
 

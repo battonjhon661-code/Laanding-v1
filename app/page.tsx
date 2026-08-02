@@ -4,6 +4,7 @@ import HeroReveal from "./components/HeroReveal";
 import ProdPage from "./components/ProdPage";
 import VersionSwitcher from "./components/VersionSwitcher";
 import BlurGlassTransition from "./components/BlurGlassTransition";
+import IceFractureTransition from "./components/IceFractureTransition";
 
 export default function Home() {
   return (
@@ -21,6 +22,7 @@ export default function Home() {
       </div>
       <VersionSwitcher />
       <BlurGlassTransition />
+      <IceFractureTransition />
     </main>
   );
 }

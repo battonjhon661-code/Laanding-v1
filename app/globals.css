@@ -141,6 +141,32 @@ html, body {
   display: none;
 }
 
+/* Вариант 6: та же механика вылета витрины, что и в 1-м, но снизу вверх —
+   витрина «поднимается» из-под нижней кромки хиро. Открытое состояние
+   (.is-flyout-open) общее, здесь переопределяем только закрытое,
+   тень и световую кромку — она переезжает с левого края на верхний. */
+.hr-stage--flyout-up .hr-under {
+  transform: translate3d(0, 100%, 0);
+  transform-origin: 50% 100%;
+  box-shadow:
+    0 -28px 64px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+.hr-stage--flyout-up .hr-under::before {
+  top: 0;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: min(9vh, 92px);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.26), rgba(142,205,244,0.14) 22%, transparent 72%),
+    linear-gradient(90deg, rgba(255,255,255,0.12), transparent 32%, transparent 68%, rgba(255,255,255,0.1));
+}
+[data-version="6"] .wrd-bottom-shadow {
+  display: none;
+}
+
 /* Variant 4: vertical glass shutter for Slide2 -> Examples */
 
 /* Variant 2: after the circle reveal (наше стекло→примеры), the mirror block
@@ -441,11 +467,22 @@ html[data-version="3"] .ls-stage {
   visibility: hidden;
   will-change: transform, opacity;
 }
+/* Белый круг, вырастающий из центра (фаза 2 перехода). */
+.vz-white-circle {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: #fff;
+  clip-path: circle(0% at 50% 50%);
+  pointer-events: none;
+  will-change: clip-path;
+}
+
 /* Реальный блок-зеркало за холстом; проявляется в конце перехода (кроссфейд из JS). */
 .vz-mir {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 4;
   opacity: 0;
   will-change: opacity, transform;
   overflow: hidden;
@@ -515,4 +552,182 @@ html[data-version="3"] .ls-stage {
 }
 [data-version="5"] .wrd-bottom-shadow {
   box-shadow: none;
+}
+
+/* Версия 6 — sunburst-переход «примеры → зеркала». */
+[data-version="6"] .slide-from-under {
+  margin-top: 0;
+}
+[data-version="6"] .wrd-bottom-shadow {
+  box-shadow: none;
+}
+
+/* Версия 6: одиночный переход хиро → наше стекло.
+   Хиро улетает вверх, наше стекло въезжает снизу — оба за 720мс. */
+.hr-stage--flyout-up.is-hero-exit {
+  transform: translate3d(0, -100%, 0);
+  transition: transform 720ms cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
+}
+[data-version="6"] .slide-from-under.is-entering {
+  transform: translate3d(0, -100vh, 0);
+  transition: transform 720ms cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
+}
+
+/* Версия 1: cr-dark (наше стекло) начинает с opacity 0 —
+   JS постепенно проявляет его после того, как хиро уехал. */
+[data-version="1"] .cr-stage--parallax .cr-dark {
+  opacity: 0;
+}
+/* Фоновый цвет cr-stage совпадает с хиро, чтобы не было рывка цвета. */
+[data-version="1"] .cr-stage--parallax {
+  background: #050606;
+}
+
+/* ── Вариант 6: sticky-сцена для sunburst-перехода ──────────── */
+.cr-stage.cr-stage--v6 {
+  height: 130vh;
+}
+
+/* v6: примеры лежат ЗА slide2 в той же точке прокрутки.
+   Разрез убирает slide2 и открывает примеры без скролла. */
+[data-version="6"] #v6-slide2-anchor {
+  position: relative;
+  z-index: 2;
+}
+[data-version="6"] .cr-stage--v6 {
+  position: relative;
+  z-index: 1;
+  margin-top: -110vh;   /* overlay поверх slide2 (height: 110vh) */
+  height: 240vh;        /* 130vh base + 110vh overlap = тот же scrollable range */
+}
+
+.v6-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+}
+.v6-bg--examples {
+  background-color: #020511;
+  background-image: url('/background-examples.png');
+}
+
+.v6-ex-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  will-change: opacity;
+}
+/* Убираем собственный фон секции — наши слои его заменяют.
+   Сбрасываем 100vw-хак: внутри sticky контейнер и так 100% ширины. */
+.cr-stage--v6 .exs-prod-section {
+  background: transparent !important;
+  background-image: none !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  height: 100% !important;
+  min-height: 100vh !important;
+}
+
+.v6-white {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: #fff;
+  clip-path: circle(0% at 50% 50%);
+  pointer-events: none;
+  will-change: clip-path;
+}
+
+.v6-mirror-reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.v6-mirror-reveal .mirror-standalone-wrap,
+.v6-mirror-reveal .mirror-section {
+  height: 100%;
+  min-height: 100%;
+}
+.v6-mirror-reveal .mirror-section.mirror-visible::before {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.v6-mirror-reveal .mirror-section.v6-pre-reveal.mirror-visible::before {
+  opacity: 0 !important;
+  transform: translateY(60px) !important;
+  transition: none !important;
+}
+.v6-mirror-reveal .mirror-section.v6-pre-reveal .mirror-text .section__title {
+  opacity: 0 !important;
+  transform: translateY(50px) !important;
+  transition: none !important;
+}
+
+/* ── Вариант 6: разрез slide2 → примеры ─────────────────────── */
+.v6-split-half {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  width: 50%;
+  z-index: 9990;
+  pointer-events: none;
+  display: none;
+  will-change: transform;
+  overflow: hidden;
+}
+.v6-split-half--left  { left: 0; }
+.v6-split-half--right { right: 0; }
+
+/* Контент клона растянут на всю ширину viewport, container обрезает нужную половину */
+.v6-split-content {
+  position: absolute;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+.v6-split-half--left  .v6-split-content { left: 0; }
+.v6-split-half--right .v6-split-content { right: 0; }
+
+/* Форсируем lights-on состояние в клонах (они показываются только во время перехода) */
+.v6-split-half [id='slide2']::before {
+  opacity: 1 !important;
+  transition: none !important;
+}
+.v6-split-half [id='slide2-text'] {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  transition: none !important;
+}
+
+/* Линия разреза — вертикальная, мелькает в начале анимации */
+.v6-split-crack {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 100vh;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(200, 230, 255, 0.85) 20%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(200, 230, 255, 0.85) 80%,
+    transparent 100%
+  );
+  z-index: 9991;
+  display: none;
+  pointer-events: none;
+  will-change: opacity;
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const VERSIONS = ["1", "2", "3", "4", "5"] as const;
+const VERSIONS = ["1", "2", "3", "4", "5", "6"] as const;
 const DEFAULT_VERSION = "1";
 const TITLES: Record<string, string> = {
   "1": "Витрина вылетает справа",
@@ -9,6 +9,7 @@ const TITLES: Record<string, string> = {
   "3": "Шторка + световой проход",
   "4": "Хиро-крышка + круговой переход",
   "5": "Без переходов между блоками",
+  "6": "Лёд + разлом (IceFracture)",
 };
 
 const RESET_SCROLL_KEY = "vipglassVersionReload";

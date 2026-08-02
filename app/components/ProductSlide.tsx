@@ -238,7 +238,7 @@ function initDesktop(section: HTMLElement) {
   // v5 pins «примеры» behind the dissolving «наше стекло», so the IO never
   // reliably fires — CircleReveal fires vg:examples-reveal explicitly instead.
   const waitsForTransitionReveal =
-    savedVersion === '2' || savedVersion === '1' || section.closest('.cr-stage--fade') !== null;
+    savedVersion === '2' || savedVersion === '1' || savedVersion === '6' || section.closest('.cr-stage--fade') !== null;
 
   function startEntrance() {
     if (entranceStarted) return;
