@@ -108,7 +108,10 @@ export default function HeroReveal({
           // Force layout flush so offsetTop is accurate after class removal.
           void stageEl.offsetHeight;
           const scrollTarget = slideEl ? slideEl.offsetTop : window.innerHeight;
-          window.scrollTo({ top: scrollTarget, behavior: "auto" });
+          const htmlEl = document.documentElement;
+          htmlEl.style.scrollBehavior = "auto";
+          window.scrollTo({ top: scrollTarget });
+          htmlEl.style.scrollBehavior = "";
           requestAnimationFrame(() => {
             stageEl.style.removeProperty("transition");
             if (slideEl) slideEl.style.removeProperty("transition");

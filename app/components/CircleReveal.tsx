@@ -42,6 +42,7 @@ export default function CircleReveal({
   const v6SplitRRef  = useRef<HTMLDivElement>(null);
   const v6CrackRef   = useRef<HTMLDivElement>(null);
   const v6Slide2Ref  = useRef<HTMLDivElement>(null);
+  const v6VideoRef   = useRef<HTMLVideoElement>(null);
   // true после того как разрез slide2→примеры завершился; sunburst ждёт этого флага
   const splitCompletedRef = useRef(false);
   const isFlat = useFlatLayout();
@@ -370,9 +371,7 @@ export default function CircleReveal({
     const mirrorReveal = v6MirrorRef.current;
     if (!stage || !exContent || !white) return;
 
-    const exSection = exContent.querySelector(".exs-prod-section");
-    if (exSection) exSection.dispatchEvent(new CustomEvent("vg:examples-reveal"));
-
+    // vg:examples-reveal диспатчится из split-эффекта после окончания видео
     const mirSection = mirrorReveal?.querySelector(".mirror-section") as HTMLElement | null;
     if (mirSection) mirSection.classList.add("v6-pre-reveal");
 
@@ -446,7 +445,10 @@ export default function CircleReveal({
         state = "done";
         exContent!.style.pointerEvents = "none";
         const stageEnd = stage!.getBoundingClientRect().top + window.scrollY + stage!.offsetHeight - window.innerHeight;
-        window.scrollTo({ top: Math.max(0, stageEnd), behavior: "auto" });
+        const html = document.documentElement;
+        html.style.scrollBehavior = "auto";
+        window.scrollTo({ top: Math.max(0, stageEnd + 4) });
+        html.style.scrollBehavior = "";
       };
 
       rafId = requestAnimationFrame(tick);
@@ -489,14 +491,20 @@ export default function CircleReveal({
 
     // Сброс если пользователь проскроллил назад выше стейджа
     const onScroll = () => {
-      if (stage!.getBoundingClientRect().top > 4 && state !== "idle") {
+      const r = stage!.getBoundingClientRect();
+      if (r.top > 4 && state !== "idle") {
         if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
         state = "idle";
         resetVisuals();
       }
-      // Когда пользователь ушёл выше slide2, сбрасываем флаг разреза
-      if (stage!.getBoundingClientRect().top > 4) {
+      if (r.top > 4) {
         splitCompletedRef.current = false;
+      }
+      // Если sunburst завершился и пользователь вернулся в sticky-зону снизу —
+      // сбрасываем зеркало и белый круг, чтобы они не торчали поверх обратного разреза.
+      if (state === "done" && r.top <= 4 && r.bottom > window.innerHeight) {
+        state = "idle";
+        resetVisuals();
       }
     };
 
@@ -520,22 +528,24 @@ export default function CircleReveal({
     };
   }, [isV6]);
 
-  // ── Вариант 6: slide2 → примеры через «разрез» ───────────────────
+  // ── Вариант 6: slide2 → примеры через «разрез» + видео ────────────
   // Сам блок slide2 разрезается пополам: левая половина улетает влево,
-  // правая — вправо, открывая блок примеров, который всегда был «снизу».
+  // правая — вправо; одновременно под ним играет видео. После окончания
+  // видео появляются фон и контент примеров.
   useEffect(() => {
     if (!isV6) return;
-    const splitL   = v6SplitLRef.current;
-    const splitR   = v6SplitRRef.current;
-    const crack    = v6CrackRef.current;
-    const slide2El = v6Slide2Ref.current;
+    const splitL    = v6SplitLRef.current;
+    const splitR    = v6SplitRRef.current;
+    const crack     = v6CrackRef.current;
+    const slide2El  = v6Slide2Ref.current;
+    const videoEl   = v6VideoRef.current;
+    const exContent = exContentRef.current;
     if (!splitL || !splitR) return;
 
     type SplitState = "idle" | "animating";
     let state: SplitState = "idle";
     let rafId = 0;
 
-    // Easing: мягкий старт → быстрое расхождение
     const easeInOut = (v: number) =>
       v < 0.5 ? 2 * v * v : 1 - Math.pow(-2 * v + 2, 2) / 2;
 
@@ -543,13 +553,11 @@ export default function CircleReveal({
       if (state !== "idle") return;
       state = "animating";
 
-      // Показываем половины — они перекрывают экран
       splitL.style.display = "block";
       splitR.style.display = "block";
       splitL.style.transform = "translateX(0)";
       splitR.style.transform = "translateX(0)";
 
-      // Форсируем «lights-on» состояние внутри клонов через CSS-класс и инлайн-оверрайды
       [splitL, splitR].forEach(half => {
         const s2 = half.querySelector("[id='slide2']") as HTMLElement | null;
         if (s2) s2.classList.add("lights-on");
@@ -559,15 +567,24 @@ export default function CircleReveal({
         }
       });
 
-      // Линия разреза
       if (crack) { crack.style.display = "block"; crack.style.opacity = "1"; }
 
-      // Примеры лежат физически ЗА slide2 (margin-top: -110vh, z-index: 1 < 2).
-      // Пока клоны закрывают экран, убираем slide2 — после разлёта клонов
-      // примеры откроются без единого пикселя скролла.
       if (slide2El) {
         slide2El.style.opacity = "0";
         slide2El.style.pointerEvents = "none";
+      }
+
+      // Прячем контент примеров — появится после видео
+      if (exContent) {
+        exContent.style.opacity = "0";
+        exContent.style.pointerEvents = "none";
+      }
+
+      // Стартуем видео одновременно с разрезом
+      if (videoEl) {
+        videoEl.currentTime = 0;
+        videoEl.style.opacity = "1";
+        videoEl.play().catch(() => {});
       }
 
       const blockWheel = (e: WheelEvent) => e.preventDefault();
@@ -596,30 +613,60 @@ export default function CircleReveal({
         splitL.style.transform = `translateX(${(-ep * 100).toFixed(2)}%)`;
         splitR.style.transform = `translateX(${(ep * 100).toFixed(2)}%)`;
 
-        // Линия разреза гаснет с открытием зазора
         if (crack) crack.style.opacity = Math.max(0, 1 - p / 0.15).toFixed(3);
 
         if (p < 1) { rafId = requestAnimationFrame(tick); return; }
 
-        unblock();
+        // Разрез завершён — скрываем половины
         splitL.style.display = "none";
         splitR.style.display = "none";
         if (crack) crack.style.display = "none";
-        state = "idle";
 
-        // Устанавливаем флаг: разрез завершён, sunburst может срабатывать.
-        splitCompletedRef.current = true;
-        // Прокручиваем чуть дальше slide2, чтобы inSlide2Zone() вернула false
-        // и sunburst не боролся со split при следующем скролле вниз.
-        // getBoundingClientRect даёт позицию в viewport — прибавляем scrollY для
-        // перевода в координаты документа (offsetTop не подходит: он считается
-        // относительно offsetParent slide-from-under, а не от начала страницы).
+        // Прокручиваем за slide2, чтобы примеры оказались в sticky-зоне
         const slide2El2 = document.getElementById("v6-slide2-anchor");
         if (slide2El2) {
-          window.scrollTo({
-            top: slide2El2.getBoundingClientRect().top + window.scrollY + slide2El2.offsetHeight,
-            behavior: "auto",
-          });
+          const html2 = document.documentElement;
+          html2.style.scrollBehavior = "auto";
+          window.scrollTo({ top: slide2El2.getBoundingClientRect().top + window.scrollY + slide2El2.offsetHeight });
+          html2.style.scrollBehavior = "";
+        }
+
+        // Ждём конца видео, затем показываем контент
+        const onVideoEnd = () => {
+          unblock();
+          state = "idle";
+          splitCompletedRef.current = true;
+
+          // Запускаем анимацию элементов примеров
+          const exSection = exContent?.querySelector(".exs-prod-section");
+          if (exSection) exSection.dispatchEvent(new CustomEvent("vg:examples-reveal"));
+
+          // Видео замирает на последнем кадре — плавно фейдим контент поверх
+          const FADE_MS = 500;
+          const ft0 = performance.now();
+          const fadeTick = (fnow: number) => {
+            const fp = Math.min(1, (fnow - ft0) / FADE_MS);
+            const fe = fp * fp * (3 - 2 * fp);
+            if (exContent) exContent.style.opacity = fe.toFixed(3);
+            if (videoEl)   videoEl.style.opacity   = (1 - fe).toFixed(3);
+            if (fp < 1) { requestAnimationFrame(fadeTick); return; }
+            if (exContent) exContent.style.pointerEvents = "";
+            if (videoEl) { videoEl.style.opacity = "0"; videoEl.pause(); }
+          };
+          requestAnimationFrame(fadeTick);
+        };
+
+        if (videoEl) {
+          if (videoEl.ended || videoEl.paused) {
+            onVideoEnd();
+          } else {
+            videoEl.addEventListener("ended", onVideoEnd, { once: true });
+          }
+        } else {
+          unblock();
+          state = "idle";
+          splitCompletedRef.current = true;
+          if (exContent) { exContent.style.opacity = ""; exContent.style.pointerEvents = ""; }
         }
       };
 
@@ -627,8 +674,6 @@ export default function CircleReveal({
     };
 
     // Пользователь находится на slide2 (flat div, не sticky) и тянет вниз.
-    // Триггер — жест, а не scroll: иначе window.scrollTo из IceFractureTransition
-    // тоже вызывал бы разрез (v6-examples-anchor оказывается точно на нижнем краю).
     const inSlide2Zone = () => {
       const slide2 = document.getElementById("v6-slide2-anchor");
       if (!slide2) return false;
@@ -636,38 +681,146 @@ export default function CircleReveal({
       return r.top <= 4 && r.bottom > window.innerHeight * 0.3;
     };
 
+    // Пользователь в sticky-зоне примеров (после разреза)
+    const inExamplesZone = () => {
+      const stage = document.getElementById("v6-examples-anchor");
+      if (!stage) return false;
+      const r = stage.getBoundingClientRect();
+      return r.top <= 4 && r.bottom > window.innerHeight;
+    };
+
+    // Реверсный разрез: половины съезжаются обратно → открывается slide2
+    const playReverseSplit = () => {
+      if (state !== "idle") return;
+      if (!splitCompletedRef.current) return;
+      state = "animating";
+
+      // Страховка: сбрасываем sunburst-состояние (зеркало и белый круг)
+      // на случай если onScroll не успел сделать это до начала анимации.
+      const mirRevealEl = v6MirrorRef.current;
+      const whiteCircleEl = v6WhiteRef.current;
+      if (mirRevealEl) { mirRevealEl.style.opacity = "0"; mirRevealEl.style.pointerEvents = "none"; }
+      if (whiteCircleEl) whiteCircleEl.style.clipPath = "circle(0% at 50% 50%)";
+
+      // Прячем контент примеров
+      if (exContent) { exContent.style.opacity = "0"; exContent.style.pointerEvents = "none"; }
+
+      // Половины появляются в полностью раздвинутом положении
+      splitL.style.display = "block";
+      splitR.style.display = "block";
+      splitL.style.transform = "translateX(-100%)";
+      splitR.style.transform = "translateX(100%)";
+
+      [splitL, splitR].forEach(half => {
+        const s2 = half.querySelector("[id='slide2']") as HTMLElement | null;
+        if (s2) s2.classList.add("lights-on");
+        const text = half.querySelector("[id='slide2-text']") as HTMLElement | null;
+        if (text) {
+          text.style.cssText += ";transition:none!important;opacity:1!important;transform:translateY(0)!important";
+        }
+      });
+
+      const blockWheel = (e: WheelEvent) => e.preventDefault();
+      const blockTouch = (e: TouchEvent) => e.preventDefault();
+      const blockKey   = (e: KeyboardEvent) => {
+        if (["ArrowDown","ArrowUp","PageDown","PageUp"," ","Spacebar","End","Home"].includes(e.key))
+          e.preventDefault();
+      };
+      window.addEventListener("wheel",     blockWheel, { passive: false, capture: true });
+      window.addEventListener("touchmove", blockTouch, { passive: false, capture: true });
+      window.addEventListener("keydown",   blockKey,   { capture: true });
+      const unblock = () => {
+        window.removeEventListener("wheel",     blockWheel, { capture: true } as EventListenerOptions);
+        window.removeEventListener("touchmove", blockTouch, { capture: true } as EventListenerOptions);
+        window.removeEventListener("keydown",   blockKey,   { capture: true } as EventListenerOptions);
+      };
+
+      const SPLIT_MS = 880;
+      const t0 = performance.now();
+
+      const tick = (now: number) => {
+        const ms = now - t0;
+        const p  = Math.min(1, ms / SPLIT_MS);
+        const ep = easeInOut(p);
+
+        // Съезжаются: от ±100% → 0%
+        splitL.style.transform = `translateX(${(-(1 - ep) * 100).toFixed(2)}%)`;
+        splitR.style.transform = `translateX(${((1 - ep) * 100).toFixed(2)}%)`;
+
+        // Линия разреза появляется ближе к концу (когда половины почти сошлись)
+        if (crack) {
+          crack.style.display = "block";
+          crack.style.opacity = Math.max(0, (p - 0.7) / 0.3).toFixed(3);
+        }
+
+        if (p < 1) { rafId = requestAnimationFrame(tick); return; }
+
+        // Половины сошлись — скрываем их и показываем slide2
+        unblock();
+        splitL.style.display = "none";
+        splitR.style.display = "none";
+        if (crack) { crack.style.opacity = "0"; crack.style.display = "none"; }
+        state = "idle";
+        splitCompletedRef.current = false;
+
+        // Восстанавливаем slide2
+        if (slide2El) { slide2El.style.opacity = ""; slide2El.style.pointerEvents = ""; }
+
+        // Прокручиваем назад к slide2 (мгновенно — scroll-behavior:smooth глобально на html)
+        const s2 = document.getElementById("v6-slide2-anchor");
+        if (s2) {
+          const html3 = document.documentElement;
+          html3.style.scrollBehavior = "auto";
+          window.scrollTo({ top: s2.getBoundingClientRect().top + window.scrollY });
+          html3.style.scrollBehavior = "";
+        }
+      };
+
+      rafId = requestAnimationFrame(tick);
+    };
+
     const onWheel = (e: WheelEvent) => {
       if (state !== "idle") return;
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.deltaY <= 0) return;
-      if (!inSlide2Zone()) return;
-      e.preventDefault();
-      playSplit();
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      if (e.deltaY > 0 && inSlide2Zone()) {
+        e.preventDefault();
+        playSplit();
+      } else if (e.deltaY < 0 && inExamplesZone() && splitCompletedRef.current) {
+        e.preventDefault();
+        playReverseSplit();
+      }
     };
 
     const onKey = (e: KeyboardEvent) => {
       if (state !== "idle") return;
-      if (!["ArrowDown", "PageDown", " ", "Spacebar", "End"].includes(e.key)) return;
-      if (!inSlide2Zone()) return;
-      e.preventDefault();
-      playSplit();
+      if (["ArrowDown", "PageDown", " ", "Spacebar", "End"].includes(e.key) && inSlide2Zone()) {
+        e.preventDefault();
+        playSplit();
+      } else if (["ArrowUp", "PageUp", "Home"].includes(e.key) && inExamplesZone() && splitCompletedRef.current) {
+        e.preventDefault();
+        playReverseSplit();
+      }
     };
 
     let touchY = 0;
     const onTouchStart = (e: TouchEvent) => { touchY = e.touches[0]?.clientY ?? 0; };
     const onTouchMove = (e: TouchEvent) => {
       if (state !== "idle") return;
-      if ((touchY - (e.touches[0]?.clientY ?? 0)) <= 0) return;
-      if (!inSlide2Zone()) return;
-      e.preventDefault();
-      playSplit();
+      const dy = touchY - (e.touches[0]?.clientY ?? 0);
+      if (dy > 0 && inSlide2Zone()) {
+        e.preventDefault();
+        playSplit();
+      } else if (dy < 0 && inExamplesZone() && splitCompletedRef.current) {
+        e.preventDefault();
+        playReverseSplit();
+      }
     };
 
-    // Когда пользователь скроллит назад выше slide2 — сбрасываем флаг и slide2
+    // Страховка: если пользователь каким-то образом ушёл выше slide2 без анимации
     const onScrollReset = () => {
       if (!splitCompletedRef.current) return;
       const s2 = document.getElementById("v6-slide2-anchor");
       if (!s2) return;
-      // slide2 снова виден сверху (значит вернулись к нему) → сбрасываем
       if (s2.getBoundingClientRect().top > window.innerHeight * 0.5) {
         splitCompletedRef.current = false;
         s2.style.opacity = "";
@@ -675,10 +828,10 @@ export default function CircleReveal({
       }
     };
 
-    window.addEventListener("wheel",      onWheel,     { passive: false, capture: true });
-    window.addEventListener("keydown",    onKey,        { capture: true });
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove",  onTouchMove,  { passive: false, capture: true });
+    window.addEventListener("wheel",      onWheel,      { passive: false, capture: true });
+    window.addEventListener("keydown",    onKey,         { capture: true });
+    window.addEventListener("touchstart", onTouchStart,  { passive: true });
+    window.addEventListener("touchmove",  onTouchMove,   { passive: false, capture: true });
     window.addEventListener("scroll",     onScrollReset, { passive: true });
 
     return () => {
@@ -692,6 +845,8 @@ export default function CircleReveal({
       splitR.style.display = "none";
       if (crack) crack.style.display = "none";
       if (slide2El) { slide2El.style.opacity = ""; slide2El.style.pointerEvents = ""; }
+      if (videoEl) { videoEl.pause(); videoEl.currentTime = 0; videoEl.style.opacity = "0"; }
+      if (exContent) { exContent.style.opacity = ""; exContent.style.pointerEvents = ""; }
       splitCompletedRef.current = false;
     };
   }, [isV6]);
@@ -727,6 +882,19 @@ export default function CircleReveal({
         <div id="v6-examples-anchor" key="v6-stage" ref={stageRef} className="cr-stage cr-stage--v6">
           <div className="cr-sticky">
             <div className="v6-bg v6-bg--examples" aria-hidden="true" />
+
+            {/* Видео-переход: играет во время разреза, финальный кадр = фон примеров */}
+            <video
+              ref={v6VideoRef}
+              className="v6-bg-video"
+              src="/examples-bg.webm"
+              muted
+              playsInline
+              preload="auto"
+              aria-hidden="true"
+            >
+              <source src="/examples-bg.mp4" type="video/mp4" />
+            </video>
 
             <div ref={exContentRef} className="v6-ex-content">
               {children}

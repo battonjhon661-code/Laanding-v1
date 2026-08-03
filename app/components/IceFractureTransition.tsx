@@ -167,7 +167,10 @@ export default function IceFractureTransition() {
           const el = document.getElementById("v6-slide2-anchor");
           if (el) {
             // getBoundingClientRect gives absolute position regardless of offsetParent.
-            window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, behavior: "auto" });
+            const htmlEl = document.documentElement;
+            htmlEl.style.scrollBehavior = "auto";
+            window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY });
+            htmlEl.style.scrollBehavior = "";
           }
         }
         if (p < 1) { rafRef.current = requestAnimationFrame(tick); return; }
