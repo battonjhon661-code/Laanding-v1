@@ -727,6 +727,13 @@ html[data-version="3"] .ls-stage {
   transition: none !important;
 }
 
+/* v6: мгновенный сброс ::before в тёмное состояние перед entrance-анимацией.
+   Применяется на один layout-flush, чтобы transition заиграл с нуля (0→1). */
+[data-version="6"] .v6-lights-reset #slide2::before {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
 /* Линия разреза — вертикальная, мелькает в начале анимации */
 .v6-split-crack {
   position: fixed;

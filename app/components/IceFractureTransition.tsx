@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { useSiteVersion, useIsMobile } from "./useFlatLayout";
 
-type Phase = "idle" | "ice" | "done";
+type Phase = "idle" | "ice" | "video" | "done";
 
 function makeRNG(seed: number) {
   let s = (seed * 1664525 + 1013904223) >>> 0;
@@ -59,6 +59,7 @@ export default function IceFractureTransition() {
   const isMobile = useIsMobile();
   const active = version === "6" && !isMobile;
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const phaseRef = useRef<Phase>("idle");
   const rafRef = useRef(0);
 
@@ -83,16 +84,16 @@ export default function IceFractureTransition() {
     resize();
     window.addEventListener("resize", resize, { passive: true });
 
-    // Block scroll during ice animation
+    // Block scroll during ice animation and video playback
     const blockWheel = (e: WheelEvent) => {
-      if (phaseRef.current === "ice") e.preventDefault();
+      if (phaseRef.current === "ice" || phaseRef.current === "video") e.preventDefault();
     };
     const blockTouch = (e: TouchEvent) => {
-      if (phaseRef.current === "ice") e.preventDefault();
+      if (phaseRef.current === "ice" || phaseRef.current === "video") e.preventDefault();
     };
     const blockKey = (e: KeyboardEvent) => {
       const keys = ["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Spacebar", "End", "Home"];
-      if (keys.includes(e.key) && phaseRef.current === "ice") e.preventDefault();
+      if (keys.includes(e.key) && (phaseRef.current === "ice" || phaseRef.current === "video")) e.preventDefault();
     };
     window.addEventListener("wheel", blockWheel, { passive: false, capture: true });
     window.addEventListener("touchmove", blockTouch, { passive: false, capture: true });
@@ -160,23 +161,87 @@ export default function IceFractureTransition() {
       const tick = (now: number) => {
         const p = Math.min(1, (now - t0) / DUR);
         drawIce(p);
-        // At max freeze (screen fully covered): secretly scroll to slide2 —
-        // the melt phase then reveals it from under the dissolving ice.
+        // At max freeze (screen fully covered): secretly scroll to slide2,
+        // hide it, and start the video — so the ice melt reveals the video
+        // playing underneath, not slide2 content directly.
         if (!scrolledToExamples && p >= SCROLL_AT) {
           scrolledToExamples = true;
-          const el = document.getElementById("v6-slide2-anchor");
+          const el = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
           if (el) {
-            // getBoundingClientRect gives absolute position regardless of offsetParent.
             const htmlEl = document.documentElement;
             htmlEl.style.scrollBehavior = "auto";
             window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY });
             htmlEl.style.scrollBehavior = "";
+            // Keep slide2 invisible until after the video ends
+            el.style.transition = "none";
+            el.style.opacity = "0";
+            el.style.pointerEvents = "none";
+          }
+          // Start video now so the ice melt reveals it (not slide2)
+          const vid = videoRef.current;
+          if (vid) {
+            phaseRef.current = "video";
+            vid.style.display = "block";
+            vid.style.opacity = "1";
+            vid.style.transition = "";
+            vid.currentTime = 0;
+            vid.onended = () => {
+              vid.onended = null;
+              // Entrance animation for slide2: dark background → lit (lights-on)
+              // + text slides up simultaneously with video fade-out.
+              const slide2Anchor = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
+              const slide2Inner = slide2Anchor?.querySelector("#slide2") as HTMLElement | null;
+              // prod-init's scroll handler already added lights-on when we scrolled to slide2,
+              // so ::before opacity is at 1. We need to snap it back to 0 instantly (no
+              // transition) so the full 1.6s "light turning on" plays on entrance.
+              // Double-reflow pattern: add class (disable transition + force opacity 0),
+              // flush layout, remove class (re-enable transition), flush again — now
+              // browser knows the current value is 0 and the transition plays from there.
+              if (slide2Inner) {
+                slide2Inner.classList.remove("lights-on");
+                slide2Inner.classList.add("v6-lights-reset");
+                void slide2Inner.offsetHeight; // flush: ::before snaps to opacity:0
+                slide2Inner.classList.remove("v6-lights-reset");
+                void slide2Inner.offsetHeight; // flush: transition re-enabled at opacity:0
+              }
+              // Fade in slide2 + trigger lights-on in the next paint — full 1.6s plays
+              requestAnimationFrame(() => {
+                if (slide2Anchor) {
+                  slide2Anchor.style.transition = "opacity 0.7s ease";
+                  slide2Anchor.style.opacity = "1";
+                  slide2Anchor.style.pointerEvents = "";
+                }
+                requestAnimationFrame(() => {
+                  if (slide2Inner) slide2Inner.classList.add("lights-on");
+                });
+              });
+              // Fade out video simultaneously
+              vid.style.transition = "opacity 0.5s ease";
+              vid.style.opacity = "0";
+              setTimeout(() => {
+                vid.style.display = "none";
+                vid.style.transition = "";
+                phaseRef.current = "done";
+              }, 500);
+            };
+            vid.play().catch(() => {
+              // Video failed — just reveal slide2 without animation
+              const slide2Anchor = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
+              if (slide2Anchor) {
+                slide2Anchor.style.transition = "opacity 0.7s ease";
+                slide2Anchor.style.opacity = "1";
+                slide2Anchor.style.pointerEvents = "";
+              }
+              vid.style.display = "none";
+              phaseRef.current = "done";
+            });
           }
         }
         if (p < 1) { rafRef.current = requestAnimationFrame(tick); return; }
+        // Ice animation done — canvas cleared. Video is already playing from SCROLL_AT.
         ctx.clearRect(0, 0, w, h);
         canvas.style.display = "none";
-        phaseRef.current = "done";
+        if (phaseRef.current !== "video") phaseRef.current = "done";
       };
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -191,13 +256,18 @@ export default function IceFractureTransition() {
 
     // Reset when scrolled back to top
     const onScroll = () => {
-      if (window.scrollY <= 2 && phaseRef.current === "done") {
+      if (window.scrollY <= 2 && (phaseRef.current === "done" || phaseRef.current === "video")) {
+        const vid = videoRef.current;
+        if (vid) { vid.pause(); vid.onended = null; vid.style.display = "none"; vid.style.transition = ""; }
         phaseRef.current = "idle";
         canvas.style.display = "none";
         ctx.clearRect(0, 0, w, h);
-        // Восстанавливаем slide2 (могла быть скрыта разрезом)
+        // Restore slide2 — clear inline styles so it's back to natural state
         const slide2 = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
-        if (slide2) { slide2.style.opacity = ""; slide2.style.pointerEvents = ""; }
+        if (slide2) { slide2.style.opacity = ""; slide2.style.pointerEvents = ""; slide2.style.transition = ""; }
+        // Remove lights-on so scroll-based logic re-evaluates it cleanly on next reveal
+        const slide2Inner = slide2?.querySelector("#slide2") as HTMLElement | null;
+        if (slide2Inner) slide2Inner.classList.remove("lights-on");
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -210,15 +280,28 @@ export default function IceFractureTransition() {
       window.removeEventListener("keydown", blockKey, { capture: true } as EventListenerOptions);
       window.removeEventListener("vg:v6-ice-start", onIceStart);
       window.removeEventListener("scroll", onScroll);
+      const vid = videoRef.current;
+      if (vid) { vid.pause(); vid.onended = null; }
     };
   }, [active]);
 
   if (!active) return null;
   return (
-    <canvas
-      ref={canvasRef}
-      aria-hidden="true"
-      style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 9998, pointerEvents: "none", display: "none" }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 9998, pointerEvents: "none", display: "none" }}
+      />
+      <video
+        ref={videoRef}
+        src="/block3-transition.mp4"
+        muted
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+        style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 9999, objectFit: "cover", pointerEvents: "none", display: "none", opacity: 0 }}
+      />
+    </>
   );
 }
