@@ -156,28 +156,17 @@ export default function IceFractureTransition() {
       phaseRef.current = "ice";
       canvas.style.display = "block";
       const DUR = 2800, SCROLL_AT = 0.50;
-      let scrolledToExamples = false;
+      let videoStarted = false;
       const t0 = performance.now();
       const tick = (now: number) => {
         const p = Math.min(1, (now - t0) / DUR);
         drawIce(p);
-        // At max freeze (screen fully covered): secretly scroll to slide2,
-        // hide it, and start the video — so the ice melt reveals the video
-        // playing underneath, not slide2 content directly.
-        if (!scrolledToExamples && p >= SCROLL_AT) {
-          scrolledToExamples = true;
-          const el = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
-          if (el) {
-            const htmlEl = document.documentElement;
-            htmlEl.style.scrollBehavior = "auto";
-            window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY });
-            htmlEl.style.scrollBehavior = "";
-            // Keep slide2 invisible until after the video ends
-            el.style.transition = "none";
-            el.style.opacity = "0";
-            el.style.pointerEvents = "none";
-          }
-          // Start video now so the ice melt reveals it (not slide2)
+        // At max freeze: start the video so the melt reveals it underneath
+        // (we don't scroll to slide2 here — that happens only after the video
+        // ends, so prod-init sees slide2 for the first time then and adds
+        // lights-on fresh, giving the full 1.6s "light turning on" effect).
+        if (!videoStarted && p >= SCROLL_AT) {
+          videoStarted = true;
           const vid = videoRef.current;
           if (vid) {
             phaseRef.current = "video";
@@ -187,35 +176,16 @@ export default function IceFractureTransition() {
             vid.currentTime = 0;
             vid.onended = () => {
               vid.onended = null;
-              // Entrance animation for slide2: dark background → lit (lights-on)
-              // + text slides up simultaneously with video fade-out.
-              const slide2Anchor = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
-              const slide2Inner = slide2Anchor?.querySelector("#slide2") as HTMLElement | null;
-              // prod-init's scroll handler already added lights-on when we scrolled to slide2,
-              // so ::before opacity is at 1. We need to snap it back to 0 instantly (no
-              // transition) so the full 1.6s "light turning on" plays on entrance.
-              // Double-reflow pattern: add class (disable transition + force opacity 0),
-              // flush layout, remove class (re-enable transition), flush again — now
-              // browser knows the current value is 0 and the transition plays from there.
-              if (slide2Inner) {
-                slide2Inner.classList.remove("lights-on");
-                slide2Inner.classList.add("v6-lights-reset");
-                void slide2Inner.offsetHeight; // flush: ::before snaps to opacity:0
-                slide2Inner.classList.remove("v6-lights-reset");
-                void slide2Inner.offsetHeight; // flush: transition re-enabled at opacity:0
+              // Scroll to slide2 now — prod-init fires and adds lights-on with
+              // ::before at 0, so the full transition plays. The video's last
+              // frame matches background-second-0.webp, making the crossfade seamless.
+              const el = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
+              if (el) {
+                const htmlEl = document.documentElement;
+                htmlEl.style.scrollBehavior = "auto";
+                window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY });
+                htmlEl.style.scrollBehavior = "";
               }
-              // Fade in slide2 + trigger lights-on in the next paint — full 1.6s plays
-              requestAnimationFrame(() => {
-                if (slide2Anchor) {
-                  slide2Anchor.style.transition = "opacity 0.7s ease";
-                  slide2Anchor.style.opacity = "1";
-                  slide2Anchor.style.pointerEvents = "";
-                }
-                requestAnimationFrame(() => {
-                  if (slide2Inner) slide2Inner.classList.add("lights-on");
-                });
-              });
-              // Fade out video simultaneously
               vid.style.transition = "opacity 0.5s ease";
               vid.style.opacity = "0";
               setTimeout(() => {
@@ -225,20 +195,13 @@ export default function IceFractureTransition() {
               }, 500);
             };
             vid.play().catch(() => {
-              // Video failed — just reveal slide2 without animation
-              const slide2Anchor = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
-              if (slide2Anchor) {
-                slide2Anchor.style.transition = "opacity 0.7s ease";
-                slide2Anchor.style.opacity = "1";
-                slide2Anchor.style.pointerEvents = "";
-              }
               vid.style.display = "none";
               phaseRef.current = "done";
             });
           }
         }
         if (p < 1) { rafRef.current = requestAnimationFrame(tick); return; }
-        // Ice animation done — canvas cleared. Video is already playing from SCROLL_AT.
+        // Ice animation done — canvas cleared; video is already playing.
         ctx.clearRect(0, 0, w, h);
         canvas.style.display = "none";
         if (phaseRef.current !== "video") phaseRef.current = "done";
@@ -262,12 +225,6 @@ export default function IceFractureTransition() {
         phaseRef.current = "idle";
         canvas.style.display = "none";
         ctx.clearRect(0, 0, w, h);
-        // Restore slide2 — clear inline styles so it's back to natural state
-        const slide2 = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
-        if (slide2) { slide2.style.opacity = ""; slide2.style.pointerEvents = ""; slide2.style.transition = ""; }
-        // Remove lights-on so scroll-based logic re-evaluates it cleanly on next reveal
-        const slide2Inner = slide2?.querySelector("#slide2") as HTMLElement | null;
-        if (slide2Inner) slide2Inner.classList.remove("lights-on");
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
