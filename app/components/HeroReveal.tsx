@@ -263,7 +263,7 @@ export default function HeroReveal({
     };
   }, [isFlat, isLid, isPlainBeforeSlide2, isFlyout, isFlyoutUp]);
 
-  if (isFlyout) {
+  if (isFlyout && !isFlat) {
     return (
       <div
         key="hr-stage-flyout"

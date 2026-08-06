@@ -20,6 +20,7 @@ export default function MirrorReveal({
   const stageRef = useRef<HTMLDivElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
+  const flatMirrorRef = useRef<HTMLDivElement>(null);
   const isFlat = useFlatLayout();
   const version = useSiteVersion();
   const isV0 = version === "2";
@@ -77,12 +78,30 @@ export default function MirrorReveal({
     };
   }, [isFlat, isV0, isV2, isV4, isV5, isV6]);
 
+  // На мобилке initProdScripts() запускается до того, как isFlat становится true,
+  // поэтому #mirror ещё нет в DOM и observer из prod-init не вешается.
+  // Вешаем observer здесь, прямо там, где рендерим секцию.
+  useEffect(() => {
+    if (!isFlat) return;
+    const section = flatMirrorRef.current?.querySelector('.mirror-section') as HTMLElement | null;
+    if (!section) return;
+    if (section.classList.contains('mirror-visible')) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        section.classList.add('mirror-visible');
+        io.disconnect();
+      }
+    }, { threshold: 0.15 });
+    io.observe(section);
+    return () => io.disconnect();
+  }, [isFlat]);
+
   if (isFlat) {
     // Keys keep React from reusing the .mr-stage node here, which would carry
     // over the inline height the desktop effect sets on it.
     return (
       <>
-        <div key="mirror-mobile" dangerouslySetInnerHTML={{ __html: mirrorHtml }} />
+        <div key="mirror-mobile" ref={flatMirrorRef} dangerouslySetInnerHTML={{ __html: mirrorHtml }} />
         <div key="footer-mobile" dangerouslySetInnerHTML={{ __html: footerHtml }} />
       </>
     );

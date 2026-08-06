@@ -375,7 +375,12 @@ html[data-version="3"] .ls-stage {
   }
 }
 
-/* ── Тестовый переключатель версий (временно) ──────────────── */
+/* ── Тестовый переключатель версий (временно, скрыт на мобилке) ──────────── */
+@media (max-width: 768px) {
+  .version-switcher {
+    display: none;
+  }
+}
 .version-switcher {
   position: fixed;
   right: 16px;
