@@ -375,12 +375,7 @@ html[data-version="3"] .ls-stage {
   }
 }
 
-/* ── Тестовый переключатель версий (временно, скрыт на мобилке) ──────────── */
-@media (max-width: 768px) {
-  .version-switcher {
-    display: none;
-  }
-}
+/* ── Тестовый переключатель версий (временно) ──────────────── */
 .version-switcher {
   position: fixed;
   right: 16px;
@@ -411,6 +406,11 @@ html[data-version="3"] .ls-stage {
 .version-switcher button.is-active {
   background: #fff;
   color: #000;
+}
+@media (max-width: 768px) {
+  .version-switcher {
+    display: none;
+  }
 }
 
 /* ── Вариант 2: стеклянный скролл-переход (песочница) ───────────
