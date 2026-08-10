@@ -5,6 +5,7 @@ import CircleReveal from "./CircleReveal";
 import MirrorReveal from "./MirrorReveal";
 import VariantZeroTransition from "./VariantZeroTransition";
 import LightSweepMirrorReveal from "./LightSweepMirrorReveal";
+import WardrobeSection from "./WardrobeSection";
 
 const MARKER = "<!--PRODUCT_SLIDE-->";
 
@@ -71,7 +72,12 @@ export default function ProdPage() {
   return (
     <>
       <div dangerouslySetInnerHTML={{ __html: navHtml }} />
-      <CircleReveal darkHtml={slide2Html} mirrorHtml={canReveal ? mirrorHtml : undefined}>
+      <CircleReveal
+        darkHtml={slide2Html}
+        mirrorHtml={canReveal ? mirrorHtml : undefined}
+        wardrobeContent={<WardrobeSection />}
+        footerHtml={canReveal ? footerHtml : ""}
+      >
         <ProductSlide />
       </CircleReveal>
       {canReveal ? (

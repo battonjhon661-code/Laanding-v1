@@ -319,6 +319,29 @@ export default function ScrollVideoHero() {
   const [snapOpacity, setSnapOpacity]   = useState(1);
   const [snapFading, setSnapFading]     = useState(false);
 
+  // v7: when promo overlay signals done, snap hero back to zone 0 (it may have
+  // auto-advanced during the 14s promo while hidden behind the overlay).
+  useEffect(() => {
+    const onPromoDone = () => {
+      if (scrubRafRef.current !== null) {
+        cancelAnimationFrame(scrubRafRef.current);
+        scrubRafRef.current = null;
+      }
+      if (autoTimerRef.current) { clearTimeout(autoTimerRef.current); autoTimerRef.current = null; }
+      transitioningRef.current = false;
+      activeZoneRef.current = 0;
+      setActiveZone(0);
+      setDisplayZone(0);
+      setVideoVisible(false);
+      setHotspotZone(null);
+      // restart timers now that we're settled at zone 0
+      scheduleAutoRef.current();
+      scheduleHsRef.current();
+    };
+    window.addEventListener("vg:v7-promo-done", onPromoDone, { once: true });
+    return () => window.removeEventListener("vg:v7-promo-done", onPromoDone);
+  }, []);
+
   const getVideo = useCallback((key: BufKey) => (key === "A" ? videoARef.current : videoBRef.current), []);
 
   // Writes opacity straight to the DOM, bypassing React's render cycle.

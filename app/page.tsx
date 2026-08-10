@@ -5,10 +5,12 @@ import ProdPage from "./components/ProdPage";
 import VersionSwitcher from "./components/VersionSwitcher";
 import BlurGlassTransition from "./components/BlurGlassTransition";
 import IceFractureTransition from "./components/IceFractureTransition";
+import PromoIntro7 from "./components/PromoIntro7";
 
 export default function Home() {
   return (
     <main id="hero">
+      <PromoIntro7 />
       <div className="hero-lid">
         <HeroReveal hero={<ScrollVideoHero />}>
           <div id="materials">

@@ -27,6 +27,58 @@ export default function HeroReveal({
   // пробрасываемся в обход flat-ветки.
   const isFlyoutUp = version === "6" && !isMobile;
   const isFlyout = version === "1" || isFlyoutUp;
+  const isV7Hero = version === "7" && !isMobile;
+
+  // v7: intercept first scroll-down on hero → dispatch ice-start event
+  useEffect(() => {
+    if (!isV7Hero) return;
+    let fired = false;
+
+    const dispatch = () => {
+      if (fired) return;
+      fired = true;
+      window.dispatchEvent(new CustomEvent("vg:v7-ice-start"));
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.deltaY <= 0) return;
+      if ((window.scrollY || window.pageYOffset) > 4) return;
+      e.preventDefault();
+      dispatch();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      const DOWN = ["ArrowDown", "PageDown", " ", "Spacebar", "End"];
+      if (!DOWN.includes(e.key)) return;
+      if ((window.scrollY || window.pageYOffset) > 4) return;
+      e.preventDefault();
+      dispatch();
+    };
+    let ty = 0;
+    const onTS = (e: TouchEvent) => { ty = e.touches[0]?.clientY ?? 0; };
+    const onTM = (e: TouchEvent) => {
+      if ((ty - (e.touches[0]?.clientY ?? 0)) <= 0) return;
+      if ((window.scrollY || window.pageYOffset) > 4) return;
+      e.preventDefault();
+      dispatch();
+    };
+    const onScroll = () => {
+      if ((window.scrollY || window.pageYOffset) <= 1 && fired) fired = false;
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    window.addEventListener("keydown", onKey, { capture: true });
+    window.addEventListener("touchstart", onTS, { passive: true });
+    window.addEventListener("touchmove", onTM, { passive: false });
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("wheel", onWheel, { capture: true } as EventListenerOptions);
+      window.removeEventListener("keydown", onKey, { capture: true } as EventListenerOptions);
+      window.removeEventListener("touchstart", onTS);
+      window.removeEventListener("touchmove", onTM);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [isV7Hero]);
 
   useEffect(() => {
     if ((isFlat && !isFlyoutUp) || isPlainBeforeSlide2) return;
@@ -262,6 +314,14 @@ export default function HeroReveal({
       underEl.style.filter = "";
     };
   }, [isFlat, isLid, isPlainBeforeSlide2, isFlyout, isFlyoutUp]);
+
+  if (isV7Hero) {
+    return (
+      <div key="hr-stage-v7" ref={stageRef} className="hr-sticky" style={{ position: "sticky", top: 0, height: "100vh", overflow: "hidden" }}>
+        {hero}
+      </div>
+    );
+  }
 
   if (isFlyout && !isFlat) {
     return (

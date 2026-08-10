@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { useFlatLayout, useSiteVersion } from "./useFlatLayout";
+import { useFlatLayout, useSiteVersion, useIsMobile } from "./useFlatLayout";
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
@@ -22,18 +22,23 @@ export default function MirrorReveal({
   const footerRef = useRef<HTMLDivElement>(null);
   const flatMirrorRef = useRef<HTMLDivElement>(null);
   const isFlat = useFlatLayout();
+  const isMobile = useIsMobile();
   const version = useSiteVersion();
   const isV0 = version === "2";
   const isV2 = version === "4";
   const isV4 = version === "3";
   const isV5 = version === "1";
-  const isV6 = version === "6";
+  const isV7Desktop = version === "7" && !isMobile;
   useEffect(() => {
-    if (isFlat || isV0 || isV2 || isV4 || isV5 || isV6) return;
+    if (isFlat || isV0 || isV2 || isV4 || isV5 || isV7Desktop) return;
     const stage = stageRef.current;
     const mirror = mirrorRef.current;
     const footer = footerRef.current;
     if (!stage || !mirror || !footer) return;
+
+    // Mirror section must be in its revealed state immediately (no entry animation).
+    const mirSection = mirror.querySelector(".mirror-section") as HTMLElement | null;
+    if (mirSection) mirSection.classList.add("mirror-visible");
 
     const footerEl = footer.querySelector(".site-footer") as HTMLElement | null;
     let footerH = footerEl ? footerEl.offsetHeight : 400;
@@ -76,7 +81,7 @@ export default function MirrorReveal({
       mirror.style.transform = "";
       footer.style.transform = "";
     };
-  }, [isFlat, isV0, isV2, isV4, isV5, isV6]);
+  }, [isFlat, isV0, isV2, isV4, isV5, isV7Desktop]);
 
   // На мобилке initProdScripts() запускается до того, как isFlat становится true,
   // поэтому #mirror ещё нет в DOM и observer из prod-init не вешается.
@@ -107,14 +112,14 @@ export default function MirrorReveal({
     );
   }
 
-  // v5 (bg morph), v2 (wipe), v6 (sunburst) show the mirror inside CircleReveal,
+  // v5 (bg morph) and v2 (wipe) show the mirror inside CircleReveal,
   // so here we render only the footer that follows it.
-  if (isV5 || isV2 || isV6) {
+  if (isV5 || isV2) {
     return <div key="footer-cr" dangerouslySetInnerHTML={{ __html: footerHtml }} />;
   }
 
-  // v0/v4 have their own dedicated mirror transition components.
-  if (isV0 || isV4) {
+  // v0/v4/v7 have their own dedicated mirror transition components.
+  if (isV0 || isV4 || isV7Desktop) {
     return null;
   }
 

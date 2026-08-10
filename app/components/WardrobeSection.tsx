@@ -169,7 +169,7 @@ export default function WardrobeSection() {
   const siteVersion = useSiteVersion();
   // Варианты 1 и 6: витрина сама вылетает панелью (справа / снизу), поэтому
   // её элементы не проявляются по скроллу, а сразу едут вместе с ней.
-  const isFlyoutVersion = siteVersion === "1" || siteVersion === "6";
+  const isFlyoutVersion = siteVersion === "1" || siteVersion === "6" || siteVersion === "7";
   const [activeTab, setActiveTab] = useState<Tab>("СТЕКЛА");
   // activeExtIdx = index in the extended (5-copy) array that is currently centred
   const [activeExtIdx, setActiveExtIdx] = useState(() => CATALOG["СТЕКЛА"].length);

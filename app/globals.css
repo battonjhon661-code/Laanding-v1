@@ -572,6 +572,14 @@ html[data-version="3"] .ls-stage {
   box-shadow: none;
 }
 
+/* Версия 7 — промо-ролик: ProdPage идёт ПОСЛЕ хиро, не под ним. */
+[data-version="7"] .slide-from-under {
+  margin-top: 0;
+}
+[data-version="7"] .wrd-bottom-shadow {
+  box-shadow: none;
+}
+
 /* Версия 6: одиночный переход хиро → наше стекло.
    Хиро улетает вверх, наше стекло въезжает снизу — оба за 720мс. */
 .hr-stage--flyout-up.is-hero-exit {
@@ -585,11 +593,6 @@ html[data-version="3"] .ls-stage {
   will-change: transform;
 }
 
-/* Версия 1: cr-dark (наше стекло) начинает с opacity 0 —
-   JS постепенно проявляет его после того, как хиро уехал. */
-[data-version="1"] .cr-stage--parallax .cr-dark {
-  opacity: 0;
-}
 /* Фоновый цвет cr-stage совпадает с хиро, чтобы не было рывка цвета. */
 [data-version="1"] .cr-stage--parallax {
   background: #050606;

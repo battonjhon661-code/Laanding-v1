@@ -20,10 +20,14 @@ function smoothstep(edge0: number, edge1: number, value: number) {
 export default function CircleReveal({
   darkHtml,
   mirrorHtml,
+  wardrobeContent,
+  footerHtml = "",
   children,
 }: {
   darkHtml: string;
   mirrorHtml?: string;
+  wardrobeContent?: ReactNode;
+  footerHtml?: string;
   children: ReactNode;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -45,6 +49,17 @@ export default function CircleReveal({
   const v6VideoRef   = useRef<HTMLVideoElement>(null);
   // true после того как разрез slide2→примеры завершился; sunburst ждёт этого флага
   const splitCompletedRef = useRef(false);
+  // v7 refs (old — kept to avoid null errors, replaced by new refs below)
+  const v7WhiteRef     = useRef<HTMLDivElement>(null);
+  const v7VideoRef     = useRef<HTMLVideoElement>(null);
+  const v7ExContentRef = useRef<HTMLDivElement>(null);
+  // v7 refs (new promo-reel)
+  const v7WardrobeRef   = useRef<HTMLDivElement>(null);
+  const v7Video1Ref     = useRef<HTMLVideoElement>(null);
+  const v7Video2Ref     = useRef<HTMLVideoElement>(null);
+  const v7ProjectsRef   = useRef<HTMLDivElement>(null);
+  const v7ExRef         = useRef<HTMLDivElement>(null);
+  const v7FooterZoneRef = useRef<HTMLDivElement>(null);
   const isFlat = useFlatLayout();
   const isMobile = useIsMobile();
   const version = useSiteVersion();
@@ -57,10 +72,12 @@ export default function CircleReveal({
   const isFade = version === "2";
   // Вариант 6: примеры исчезают → фон кроссфейдит в noglass → белый круг из солнца → зеркало.
   const isV6 = version === "6" && !isMobile;
+  // Вариант 7: slide2 → белый фон → 12.mp4 → примеры (12.jpg).
+  const isV7 = version === "7" && !isMobile;
 
   // ── Обычный переход (clip / круг) — варианты 1,3,4 ──────────────
   useEffect(() => {
-    if (isFlat || isFade || isParallax || isCircle || isV6) return;
+    if (isFlat || isFade || isParallax || isCircle || isV6 || isV7) return;
     const stage = stageRef.current;
     const light = lightRef.current;
     const dark = darkRef.current;
@@ -205,7 +222,6 @@ export default function CircleReveal({
     light.style.transformOrigin = "50% 50%";
     dark.style.willChange = "transform, filter, opacity";
     dark.style.transformOrigin = "50% 50%";
-    dark.style.opacity = "0"; // fades in after hero scrolls off
 
     let morph: GLMorph | null = null;
     if (canvas) morph = createGLMorph(canvas, TEX_EXAMPLES, TEX_MIRROR, 0.3);
@@ -234,19 +250,12 @@ export default function CircleReveal({
       const t = clamp(scrolled / range, 0, 1);
 
       // Фаза A (t 0→0.35): зум в «наше стекло» + растворение.
-      // Entry: hero is 100vh, covers cr-stage while rect.top > -vh.
-      // Fade cr-dark in over 0.4vh after the hero finishes scrolling off.
-      const entryT = clamp((-rect.top - vh) / (vh * 0.4), 0, 1);
-      const entryOpacity = easeOutCubic(entryT);
-
       const pA = clamp(t / 0.35, 0, 1);
       const eA = easeOutCubic(pA);
-      // Вход элементов «примеров» запускаем только когда «наше стекло» уже ушло —
-      // сначала приземляемся на слайд, потом проигрывается появление элементов.
       if (pA > 0.85) revealExamples();
       dark!.style.transform = `scale(${(1 + eA * 0.4).toFixed(4)})`;
       dark!.style.filter = `blur(${(eA * 8).toFixed(2)}px)`;
-      dark!.style.opacity = (entryOpacity * clamp(1 - pA / 0.85, 0, 1)).toFixed(3);
+      dark!.style.opacity = clamp(1 - pA / 0.85, 0, 1).toFixed(3);
       // «Наше стекло» лежит ПОВЕРХ примеров, и прозрачный элемент всё равно ловит
       // клики — без этого в примерах не нажимаются ни категории, ни стрелки, ни
       // кнопки. Отдаём клики примерам, как только слайд заметно растворился.
@@ -439,15 +448,15 @@ export default function CircleReveal({
 
         if (ms < TOTAL_MS) { rafId = requestAnimationFrame(tick); return; }
 
-        // Анимация завершена: снимаем блок, прокручиваем за конец стейджа.
-        // getBoundingClientRect + scrollY = документная позиция (offsetTop не подходит).
+        // Анимация завершена: снимаем блок, прокручиваем к началу mr-stage
+        // (= конец cr-stage--v6 полностью покинул вьюпорт, mr-sticky сразу пинится).
         unblock();
         state = "done";
         exContent!.style.pointerEvents = "none";
-        const stageEnd = stage!.getBoundingClientRect().top + window.scrollY + stage!.offsetHeight - window.innerHeight;
+        const mrStart = stage!.getBoundingClientRect().top + window.scrollY + stage!.offsetHeight;
         const html = document.documentElement;
         html.style.scrollBehavior = "auto";
-        window.scrollTo({ top: Math.max(0, stageEnd + 4) });
+        window.scrollTo({ top: Math.max(0, mrStart) });
         html.style.scrollBehavior = "";
       };
 
@@ -851,6 +860,218 @@ export default function CircleReveal({
     };
   }, [isV6]);
 
+  // ── Вариант 7: промо-ролик (slide2 → flyout wardrobe → video1 → projects → video2 → footer) ──
+  useEffect(() => {
+    if (!isV7) return;
+    const stage      = stageRef.current;
+    const dark       = darkRef.current;
+    const wardrobe   = v7WardrobeRef.current;
+    const vid1       = v7Video1Ref.current;
+    const vid2       = v7Video2Ref.current;
+    const projects   = v7ProjectsRef.current;
+    const exEl       = v7ExRef.current;
+    const footerZone = v7FooterZoneRef.current;
+    if (!stage || !dark || !wardrobe || !vid1 || !vid2 || !projects || !exEl) return;
+
+    wardrobe.style.transform = "translateX(100%)";
+    wardrobe.style.transition = "";
+    wardrobe.style.opacity = "";
+    vid1.style.display = "none";
+    vid2.style.display = "none";
+    exEl.style.opacity = "0";
+    exEl.style.pointerEvents = "none";
+    if (footerZone) footerZone.style.opacity = "0";
+
+    type FlyState = "idle" | "open" | "passed";
+    type VidState = "idle" | "playing" | "done";
+    let flyState: FlyState = "idle";
+    let vid1State: VidState = "idle";
+    let vid2State: VidState = "idle";
+
+    const OPEN_MS = 700;
+    const IDLE_MS = 180;
+    let openedAt = 0;
+    let releaseTimer = 0;
+
+    const inStage = () => {
+      const r = stage!.getBoundingClientRect();
+      return r.top >= -4 && r.top <= 4;
+    };
+
+    const inProjectsBottom = () => {
+      const r = projects!.getBoundingClientRect();
+      return r.bottom <= window.innerHeight + 10 && r.bottom > -100;
+    };
+
+    const openFlyout = () => {
+      if (flyState !== "idle") return;
+      flyState = "open";
+      openedAt = performance.now();
+      wardrobe!.style.transition = `transform ${OPEN_MS}ms cubic-bezier(.4,0,.2,1)`;
+      wardrobe!.style.transform = "translateX(0)";
+    };
+
+    const scheduleRelease = () => {
+      window.clearTimeout(releaseTimer);
+      releaseTimer = window.setTimeout(() => {
+        if (performance.now() - openedAt >= OPEN_MS && flyState === "open") {
+          flyState = "passed";
+        } else if (flyState === "open") {
+          scheduleRelease();
+        }
+      }, IDLE_MS);
+    };
+
+    const makeBlockers = () => {
+      const blockW = (e: WheelEvent) => e.preventDefault();
+      const blockT = (e: TouchEvent) => e.preventDefault();
+      const blockK = (e: KeyboardEvent) => {
+        if (["ArrowDown","ArrowUp","PageDown","PageUp"," ","Spacebar","End","Home"].includes(e.key)) e.preventDefault();
+      };
+      window.addEventListener("wheel",     blockW, { passive: false, capture: true });
+      window.addEventListener("touchmove", blockT, { passive: false, capture: true });
+      window.addEventListener("keydown",   blockK, { capture: true });
+      return () => {
+        window.removeEventListener("wheel",     blockW, { capture: true } as EventListenerOptions);
+        window.removeEventListener("touchmove", blockT, { capture: true } as EventListenerOptions);
+        window.removeEventListener("keydown",   blockK, { capture: true } as EventListenerOptions);
+      };
+    };
+
+    const playVideo1 = () => {
+      if (vid1State !== "idle") return;
+      vid1State = "playing";
+      const unblock = makeBlockers();
+
+      wardrobe!.style.transition = "opacity 0.5s ease";
+      wardrobe!.style.opacity = "0";
+
+      vid1!.style.display = "block";
+      vid1!.style.opacity = "0";
+      vid1!.style.transition = "opacity 0.35s ease";
+      vid1!.currentTime = 0;
+      vid1!.play().catch(() => {});
+      requestAnimationFrame(() => { if (vid1) vid1.style.opacity = "1"; });
+
+      vid1!.addEventListener("playing", () => {
+        exEl!.style.transition = "opacity 1.4s ease";
+        exEl!.style.opacity = "1";
+        exEl!.style.pointerEvents = "";
+        const exSec = exEl!.querySelector(".exs-prod-section") as HTMLElement | null;
+        if (exSec) exSec.dispatchEvent(new CustomEvent("vg:examples-reveal"));
+      }, { once: true });
+
+      vid1!.onended = () => {
+        vid1!.onended = null;
+        const projEl = projects!;
+        const htmlEl = document.documentElement;
+        htmlEl.style.scrollBehavior = "auto";
+        window.scrollTo({ top: projEl.getBoundingClientRect().top + window.scrollY });
+        htmlEl.style.scrollBehavior = "";
+        vid1!.style.transition = "opacity 0.5s ease";
+        vid1!.style.opacity = "0";
+        setTimeout(() => {
+          if (vid1) { vid1.style.display = "none"; vid1.style.transition = ""; }
+        }, 500);
+        unblock();
+        vid1State = "done";
+      };
+    };
+
+    const playVideo2 = () => {
+      if (vid2State !== "idle") return;
+      vid2State = "playing";
+      const unblock = makeBlockers();
+
+      vid2!.style.display = "block";
+      vid2!.style.opacity = "0";
+      vid2!.style.transition = "opacity 0.35s ease";
+      vid2!.currentTime = 0;
+      vid2!.play().catch(() => {});
+      requestAnimationFrame(() => { if (vid2) vid2.style.opacity = "1"; });
+
+      vid2!.onended = () => {
+        vid2!.onended = null;
+        if (footerZone) {
+          footerZone.style.transition = "opacity 0.8s ease";
+          footerZone.style.opacity = "1";
+          const mirSection = footerZone.querySelector(".mirror-section") as HTMLElement | null;
+          if (mirSection) mirSection.classList.add("mirror-visible");
+          const htmlEl = document.documentElement;
+          htmlEl.style.scrollBehavior = "auto";
+          window.scrollTo({ top: footerZone.getBoundingClientRect().top + window.scrollY });
+          htmlEl.style.scrollBehavior = "";
+        }
+        vid2!.style.transition = "opacity 0.5s ease";
+        vid2!.style.opacity = "0";
+        setTimeout(() => {
+          if (vid2) { vid2.style.display = "none"; vid2.style.transition = ""; }
+        }, 500);
+        unblock();
+        vid2State = "done";
+      };
+    };
+
+    const DOWN = ["ArrowDown","PageDown"," ","Spacebar","End"];
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.deltaY <= 0) return;
+      if (flyState === "idle" && inStage()) { e.preventDefault(); openFlyout(); scheduleRelease(); return; }
+      if (flyState === "passed" && vid1State === "idle" && inStage()) { e.preventDefault(); playVideo1(); return; }
+      if (vid1State === "done" && vid2State === "idle" && inProjectsBottom()) { e.preventDefault(); playVideo2(); return; }
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (!DOWN.includes(e.key)) return;
+      if (flyState === "idle" && inStage()) { e.preventDefault(); openFlyout(); scheduleRelease(); return; }
+      if (flyState === "passed" && vid1State === "idle" && inStage()) { e.preventDefault(); playVideo1(); return; }
+      if (vid1State === "done" && vid2State === "idle" && inProjectsBottom()) { e.preventDefault(); playVideo2(); return; }
+    };
+
+    let ty = 0;
+    const onTS = (e: TouchEvent) => { ty = e.touches[0]?.clientY ?? 0; };
+    const onTM = (e: TouchEvent) => {
+      if ((ty - (e.touches[0]?.clientY ?? 0)) <= 0) return;
+      if (flyState === "idle" && inStage()) { e.preventDefault(); openFlyout(); scheduleRelease(); return; }
+      if (flyState === "passed" && vid1State === "idle" && inStage()) { e.preventDefault(); playVideo1(); return; }
+      if (vid1State === "done" && vid2State === "idle" && inProjectsBottom()) { e.preventDefault(); playVideo2(); return; }
+    };
+
+    const onScroll = () => {
+      if ((window.scrollY || window.pageYOffset) <= 2 && flyState !== "idle") {
+        flyState = "idle";
+        vid1State = "idle";
+        vid2State = "idle";
+        window.clearTimeout(releaseTimer);
+        wardrobe!.style.transition = "";
+        wardrobe!.style.transform = "translateX(100%)";
+        wardrobe!.style.opacity = "";
+        if (vid1) { vid1.pause(); vid1.onended = null; vid1.style.display = "none"; vid1.style.opacity = "0"; }
+        if (vid2) { vid2.pause(); vid2.onended = null; vid2.style.display = "none"; vid2.style.opacity = "0"; }
+        exEl!.style.opacity = "0";
+        exEl!.style.pointerEvents = "none";
+        if (footerZone) { footerZone.style.opacity = "0"; footerZone.style.transition = ""; }
+      }
+    };
+
+    window.addEventListener("wheel",      onWheel, { passive: false, capture: true });
+    window.addEventListener("keydown",    onKey,   { capture: true });
+    window.addEventListener("touchstart", onTS,    { passive: true });
+    window.addEventListener("touchmove",  onTM,    { passive: false });
+    window.addEventListener("scroll",     onScroll, { passive: true });
+
+    return () => {
+      window.clearTimeout(releaseTimer);
+      window.removeEventListener("wheel",      onWheel, { capture: true } as EventListenerOptions);
+      window.removeEventListener("keydown",    onKey,   { capture: true } as EventListenerOptions);
+      window.removeEventListener("touchstart", onTS);
+      window.removeEventListener("touchmove",  onTM);
+      window.removeEventListener("scroll",     onScroll);
+      if (vid1) { vid1.pause(); vid1.onended = null; }
+      if (vid2) { vid2.pause(); vid2.onended = null; }
+    };
+  }, [isV7]);
+
   if (isFlat) {
     // Ключи не дают React переиспользовать узлы, на которых остались
     // инлайн-стили от десктопного эффекта.
@@ -858,6 +1079,34 @@ export default function CircleReveal({
       <>
         <div key="cr-dark-flat" dangerouslySetInnerHTML={{ __html: darkHtml }} />
         {children}
+      </>
+    );
+  }
+
+  if (isV7) {
+    return (
+      <>
+        <div id="v7-slide2-anchor" ref={stageRef} className="v7-flyout-stage">
+          <div className="v7-flyout-sticky">
+            <div ref={darkRef} className="cr-dark" dangerouslySetInnerHTML={{ __html: darkHtml }} />
+            <div ref={v7WardrobeRef} className="v7-wardrobe-flyout">
+              {wardrobeContent}
+            </div>
+          </div>
+        </div>
+        <video ref={v7Video1Ref} className="v7-vid-overlay" src="/v7-1.mp4" muted playsInline preload="auto" aria-hidden="true" />
+        <video ref={v7Video2Ref} className="v7-vid-overlay" src="/v7-2.mp4" muted playsInline preload="auto" aria-hidden="true" />
+        <div ref={v7ProjectsRef} id="v7-projects-anchor" className="v7-projects-zone">
+          <div ref={v7ExRef} className="v7-ex-new">
+            {children}
+          </div>
+        </div>
+        {(mirrorHtml || footerHtml) && (
+          <div ref={v7FooterZoneRef} id="v7-footer-anchor" className="v7-footer-zone">
+            {mirrorHtml && <div dangerouslySetInnerHTML={{ __html: mirrorHtml }} />}
+            {footerHtml && <div dangerouslySetInnerHTML={{ __html: footerHtml }} />}
+          </div>
+        )}
       </>
     );
   }

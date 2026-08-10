@@ -757,6 +757,51 @@
     height: 570vh;
     z-index: 2;
   }
+  /* ── V7 promo-reel layout ────────────────────────────────── */
+  .v7-flyout-stage {
+    position: relative;
+    height: 100vh;
+  }
+  .v7-flyout-sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .v7-wardrobe-flyout {
+    position: absolute;
+    inset: 0;
+    transform: translateX(100%);
+    z-index: 5;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .v7-vid-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: 9990;
+    pointer-events: none;
+    display: none;
+  }
+  .v7-projects-zone {
+    position: relative;
+    min-height: 100vh;
+  }
+  .v7-ex-new {
+    position: relative;
+    z-index: 1;
+  }
+  .v7-footer-zone {
+    position: relative;
+    opacity: 0;
+  }
+  html[data-version="7"] .exs-prod-section {
+    background-image: url('/assets/12.jpg');
+  }
   .cr-sticky {
     position: sticky;
     top: 0;

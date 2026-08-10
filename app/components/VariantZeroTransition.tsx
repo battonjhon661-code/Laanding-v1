@@ -108,6 +108,13 @@ function GlassStage({ mirrorHtml, footerHtml }: { mirrorHtml: string; footerHtml
 
       draw(easedProgress);
 
+      // Collapse white circle once footer phase starts, otherwise it shows as
+      // a white screen behind the rising mirror block.
+      if (footerPhase) {
+        const collapseP = ss(0, 0.5, easedFooterProgress);
+        whiteEl!.style.clipPath = `circle(${((1 - collapseP) * 145).toFixed(2)}% at 50% 50%)`;
+      }
+
       if (Math.abs(targetProgress - easedProgress) > 0.0005 ||
           Math.abs(targetFooterProgress - easedFooterProgress) > 0.0005) {
         frameId = requestAnimationFrame(tick);
