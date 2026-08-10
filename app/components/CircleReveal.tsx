@@ -66,18 +66,18 @@ export default function CircleReveal({
   // Вариант 2: следующий слайд открывается кругом из центра, а не полосой.
   const isCircle = version === "4";
   const isShutter = version === "3";
-  // Вариант 5: «наше стекло» → «примеры» через параллакс + размытие.
-  const isParallax = version === "1";
+  // Вариант 1: «наше стекло» → «примеры» через параллакс + размытие + WebGL-морф.
+  const isParallax = version === "1" || version === "7";
+  // Вариант 7: «наше стекло» → «примеры» через видео-переход (v7-1.mp4).
+  const isV7 = version === "7" && !isMobile;
   // Вариант 0: «наше стекло» затемняется в чёрный экран, из него проявляются «Примеры работ».
   const isFade = version === "2";
   // Вариант 6: примеры исчезают → фон кроссфейдит в noglass → белый круг из солнца → зеркало.
   const isV6 = version === "6" && !isMobile;
-  // Вариант 7: slide2 → белый фон → 12.mp4 → примеры (12.jpg).
-  const isV7 = version === "7" && !isMobile;
 
   // ── Обычный переход (clip / круг) — варианты 1,3,4 ──────────────
   useEffect(() => {
-    if (isFlat || isFade || isParallax || isCircle || isV6 || isV7) return;
+    if (isFlat || isFade || isParallax || isCircle || isV6) return;
     const stage = stageRef.current;
     const light = lightRef.current;
     const dark = darkRef.current;
@@ -204,11 +204,253 @@ export default function CircleReveal({
     };
   }, [isFlat, isCircle]);
 
+  // ── Вариант 7: видео-переходы «наше стекло»→«примеры» (v7-1.mp4) и
+  //    «примеры»→«зеркало» (v7-2.mp4).
+  // Первый скролл вниз: v7-1.mp4 → примеры.
+  // Второй скролл вниз (после примеров): v7-2.mp4 → зеркало.
+  useEffect(() => {
+    if (isFlat || !isV7) return;
+    const stage  = stageRef.current;
+    const dark   = darkRef.current;
+    const light  = lightRef.current;
+    const video  = v7Video1Ref.current;
+    const video2 = v7Video2Ref.current;
+    if (!stage || !dark || !light) return;
+
+    light.style.clipPath      = "none";
+    light.style.transform     = "none"; // override cr-stage--parallax scale(1.06)
+    light.style.opacity       = "0";
+    light.style.pointerEvents = "none";
+    dark.style.opacity        = "1";
+
+    let revealed        = false;
+    let animating       = false;
+    let mirrorRevealed  = false;
+    let phase2Animating = false;
+
+    const ss = (v: number) => v * v * (3 - 2 * v);
+
+    const revealExamples = () => {
+      if (revealed) return;
+      revealed = true;
+      light!.querySelector(".exs-prod-section")?.dispatchEvent(new CustomEvent("vg:examples-reveal"));
+
+      const FADE_MS = 500;
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const p = Math.min(1, (now - t0) / FADE_MS);
+        const e = ss(p);
+        light!.style.opacity = e.toFixed(3);
+        if (video) video.style.opacity = (1 - e).toFixed(3);
+        if (p < 1) { requestAnimationFrame(tick); return; }
+        light!.style.pointerEvents = "auto";
+        if (video) { video.pause(); video.style.display = "none"; video.style.opacity = ""; }
+      };
+      requestAnimationFrame(tick);
+    };
+
+    const revealMirror = () => {
+      if (mirrorRevealed) return;
+      mirrorRevealed = true;
+      const mirrorTitleEl = mirrorTitleRef.current;
+      const exContent = exContentRef.current;
+
+      const mirSection = mirrorTitleEl?.querySelector(".mirror-section") as HTMLElement | null;
+      if (mirSection) mirSection.classList.add("mirror-visible");
+
+      const FADE_MS = 600;
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const p = Math.min(1, (now - t0) / FADE_MS);
+        const e = ss(p);
+        if (exContent) exContent.style.opacity = (1 - e).toFixed(3);
+        if (video2) video2.style.opacity = (1 - e).toFixed(3);
+        if (mirrorTitleEl) mirrorTitleEl.style.opacity = e.toFixed(3);
+        if (p < 1) { requestAnimationFrame(tick); return; }
+        if (video2) { video2.pause(); video2.style.display = "none"; video2.style.opacity = ""; }
+      };
+      requestAnimationFrame(tick);
+    };
+
+    const makeBlockers = () => {
+      const blockWheel = (e: WheelEvent) => e.preventDefault();
+      const blockTouch = (e: TouchEvent) => e.preventDefault();
+      const blockKey   = (e: KeyboardEvent) => {
+        if (["ArrowDown","ArrowUp","PageDown","PageUp"," ","Spacebar","End","Home"].includes(e.key)) e.preventDefault();
+      };
+      window.addEventListener("wheel",     blockWheel, { passive: false, capture: true });
+      window.addEventListener("touchmove", blockTouch, { passive: false, capture: true });
+      window.addEventListener("keydown",   blockKey,   { capture: true });
+      return () => {
+        window.removeEventListener("wheel",     blockWheel, { capture: true } as EventListenerOptions);
+        window.removeEventListener("touchmove", blockTouch, { capture: true } as EventListenerOptions);
+        window.removeEventListener("keydown",   blockKey,   { capture: true } as EventListenerOptions);
+      };
+    };
+
+    const playVideo = (
+      vid: HTMLVideoElement,
+      onFadeIn: (p: number) => void,
+      onEnd: () => void,
+    ) => {
+      vid.style.display    = "block";
+      vid.style.opacity    = "0";
+      vid.currentTime      = 0;
+
+      const MAX_MS = 15000;
+      const fallback = window.setTimeout(() => {
+        vid.removeEventListener("ended", wrapped);
+        onEnd();
+      }, MAX_MS);
+      const wrapped = () => { window.clearTimeout(fallback); onEnd(); };
+
+      vid.play().catch(() => { window.clearTimeout(fallback); onEnd(); });
+
+      const FADEIN_MS = 300;
+      const t0 = performance.now();
+      const fadeIn = (now: number) => {
+        const p = Math.min(1, (now - t0) / FADEIN_MS);
+        onFadeIn(p);
+        vid.style.opacity = ss(p).toFixed(3);
+        if (p < 1) requestAnimationFrame(fadeIn);
+      };
+      requestAnimationFrame(fadeIn);
+      vid.addEventListener("ended", wrapped, { once: true });
+    };
+
+    const playTransition = () => {
+      if (animating || revealed) return;
+      animating = true;
+      const unblock = makeBlockers();
+
+      if (video) {
+        playVideo(
+          video,
+          (p) => { dark!.style.opacity = (1 - ss(p)).toFixed(3); },
+          () => { unblock(); animating = false; revealExamples(); },
+        );
+      } else {
+        unblock();
+        animating = false;
+        dark.style.opacity = "0";
+        revealExamples();
+      }
+    };
+
+    const playTransition2 = () => {
+      if (phase2Animating || mirrorRevealed) return;
+      phase2Animating = true;
+      light!.style.pointerEvents = "none";
+      const unblock = makeBlockers();
+
+      if (video2) {
+        playVideo(
+          video2,
+          () => {},
+          () => { unblock(); phase2Animating = false; revealMirror(); },
+        );
+      } else {
+        unblock();
+        phase2Animating = false;
+        revealMirror();
+      }
+    };
+
+    const inStickyZone = () => {
+      const r = stage!.getBoundingClientRect();
+      if (r.top > 4 || r.bottom <= window.innerHeight) return false;
+      // cr-stage starts at y=0 (margin-top:-100vh on slide-from-under), so
+      // r.top <= 4 is true even while the hero covers the page. Only treat
+      // slide2 as "pinned and visible" once the hero-lid has scrolled away.
+      const heroBottom = (document.querySelector(".hero-lid") as HTMLElement | null)
+        ?.getBoundingClientRect().bottom ?? -1;
+      return heroBottom <= 0;
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.deltaY <= 0) return;
+      if (!inStickyZone()) return;
+      if (!revealed && !animating) {
+        e.preventDefault();
+        playTransition();
+      } else if (revealed && !mirrorRevealed && !phase2Animating) {
+        e.preventDefault();
+        playTransition2();
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (!["ArrowDown","PageDown"," ","Spacebar","End"].includes(e.key)) return;
+      if (!inStickyZone()) return;
+      if (!revealed && !animating) {
+        e.preventDefault();
+        playTransition();
+      } else if (revealed && !mirrorRevealed && !phase2Animating) {
+        e.preventDefault();
+        playTransition2();
+      }
+    };
+    let touchY = 0;
+    const onTouchStart = (e: TouchEvent) => { touchY = e.touches[0]?.clientY ?? 0; };
+    const onTouchMove  = (e: TouchEvent) => {
+      if ((touchY - (e.touches[0]?.clientY ?? 0)) <= 0) return;
+      if (!inStickyZone()) return;
+      if (!revealed && !animating) {
+        e.preventDefault();
+        playTransition();
+      } else if (revealed && !mirrorRevealed && !phase2Animating) {
+        e.preventDefault();
+        playTransition2();
+      }
+    };
+    const onScroll = () => {
+      if (!(revealed || animating || mirrorRevealed || phase2Animating)) return;
+      // Reset when user scrolls back up to hero area (hero-lid re-enters viewport).
+      const heroBottom = (document.querySelector(".hero-lid") as HTMLElement | null)
+        ?.getBoundingClientRect().bottom ?? -1;
+      if (heroBottom > 0) {
+        revealed = false;
+        animating = false;
+        mirrorRevealed = false;
+        phase2Animating = false;
+        dark!.style.opacity        = "1";
+        light!.style.opacity       = "0";
+        light!.style.pointerEvents = "none";
+        const mirrorTitleEl = mirrorTitleRef.current;
+        const exContent     = exContentRef.current;
+        if (mirrorTitleEl) { mirrorTitleEl.style.opacity = ""; }
+        if (exContent)     { exContent.style.opacity     = ""; }
+        if (video)  { video.pause();  video.currentTime  = 0; video.style.display  = "none"; video.style.opacity  = "0"; }
+        if (video2) { video2.pause(); video2.currentTime = 0; video2.style.display = "none"; video2.style.opacity = "0"; }
+      }
+    };
+
+    window.addEventListener("wheel",      onWheel,      { passive: false, capture: true });
+    window.addEventListener("keydown",    onKey,         { capture: true });
+    window.addEventListener("touchstart", onTouchStart,  { passive: true });
+    window.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    window.addEventListener("scroll",     onScroll,     { passive: true });
+
+    return () => {
+      window.removeEventListener("wheel",      onWheel,     { capture: true } as EventListenerOptions);
+      window.removeEventListener("keydown",    onKey,       { capture: true } as EventListenerOptions);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove",  onTouchMove);
+      window.removeEventListener("scroll",     onScroll);
+      dark.style.opacity        = "";
+      light.style.opacity       = "";
+      light.style.clipPath      = "";
+      light.style.transform     = "";
+      light.style.pointerEvents = "";
+      if (video)  { video.pause();  video.style.display  = "none"; video.style.opacity  = ""; }
+      if (video2) { video2.pause(); video2.style.display = "none"; video2.style.opacity = ""; }
+    };
+  }, [isFlat, isV7]);
+
   // ── Вариант 5: зум+растворение «наше стекло»→«примеры», затем морф фона
   //    «примеры»→«зеркала» прямо на блоке примеров (контент тает, в конце
   //    проявляется заголовок «Наши работы вписываются…»).
   useEffect(() => {
-    if (isFlat || !isParallax) return;
+    if (isFlat || !isParallax || isV7) return;
     const stage = stageRef.current;
     const dark = darkRef.current;
     const light = lightRef.current;
@@ -293,7 +535,7 @@ export default function CircleReveal({
       if (exContent) exContent.style.opacity = "";
       if (mirrorTitle) { mirrorTitle.style.opacity = ""; mirrorTitle.style.pointerEvents = ""; }
     };
-  }, [isFlat, isParallax]);
+  }, [isFlat, isParallax, isV7]);
 
   // ── Переход через затемнение в чёрный — вариант 0 ──────────────
   useEffect(() => {
@@ -860,217 +1102,6 @@ export default function CircleReveal({
     };
   }, [isV6]);
 
-  // ── Вариант 7: промо-ролик (slide2 → flyout wardrobe → video1 → projects → video2 → footer) ──
-  useEffect(() => {
-    if (!isV7) return;
-    const stage      = stageRef.current;
-    const dark       = darkRef.current;
-    const wardrobe   = v7WardrobeRef.current;
-    const vid1       = v7Video1Ref.current;
-    const vid2       = v7Video2Ref.current;
-    const projects   = v7ProjectsRef.current;
-    const exEl       = v7ExRef.current;
-    const footerZone = v7FooterZoneRef.current;
-    if (!stage || !dark || !wardrobe || !vid1 || !vid2 || !projects || !exEl) return;
-
-    wardrobe.style.transform = "translateX(100%)";
-    wardrobe.style.transition = "";
-    wardrobe.style.opacity = "";
-    vid1.style.display = "none";
-    vid2.style.display = "none";
-    exEl.style.opacity = "0";
-    exEl.style.pointerEvents = "none";
-    if (footerZone) footerZone.style.opacity = "0";
-
-    type FlyState = "idle" | "open" | "passed";
-    type VidState = "idle" | "playing" | "done";
-    let flyState: FlyState = "idle";
-    let vid1State: VidState = "idle";
-    let vid2State: VidState = "idle";
-
-    const OPEN_MS = 700;
-    const IDLE_MS = 180;
-    let openedAt = 0;
-    let releaseTimer = 0;
-
-    const inStage = () => {
-      const r = stage!.getBoundingClientRect();
-      return r.top >= -4 && r.top <= 4;
-    };
-
-    const inProjectsBottom = () => {
-      const r = projects!.getBoundingClientRect();
-      return r.bottom <= window.innerHeight + 10 && r.bottom > -100;
-    };
-
-    const openFlyout = () => {
-      if (flyState !== "idle") return;
-      flyState = "open";
-      openedAt = performance.now();
-      wardrobe!.style.transition = `transform ${OPEN_MS}ms cubic-bezier(.4,0,.2,1)`;
-      wardrobe!.style.transform = "translateX(0)";
-    };
-
-    const scheduleRelease = () => {
-      window.clearTimeout(releaseTimer);
-      releaseTimer = window.setTimeout(() => {
-        if (performance.now() - openedAt >= OPEN_MS && flyState === "open") {
-          flyState = "passed";
-        } else if (flyState === "open") {
-          scheduleRelease();
-        }
-      }, IDLE_MS);
-    };
-
-    const makeBlockers = () => {
-      const blockW = (e: WheelEvent) => e.preventDefault();
-      const blockT = (e: TouchEvent) => e.preventDefault();
-      const blockK = (e: KeyboardEvent) => {
-        if (["ArrowDown","ArrowUp","PageDown","PageUp"," ","Spacebar","End","Home"].includes(e.key)) e.preventDefault();
-      };
-      window.addEventListener("wheel",     blockW, { passive: false, capture: true });
-      window.addEventListener("touchmove", blockT, { passive: false, capture: true });
-      window.addEventListener("keydown",   blockK, { capture: true });
-      return () => {
-        window.removeEventListener("wheel",     blockW, { capture: true } as EventListenerOptions);
-        window.removeEventListener("touchmove", blockT, { capture: true } as EventListenerOptions);
-        window.removeEventListener("keydown",   blockK, { capture: true } as EventListenerOptions);
-      };
-    };
-
-    const playVideo1 = () => {
-      if (vid1State !== "idle") return;
-      vid1State = "playing";
-      const unblock = makeBlockers();
-
-      wardrobe!.style.transition = "opacity 0.5s ease";
-      wardrobe!.style.opacity = "0";
-
-      vid1!.style.display = "block";
-      vid1!.style.opacity = "0";
-      vid1!.style.transition = "opacity 0.35s ease";
-      vid1!.currentTime = 0;
-      vid1!.play().catch(() => {});
-      requestAnimationFrame(() => { if (vid1) vid1.style.opacity = "1"; });
-
-      vid1!.addEventListener("playing", () => {
-        exEl!.style.transition = "opacity 1.4s ease";
-        exEl!.style.opacity = "1";
-        exEl!.style.pointerEvents = "";
-        const exSec = exEl!.querySelector(".exs-prod-section") as HTMLElement | null;
-        if (exSec) exSec.dispatchEvent(new CustomEvent("vg:examples-reveal"));
-      }, { once: true });
-
-      vid1!.onended = () => {
-        vid1!.onended = null;
-        const projEl = projects!;
-        const htmlEl = document.documentElement;
-        htmlEl.style.scrollBehavior = "auto";
-        window.scrollTo({ top: projEl.getBoundingClientRect().top + window.scrollY });
-        htmlEl.style.scrollBehavior = "";
-        vid1!.style.transition = "opacity 0.5s ease";
-        vid1!.style.opacity = "0";
-        setTimeout(() => {
-          if (vid1) { vid1.style.display = "none"; vid1.style.transition = ""; }
-        }, 500);
-        unblock();
-        vid1State = "done";
-      };
-    };
-
-    const playVideo2 = () => {
-      if (vid2State !== "idle") return;
-      vid2State = "playing";
-      const unblock = makeBlockers();
-
-      vid2!.style.display = "block";
-      vid2!.style.opacity = "0";
-      vid2!.style.transition = "opacity 0.35s ease";
-      vid2!.currentTime = 0;
-      vid2!.play().catch(() => {});
-      requestAnimationFrame(() => { if (vid2) vid2.style.opacity = "1"; });
-
-      vid2!.onended = () => {
-        vid2!.onended = null;
-        if (footerZone) {
-          footerZone.style.transition = "opacity 0.8s ease";
-          footerZone.style.opacity = "1";
-          const mirSection = footerZone.querySelector(".mirror-section") as HTMLElement | null;
-          if (mirSection) mirSection.classList.add("mirror-visible");
-          const htmlEl = document.documentElement;
-          htmlEl.style.scrollBehavior = "auto";
-          window.scrollTo({ top: footerZone.getBoundingClientRect().top + window.scrollY });
-          htmlEl.style.scrollBehavior = "";
-        }
-        vid2!.style.transition = "opacity 0.5s ease";
-        vid2!.style.opacity = "0";
-        setTimeout(() => {
-          if (vid2) { vid2.style.display = "none"; vid2.style.transition = ""; }
-        }, 500);
-        unblock();
-        vid2State = "done";
-      };
-    };
-
-    const DOWN = ["ArrowDown","PageDown"," ","Spacebar","End"];
-
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.deltaY <= 0) return;
-      if (flyState === "idle" && inStage()) { e.preventDefault(); openFlyout(); scheduleRelease(); return; }
-      if (flyState === "passed" && vid1State === "idle" && inStage()) { e.preventDefault(); playVideo1(); return; }
-      if (vid1State === "done" && vid2State === "idle" && inProjectsBottom()) { e.preventDefault(); playVideo2(); return; }
-    };
-
-    const onKey = (e: KeyboardEvent) => {
-      if (!DOWN.includes(e.key)) return;
-      if (flyState === "idle" && inStage()) { e.preventDefault(); openFlyout(); scheduleRelease(); return; }
-      if (flyState === "passed" && vid1State === "idle" && inStage()) { e.preventDefault(); playVideo1(); return; }
-      if (vid1State === "done" && vid2State === "idle" && inProjectsBottom()) { e.preventDefault(); playVideo2(); return; }
-    };
-
-    let ty = 0;
-    const onTS = (e: TouchEvent) => { ty = e.touches[0]?.clientY ?? 0; };
-    const onTM = (e: TouchEvent) => {
-      if ((ty - (e.touches[0]?.clientY ?? 0)) <= 0) return;
-      if (flyState === "idle" && inStage()) { e.preventDefault(); openFlyout(); scheduleRelease(); return; }
-      if (flyState === "passed" && vid1State === "idle" && inStage()) { e.preventDefault(); playVideo1(); return; }
-      if (vid1State === "done" && vid2State === "idle" && inProjectsBottom()) { e.preventDefault(); playVideo2(); return; }
-    };
-
-    const onScroll = () => {
-      if ((window.scrollY || window.pageYOffset) <= 2 && flyState !== "idle") {
-        flyState = "idle";
-        vid1State = "idle";
-        vid2State = "idle";
-        window.clearTimeout(releaseTimer);
-        wardrobe!.style.transition = "";
-        wardrobe!.style.transform = "translateX(100%)";
-        wardrobe!.style.opacity = "";
-        if (vid1) { vid1.pause(); vid1.onended = null; vid1.style.display = "none"; vid1.style.opacity = "0"; }
-        if (vid2) { vid2.pause(); vid2.onended = null; vid2.style.display = "none"; vid2.style.opacity = "0"; }
-        exEl!.style.opacity = "0";
-        exEl!.style.pointerEvents = "none";
-        if (footerZone) { footerZone.style.opacity = "0"; footerZone.style.transition = ""; }
-      }
-    };
-
-    window.addEventListener("wheel",      onWheel, { passive: false, capture: true });
-    window.addEventListener("keydown",    onKey,   { capture: true });
-    window.addEventListener("touchstart", onTS,    { passive: true });
-    window.addEventListener("touchmove",  onTM,    { passive: false });
-    window.addEventListener("scroll",     onScroll, { passive: true });
-
-    return () => {
-      window.clearTimeout(releaseTimer);
-      window.removeEventListener("wheel",      onWheel, { capture: true } as EventListenerOptions);
-      window.removeEventListener("keydown",    onKey,   { capture: true } as EventListenerOptions);
-      window.removeEventListener("touchstart", onTS);
-      window.removeEventListener("touchmove",  onTM);
-      window.removeEventListener("scroll",     onScroll);
-      if (vid1) { vid1.pause(); vid1.onended = null; }
-      if (vid2) { vid2.pause(); vid2.onended = null; }
-    };
-  }, [isV7]);
 
   if (isFlat) {
     // Ключи не дают React переиспользовать узлы, на которых остались
@@ -1079,34 +1110,6 @@ export default function CircleReveal({
       <>
         <div key="cr-dark-flat" dangerouslySetInnerHTML={{ __html: darkHtml }} />
         {children}
-      </>
-    );
-  }
-
-  if (isV7) {
-    return (
-      <>
-        <div id="v7-slide2-anchor" ref={stageRef} className="v7-flyout-stage">
-          <div className="v7-flyout-sticky">
-            <div ref={darkRef} className="cr-dark" dangerouslySetInnerHTML={{ __html: darkHtml }} />
-            <div ref={v7WardrobeRef} className="v7-wardrobe-flyout">
-              {wardrobeContent}
-            </div>
-          </div>
-        </div>
-        <video ref={v7Video1Ref} className="v7-vid-overlay" src="/v7-1.mp4" muted playsInline preload="auto" aria-hidden="true" />
-        <video ref={v7Video2Ref} className="v7-vid-overlay" src="/v7-2.mp4" muted playsInline preload="auto" aria-hidden="true" />
-        <div ref={v7ProjectsRef} id="v7-projects-anchor" className="v7-projects-zone">
-          <div ref={v7ExRef} className="v7-ex-new">
-            {children}
-          </div>
-        </div>
-        {(mirrorHtml || footerHtml) && (
-          <div ref={v7FooterZoneRef} id="v7-footer-anchor" className="v7-footer-zone">
-            {mirrorHtml && <div dangerouslySetInnerHTML={{ __html: mirrorHtml }} />}
-            {footerHtml && <div dangerouslySetInnerHTML={{ __html: footerHtml }} />}
-          </div>
-        )}
       </>
     );
   }
@@ -1166,6 +1169,28 @@ export default function CircleReveal({
 
   return (
     <div key="cr-stage" ref={stageRef} className={`cr-stage${isFade ? " cr-stage--fade" : ""}${isShutter ? " cr-stage--shutter" : ""}${isParallax ? " cr-stage--parallax" : ""}${isCircle ? " cr-stage--circle" : ""}`}>
+      {/* v7 video overlays sit OUTSIDE cr-sticky so they don't inherit
+          cr-light's opacity:0 or transform:scale(). */}
+      {isV7 && (
+        <>
+          <video
+            ref={v7Video1Ref}
+            className="v7-vid-overlay"
+            src="/v7-1.mp4"
+            muted
+            playsInline
+            preload="auto"
+          />
+          <video
+            ref={v7Video2Ref}
+            className="v7-vid-overlay"
+            src="/v7-2.mp4"
+            muted
+            playsInline
+            preload="auto"
+          />
+        </>
+      )}
       <div className="cr-sticky">
         <div
           ref={darkRef}
@@ -1176,7 +1201,7 @@ export default function CircleReveal({
         <div ref={lightRef} className="cr-light">
           {isParallax ? (
             <>
-              <canvas ref={canvasRef} className="cr-morph-canvas" />
+              {!isV7 && <canvas ref={canvasRef} className="cr-morph-canvas" />}
               <div ref={exContentRef} className="cr-ex-content">
                 {children}
               </div>

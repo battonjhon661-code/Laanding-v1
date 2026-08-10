@@ -319,8 +319,10 @@ export default function ScrollVideoHero() {
   const [snapOpacity, setSnapOpacity]   = useState(1);
   const [snapFading, setSnapFading]     = useState(false);
 
-  // v7: when promo overlay signals done, snap hero back to zone 0 (it may have
-  // auto-advanced during the 14s promo while hidden behind the overlay).
+  // v7: when promo overlay signals done, reset hero to zone 0 and replay the
+  // intro reveal (off.png → bedroom crossfade + HeroText/Chapters entrance).
+  // The intro would have played silently under the promo, so we replay it here
+  // so the user actually sees it after the overlay fades.
   useEffect(() => {
     const onPromoDone = () => {
       if (scrubRafRef.current !== null) {
@@ -334,9 +336,11 @@ export default function ScrollVideoHero() {
       setDisplayZone(0);
       setVideoVisible(false);
       setHotspotZone(null);
-      // restart timers now that we're settled at zone 0
-      scheduleAutoRef.current();
-      scheduleHsRef.current();
+      // Reset intro states → triggers re-play of the off.png → bedroom reveal
+      // and the HeroText/Chapters fade-in. Auto-advance + hotspot timers will
+      // restart automatically via the introComplete effect once the reveal ends.
+      setIntroRevealed(false);
+      setIntroComplete(false);
     };
     window.addEventListener("vg:v7-promo-done", onPromoDone, { once: true });
     return () => window.removeEventListener("vg:v7-promo-done", onPromoDone);

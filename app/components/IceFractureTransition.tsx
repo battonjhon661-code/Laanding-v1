@@ -57,7 +57,7 @@ function buildSpikes(w: number, h: number): Spike[] {
 export default function IceFractureTransition() {
   const version = useSiteVersion();
   const isMobile = useIsMobile();
-  const active = (version === "6" || version === "7") && !isMobile;
+  const active = version === "6" && !isMobile;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const phaseRef = useRef<Phase>("idle");
@@ -179,7 +179,7 @@ export default function IceFractureTransition() {
               // Scroll to slide2 now — prod-init fires and adds lights-on with
               // ::before at 0, so the full transition plays. The video's last
               // frame matches background-second-0.webp, making the crossfade seamless.
-              const el = document.getElementById(version === "7" ? "v7-slide2-anchor" : "v6-slide2-anchor") as HTMLElement | null;
+              const el = document.getElementById("v6-slide2-anchor") as HTMLElement | null;
               if (el) {
                 const htmlEl = document.documentElement;
                 htmlEl.style.scrollBehavior = "auto";
@@ -216,7 +216,6 @@ export default function IceFractureTransition() {
       playIce();
     };
     window.addEventListener("vg:v6-ice-start", onIceStart);
-    window.addEventListener("vg:v7-ice-start", onIceStart);
 
     // Reset when scrolled back to top
     const onScroll = () => {
@@ -237,7 +236,6 @@ export default function IceFractureTransition() {
       window.removeEventListener("touchmove", blockTouch, { capture: true } as EventListenerOptions);
       window.removeEventListener("keydown", blockKey, { capture: true } as EventListenerOptions);
       window.removeEventListener("vg:v6-ice-start", onIceStart);
-      window.removeEventListener("vg:v7-ice-start", onIceStart);
       window.removeEventListener("scroll", onScroll);
       const vid = videoRef.current;
       if (vid) { vid.pause(); vid.onended = null; }

@@ -112,14 +112,14 @@ export default function MirrorReveal({
     );
   }
 
-  // v5 (bg morph) and v2 (wipe) show the mirror inside CircleReveal,
+  // v1/v7 (bg morph) and v4/circle (wipe) show the mirror inside CircleReveal,
   // so here we render only the footer that follows it.
-  if (isV5 || isV2) {
+  if (isV5 || isV7Desktop || isV2) {
     return <div key="footer-cr" dangerouslySetInnerHTML={{ __html: footerHtml }} />;
   }
 
-  // v0/v4/v7 have their own dedicated mirror transition components.
-  if (isV0 || isV4 || isV7Desktop) {
+  // v0/v4 have their own dedicated mirror transition components.
+  if (isV0 || isV4) {
     return null;
   }
 

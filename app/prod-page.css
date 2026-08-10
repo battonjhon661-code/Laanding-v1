@@ -274,7 +274,8 @@
     /* Variant 5: the second ("lights on") background fades in gradually, driven
        by --s2-lights as the block slides up into view (set in ProdScripts.tsx),
        instead of a single class toggle. */
-    [data-version="1"] #slide2::before {
+    [data-version="1"] #slide2::before,
+    [data-version="7"] #slide2::before {
       opacity: var(--s2-lights, 0) !important;
       transition: none !important;
     }
