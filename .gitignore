@@ -43,6 +43,14 @@ next-env.d.ts
 # media: use webp/webm instead of png/mp4
 *.png
 *.mp4
+# exceptions: files needed on Vercel that have no webm/webp alternative
+!public/bedroom.png
+!public/balcony.png
+!public/gym.png
+!public/locations/off.png
+!public/v7-1.mp4
+!public/v7-2.mp4
+!public/block3-transition.mp4
 
 # dev server log
 dev.log
