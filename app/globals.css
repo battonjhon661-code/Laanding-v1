@@ -146,19 +146,22 @@ html, body {
   display: none;
 }
 
-/* Вариант 7: витрина выезжает снизу (та же механика что v6, без отдельного класса). */
-[data-version="7"] .hr-stage--flyout .hr-under {
+/* Вариант 7/8: витрина выезжает снизу (та же механика что v6, без отдельного класса). */
+[data-version="7"] .hr-stage--flyout .hr-under,
+[data-version="8"] .hr-stage--flyout .hr-under {
   transform: translate3d(0, 100%, 0);
   transform-origin: 50% 100%;
   box-shadow:
     0 -28px 64px rgba(0, 0, 0, 0.38),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
-/* Специфичность выше чем у базового .is-flyout-open — иначе v7-правило его перебивает. */
-[data-version="7"] .hr-stage--flyout.is-flyout-open .hr-under {
+/* Специфичность выше чем у базового .is-flyout-open — иначе v7/v8-правило его перебивает. */
+[data-version="7"] .hr-stage--flyout.is-flyout-open .hr-under,
+[data-version="8"] .hr-stage--flyout.is-flyout-open .hr-under {
   transform: translate3d(0, 0, 0);
 }
-[data-version="7"] .hr-stage--flyout .hr-under::before {
+[data-version="7"] .hr-stage--flyout .hr-under::before,
+[data-version="8"] .hr-stage--flyout .hr-under::before {
   top: 0;
   bottom: auto;
   left: 0;
@@ -169,7 +172,8 @@ html, body {
     linear-gradient(180deg, rgba(255,255,255,0.26), rgba(142,205,244,0.14) 22%, transparent 72%),
     linear-gradient(90deg, rgba(255,255,255,0.12), transparent 32%, transparent 68%, rgba(255,255,255,0.1));
 }
-[data-version="7"] .wrd-bottom-shadow {
+[data-version="7"] .wrd-bottom-shadow,
+[data-version="8"] .wrd-bottom-shadow {
   display: none;
 }
 
@@ -252,12 +256,14 @@ html, body {
 .cr-stage--parallax .cr-ex-content .exs-prod-section {
   background: transparent;
 }
-/* v7 has no WebGL canvas — restore the examples background so it shows after v7-1.mp4. */
-[data-version="7"] .cr-stage--parallax .cr-ex-content .exs-prod-section {
+/* v7/v8 has no WebGL canvas — restore the examples background so it shows after v7-1.mp4. */
+[data-version="7"] .cr-stage--parallax .cr-ex-content .exs-prod-section,
+[data-version="8"] .cr-stage--parallax .cr-ex-content .exs-prod-section {
   background: #fff url('/background-examples.png') center / cover no-repeat;
 }
-/* v7 cr-light: no parallax-zoom (scale(1.06) is for v1 canvas-morph only). */
-[data-version="7"] .cr-stage--parallax .cr-light {
+/* v7/v8 cr-light: no parallax-zoom (scale(1.06) is for v1 canvas-morph only). */
+[data-version="7"] .cr-stage--parallax .cr-light,
+[data-version="8"] .cr-stage--parallax .cr-light {
   transform: none;
 }
 /* Mirror statement overlay: only the title, over the morphed (now mirror) bg.
@@ -278,15 +284,19 @@ html, body {
 .cr-mirror-title .mirror-section::before {
   display: none;
 }
-/* v7 has no canvas — restore mirror section background and ::before photo. */
-[data-version="7"] .cr-mirror-title {
+/* v7/v8 has no canvas — restore mirror section background and ::before photo. */
+[data-version="7"] .cr-mirror-title,
+[data-version="8"] .cr-mirror-title {
   display: block;
 }
 [data-version="7"] .cr-mirror-title .mirror-standalone-wrap,
-[data-version="7"] .cr-mirror-title .mirror-section {
+[data-version="7"] .cr-mirror-title .mirror-section,
+[data-version="8"] .cr-mirror-title .mirror-standalone-wrap,
+[data-version="8"] .cr-mirror-title .mirror-section {
   background: #fff;
 }
-[data-version="7"] .cr-mirror-title .mirror-section::before {
+[data-version="7"] .cr-mirror-title .mirror-section::before,
+[data-version="8"] .cr-mirror-title .mirror-section::before {
   display: block;
 }
 
@@ -618,17 +628,20 @@ html[data-version="3"] .ls-stage {
   box-shadow: none;
 }
 
-/* Версия 7 — те же правила что и v1 (под хиро), витрина выезжает снизу. */
-[data-version="7"] .slide-from-under {
+/* Версия 7/8 — те же правила что и v1 (под хиро), витрина выезжает снизу. */
+[data-version="7"] .slide-from-under,
+[data-version="8"] .slide-from-under {
   z-index: 1;
   margin-top: -100vh;
 }
 @media (max-width: 768px) {
-  [data-version="7"] .slide-from-under {
+  [data-version="7"] .slide-from-under,
+  [data-version="8"] .slide-from-under {
     margin-top: 0;
   }
 }
-[data-version="7"] .cr-stage--parallax {
+[data-version="7"] .cr-stage--parallax,
+[data-version="8"] .cr-stage--parallax {
   background: #050606;
   height: 250vh; /* без морфа нужна меньшая зона */
 }

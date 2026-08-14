@@ -6,6 +6,7 @@ import VersionSwitcher from "./components/VersionSwitcher";
 import BlurGlassTransition from "./components/BlurGlassTransition";
 import IceFractureTransition from "./components/IceFractureTransition";
 import PromoIntro7 from "./components/PromoIntro7";
+import V8Transitions from "./components/V8Transitions";
 
 export default function Home() {
   return (
@@ -25,6 +26,7 @@ export default function Home() {
       <VersionSwitcher />
       <BlurGlassTransition />
       <IceFractureTransition />
+      <V8Transitions />
     </main>
   );
 }

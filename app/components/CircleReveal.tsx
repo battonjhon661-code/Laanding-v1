@@ -67,9 +67,9 @@ export default function CircleReveal({
   const isCircle = version === "4";
   const isShutter = version === "3";
   // Вариант 1: «наше стекло» → «примеры» через параллакс + размытие + WebGL-морф.
-  const isParallax = version === "1" || version === "7";
-  // Вариант 7: «наше стекло» → «примеры» через видео-переход (v7-1.mp4).
-  const isV7 = version === "7" && !isMobile;
+  const isParallax = version === "1" || version === "7" || version === "8";
+  // Вариант 7/8: «наше стекло» → «примеры» через видео-переход (v7-1.mp4).
+  const isV7 = (version === "7" || version === "8") && !isMobile;
   // Вариант 0: «наше стекло» затемняется в чёрный экран, из него проявляются «Примеры работ».
   const isFade = version === "2";
   // Вариант 6: примеры исчезают → фон кроссфейдит в noglass → белый круг из солнца → зеркало.
@@ -1184,7 +1184,7 @@ export default function CircleReveal({
           <video
             ref={v7Video2Ref}
             className="v7-vid-overlay"
-            src="/v7-2.mp4"
+            src={version === "8" ? "/assets/last.mp4" : "/v7-2.mp4"}
             muted
             playsInline
             preload="auto"

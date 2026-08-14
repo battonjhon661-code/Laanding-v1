@@ -26,7 +26,9 @@ export default function HeroReveal({
   // Остальные блоки в 6-м идут монолитом (useFlatLayout), поэтому сюда
   // пробрасываемся в обход flat-ветки.
   const isFlyoutUp = version === "6" && !isMobile;
-  const isFlyout = version === "1" || version === "7" || isFlyoutUp;
+  // v8: та же механика витрины снизу что в v7, плюс видео-переход к блоку 3.
+  const isV8Flyout = version === "8";
+  const isFlyout = version === "1" || version === "7" || isV8Flyout || isFlyoutUp;
 
   useEffect(() => {
     if ((isFlat && !isFlyoutUp) || isPlainBeforeSlide2) return;
@@ -55,7 +57,7 @@ export default function HeroReveal({
       let releaseTimer = 0;
       // Phase 2 (v6 only): one-shot hero-exit animation on the first scroll
       // after the flyout-up has settled.
-      let phase2done = !isFlyoutUp;
+      let phase2done = !isFlyoutUp && !isV8Flyout;
 
       const openFlyout = () => {
         if (!stageEl.classList.contains("is-flyout-open")) {
@@ -93,6 +95,21 @@ export default function HeroReveal({
           // v6: dispatch event — IceFractureTransition handles the canvas animation
           // and will scroll to slide2 itself when frost covers the screen.
           window.dispatchEvent(new CustomEvent("vg:v6-ice-start"));
+          return;
+        }
+
+        if (isV8Flyout) {
+          // v8: play third.mp4 overlay, then snap to slide-from-under after 720ms.
+          // Scroll is blocked by V8Transitions during the video.
+          window.dispatchEvent(new CustomEvent("vg:v8-third-start"));
+          const slideEl8 = document.querySelector(".slide-from-under") as HTMLElement | null;
+          window.setTimeout(() => {
+            const scrollTarget = slideEl8 ? slideEl8.offsetTop : window.innerHeight;
+            const htmlEl = document.documentElement;
+            htmlEl.style.scrollBehavior = "auto";
+            window.scrollTo({ top: scrollTarget });
+            htmlEl.style.scrollBehavior = "";
+          }, 720);
           return;
         }
 
@@ -192,7 +209,7 @@ export default function HeroReveal({
           // Back on the hero after leaving — re-arm and reset the transition.
           passed = false;
           awayFromTop = false;
-          phase2done = !isFlyoutUp;
+          phase2done = !isFlyoutUp && !isV8Flyout;
           stageEl.classList.remove("is-flyout-open");
         }
       };
@@ -261,7 +278,7 @@ export default function HeroReveal({
       underEl.style.opacity = "";
       underEl.style.filter = "";
     };
-  }, [isFlat, isLid, isPlainBeforeSlide2, isFlyout, isFlyoutUp]);
+  }, [isFlat, isLid, isPlainBeforeSlide2, isFlyout, isFlyoutUp, isV8Flyout]);
 
   if (isFlyout && !isFlat) {
     return (

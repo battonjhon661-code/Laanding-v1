@@ -28,7 +28,7 @@ export default function MirrorReveal({
   const isV2 = version === "4";
   const isV4 = version === "3";
   const isV5 = version === "1";
-  const isV7Desktop = version === "7" && !isMobile;
+  const isV7Desktop = (version === "7" || version === "8") && !isMobile;
   useEffect(() => {
     if (isFlat || isV0 || isV2 || isV4 || isV5 || isV7Desktop) return;
     const stage = stageRef.current;
