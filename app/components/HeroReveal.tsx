@@ -101,10 +101,14 @@ export default function HeroReveal({
         if (isV8Flyout) {
           // v8: play third.mp4 overlay, then snap to slide-from-under after 720ms.
           // Scroll is blocked by V8Transitions during the video.
+          // Note: .slide-from-under has margin-top:-100vh so its offsetTop≈0 and
+          // can't be used as scroll target. We scroll past .hero-lid instead.
           window.dispatchEvent(new CustomEvent("vg:v8-third-start"));
-          const slideEl8 = document.querySelector(".slide-from-under") as HTMLElement | null;
+          const heroLidEl = stageEl.closest(".hero-lid") as HTMLElement | null;
           window.setTimeout(() => {
-            const scrollTarget = slideEl8 ? slideEl8.offsetTop : window.innerHeight;
+            const scrollTarget = heroLidEl
+              ? heroLidEl.offsetTop + heroLidEl.offsetHeight
+              : window.innerHeight;
             const htmlEl = document.documentElement;
             htmlEl.style.scrollBehavior = "auto";
             window.scrollTo({ top: scrollTarget });
