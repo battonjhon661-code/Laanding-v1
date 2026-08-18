@@ -57,6 +57,7 @@ export default function CircleReveal({
   const v7WardrobeRef   = useRef<HTMLDivElement>(null);
   const v7Video1Ref     = useRef<HTMLVideoElement>(null);
   const v7Video2Ref     = useRef<HTMLVideoElement>(null);
+  const v7MirrorBgRef   = useRef<HTMLDivElement>(null);
   const v7ProjectsRef   = useRef<HTMLDivElement>(null);
   const v7ExRef         = useRef<HTMLDivElement>(null);
   const v7FooterZoneRef = useRef<HTMLDivElement>(null);
@@ -214,7 +215,8 @@ export default function CircleReveal({
     const dark   = darkRef.current;
     const light  = lightRef.current;
     const video  = v7Video1Ref.current;
-    const video2 = v7Video2Ref.current;
+    const video2  = v7Video2Ref.current;
+    const mirrorBg = v7MirrorBgRef.current;
     if (!stage || !dark || !light) return;
 
     light.style.clipPath      = "none";
@@ -227,6 +229,8 @@ export default function CircleReveal({
     let animating       = false;
     let mirrorRevealed  = false;
     let phase2Animating = false;
+    let settling        = false;
+    let settleTimer     = 0;
 
     const ss = (v: number) => v * v * (3 - 2 * v);
 
@@ -256,7 +260,7 @@ export default function CircleReveal({
       const exContent = exContentRef.current;
 
       const mirSection = mirrorTitleEl?.querySelector(".mirror-section") as HTMLElement | null;
-      if (mirSection) mirSection.classList.add("mirror-visible");
+      if (mirSection) mirSection.classList.add("mirror-visible", "vg-mirror-bg-instant");
 
       const FADE_MS = 600;
       const t0 = performance.now();
@@ -268,6 +272,7 @@ export default function CircleReveal({
         if (mirrorTitleEl) mirrorTitleEl.style.opacity = e.toFixed(3);
         if (p < 1) { requestAnimationFrame(tick); return; }
         if (video2) { video2.pause(); video2.style.display = "none"; video2.style.opacity = ""; }
+        if (mirrorBg) mirrorBg.style.display = "none";
       };
       requestAnimationFrame(tick);
     };
@@ -327,13 +332,16 @@ export default function CircleReveal({
         playVideo(
           video,
           (p) => { dark!.style.opacity = (1 - ss(p)).toFixed(3); },
-          () => { unblock(); animating = false; revealExamples(); },
+          () => {
+            animating = false; settling = true; revealExamples();
+            window.clearTimeout(settleTimer);
+            settleTimer = window.setTimeout(() => { settling = false; unblock(); }, 2000);
+          },
         );
       } else {
-        unblock();
-        animating = false;
-        dark.style.opacity = "0";
-        revealExamples();
+        animating = false; settling = true; dark.style.opacity = "0"; revealExamples();
+        window.clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(() => { settling = false; unblock(); }, 2000);
       }
     };
 
@@ -341,18 +349,23 @@ export default function CircleReveal({
       if (phase2Animating || mirrorRevealed) return;
       phase2Animating = true;
       light!.style.pointerEvents = "none";
+      if (mirrorBg) mirrorBg.style.display = "block";
       const unblock = makeBlockers();
 
       if (video2) {
         playVideo(
           video2,
           () => {},
-          () => { unblock(); phase2Animating = false; revealMirror(); },
+          () => {
+            phase2Animating = false; settling = true; revealMirror();
+            window.clearTimeout(settleTimer);
+            settleTimer = window.setTimeout(() => { settling = false; unblock(); }, 1600);
+          },
         );
       } else {
-        unblock();
-        phase2Animating = false;
-        revealMirror();
+        phase2Animating = false; settling = true; revealMirror();
+        window.clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(() => { settling = false; unblock(); }, 1600);
       }
     };
 
@@ -370,10 +383,10 @@ export default function CircleReveal({
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.deltaY <= 0) return;
       if (!inStickyZone()) return;
-      if (!revealed && !animating) {
+      if (!revealed && !animating && !settling) {
         e.preventDefault();
         playTransition();
-      } else if (revealed && !mirrorRevealed && !phase2Animating) {
+      } else if (revealed && !mirrorRevealed && !phase2Animating && !settling) {
         e.preventDefault();
         playTransition2();
       }
@@ -381,10 +394,10 @@ export default function CircleReveal({
     const onKey = (e: KeyboardEvent) => {
       if (!["ArrowDown","PageDown"," ","Spacebar","End"].includes(e.key)) return;
       if (!inStickyZone()) return;
-      if (!revealed && !animating) {
+      if (!revealed && !animating && !settling) {
         e.preventDefault();
         playTransition();
-      } else if (revealed && !mirrorRevealed && !phase2Animating) {
+      } else if (revealed && !mirrorRevealed && !phase2Animating && !settling) {
         e.preventDefault();
         playTransition2();
       }
@@ -394,16 +407,16 @@ export default function CircleReveal({
     const onTouchMove  = (e: TouchEvent) => {
       if ((touchY - (e.touches[0]?.clientY ?? 0)) <= 0) return;
       if (!inStickyZone()) return;
-      if (!revealed && !animating) {
+      if (!revealed && !animating && !settling) {
         e.preventDefault();
         playTransition();
-      } else if (revealed && !mirrorRevealed && !phase2Animating) {
+      } else if (revealed && !mirrorRevealed && !phase2Animating && !settling) {
         e.preventDefault();
         playTransition2();
       }
     };
     const onScroll = () => {
-      if (!(revealed || animating || mirrorRevealed || phase2Animating)) return;
+      if (!(revealed || animating || mirrorRevealed || phase2Animating || settling)) return;
       // Reset when user scrolls back up to hero area (hero-lid re-enters viewport).
       const heroBottom = (document.querySelector(".hero-lid") as HTMLElement | null)
         ?.getBoundingClientRect().bottom ?? -1;
@@ -412,6 +425,8 @@ export default function CircleReveal({
         animating = false;
         mirrorRevealed = false;
         phase2Animating = false;
+        settling = false;
+        window.clearTimeout(settleTimer);
         dark!.style.opacity        = "1";
         light!.style.opacity       = "0";
         light!.style.pointerEvents = "none";
@@ -431,6 +446,7 @@ export default function CircleReveal({
     window.addEventListener("scroll",     onScroll,     { passive: true });
 
     return () => {
+      window.clearTimeout(settleTimer);
       window.removeEventListener("wheel",      onWheel,     { capture: true } as EventListenerOptions);
       window.removeEventListener("keydown",    onKey,       { capture: true } as EventListenerOptions);
       window.removeEventListener("touchstart", onTouchStart);
@@ -1180,6 +1196,18 @@ export default function CircleReveal({
             muted
             playsInline
             preload="auto"
+          />
+          <div
+            ref={v7MirrorBgRef}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 9989,
+              background: "url('/assets/background-5.webp') center center / cover no-repeat",
+              display: "none",
+              pointerEvents: "none",
+            }}
+            aria-hidden="true"
           />
           <video
             ref={v7Video2Ref}

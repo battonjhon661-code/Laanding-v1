@@ -299,6 +299,13 @@ html, body {
 [data-version="8"] .cr-mirror-title .mirror-section::before {
   display: block;
 }
+/* When revealed via video transition: skip ::before fade-in delay so the background
+   image is instantly visible when the video overlay disappears. */
+.cr-mirror-title .mirror-section.vg-mirror-bg-instant::before {
+  transition: none !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
 
 .cr-stage--shutter {
   --cr-shutter-p: 0;
