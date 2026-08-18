@@ -57,13 +57,19 @@ export default function V8Transitions() {
       requestAnimationFrame(fadeIn);
 
       const fadeOut = () => {
-        // Snap to slide2 happens 720ms after event; lights-on CTA needs 2000ms after that.
+        // Snap to slide2 happens 720ms after event; lights-on CTA needs 2900ms after that.
         // Delay unblock until that animation is guaranteed complete.
         const SNAP_MS = 720;
         const SETTLE_MS = 2900; // 1.3s CTA delay + 1.6s CTA animation
         const targetTime = startTime + SNAP_MS + SETTLE_MS;
         const delay = Math.max(0, targetTime - performance.now());
         window.setTimeout(unblock, delay);
+
+        // Force lights-on on slide2 regardless of scroll-event timing.
+        // On production (Vercel SSR), data-version is set after hydration so
+        // prod-init.ts check() may run before the layout shift and never fire again.
+        const slide2El = document.getElementById("slide2");
+        if (slide2El) slide2El.classList.add("lights-on");
 
         const t1 = performance.now();
         const FADE_OUT_MS = 600;
