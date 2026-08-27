@@ -21,7 +21,7 @@ function delay(ms: number): Promise<void> {
 
 export default function PromoIntro7() {
   const version = useSiteVersion();
-  const active  = version === "7";
+  const active  = version === "7" || version === "8";
 
   const [mounted, setMounted]       = useState(true);
   const [phraseIdx, setPhraseIdx]   = useState(-1);
