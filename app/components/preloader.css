@@ -8,50 +8,81 @@
   background: #0e0f12;
   overflow: hidden;
   cursor: pointer;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.6s ease;
 }
 
+/* Video background */
+.vg-preloader-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+/* Dark overlay so UI is readable */
+.vg-preloader-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1;
+}
+
+/* Content on top of video */
 .vg-logo-stack {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
+  gap: 28px;
   opacity: 0;
-  animation: vg-logo-fade-in 0.6s ease forwards;
+  animation: vg-logo-fade-in 0.7s ease 0.2s forwards;
 }
 
 .vg-logo-img {
   width: clamp(220px, 30vw, 420px);
   height: auto;
   display: block;
+  filter: drop-shadow(0 4px 24px rgba(0,0,0,0.7));
 }
 
+/* Progress bar — bigger and glowing */
 .vg-progress-track {
-  width: clamp(180px, 22vw, 280px);
-  height: 2px;
-  background: rgba(255,255,255,0.12);
-  border-radius: 2px;
+  width: clamp(280px, 44vw, 560px);
+  height: 6px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
   overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
 }
+
 .vg-progress-fill {
   height: 100%;
-  background: rgba(255,255,255,0.7);
+  background: linear-gradient(90deg, rgba(255,255,255,0.6) 0%, #fff 60%, rgba(220,235,255,0.95) 100%);
+  border-radius: 6px;
   transition: width 0.15s linear;
+  box-shadow: 0 0 12px 2px rgba(255,255,255,0.55), 0 0 28px 4px rgba(200,220,255,0.3);
 }
 
+/* Percentage — bigger and brighter */
 .vg-progress-pct {
   font-family: Inter, -apple-system, sans-serif;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.4);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 8px rgba(0,0,0,0.6);
 }
 
 @media (max-width: 768px) {
   .vg-logo-img { width: clamp(150px, 55vw, 260px); }
-  .vg-progress-track { width: clamp(140px, 50vw, 220px); }
+  .vg-progress-track { width: clamp(220px, 76vw, 400px); height: 5px; }
+  .vg-progress-pct { font-size: 13px; }
 }
 
 @keyframes vg-logo-fade-in {
-  0%   { opacity: 0; transform: scale(0.96); }
-  100% { opacity: 1; transform: scale(1); }
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
 }

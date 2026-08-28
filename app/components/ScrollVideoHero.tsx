@@ -1001,8 +1001,6 @@ export default function ScrollVideoHero() {
               <ZoneHotspots key={hotspotZone} zone={hotspotZone} isMobile />
             )}
 
-
-
             {/* Dark fill at bottom — shows through white card's top border-radius gaps */}
             <div style={{
               position: "absolute",
@@ -1085,6 +1083,7 @@ export default function ScrollVideoHero() {
               {hotspotZone !== null && (
                 <ZoneHotspots key={hotspotZone} zone={hotspotZone} />
               )}
+
               <div style={{
                 position: "absolute",
                 right: "clamp(28px, 3.2vw, 58px)",

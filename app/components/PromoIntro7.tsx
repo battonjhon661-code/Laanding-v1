@@ -115,8 +115,18 @@ export default function PromoIntro7() {
         pointerEvents: overlayOp < 0.01 ? "none" : "auto",
       }}
     >
+      {/* Background video */}
+      <video
+        autoPlay muted loop playsInline preload="auto"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
+      >
+        <source src="/start.webm" type="video/webm" />
+        <source src="/start.mp4" type="video/mp4" />
+      </video>
+      {/* Overlay to keep text readable */}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1 }} />
       {/* Phrases */}
-      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center", width: "min(76vw, 680px)", pointerEvents: "none" }}>
+      <div style={{ position: "absolute", bottom: 110, left: "50%", transform: "translateX(-50%)", textAlign: "center", width: "min(76vw, 680px)", pointerEvents: "none", zIndex: 2 }}>
         <p style={{
           fontFamily: "'Manrope', sans-serif",
           fontSize: "clamp(15px, 2.4vw, 28px)",
@@ -139,11 +149,14 @@ export default function PromoIntro7() {
           alt="VIPGLASS"
           style={{
             position: "absolute",
+            zIndex: 2,
             width:  logoFlying ? "110px" : "min(38vw, 340px)",
-            top:    logoFlying ? "16px"  : "50%",
+            bottom: logoFlying ? "auto"  : "110px",
+            top:    logoFlying ? "16px"  : "auto",
             left:   logoFlying ? "20px"  : "50%",
-            transform: logoFlying ? "none" : "translate(-50%, -50%)",
+            transform: logoFlying ? "none" : "translateX(-50%)",
             objectFit: "contain",
+            filter: "drop-shadow(0 2px 16px rgba(0,0,0,0.7))",
             transition: "width 0.65s cubic-bezier(.4,0,.2,1), top 0.65s cubic-bezier(.4,0,.2,1), left 0.65s cubic-bezier(.4,0,.2,1), transform 0.65s cubic-bezier(.4,0,.2,1)",
             animation: !logoFlying ? "v7pi-blink 0.38s steps(1,end) 3" : undefined,
             pointerEvents: "none",
@@ -152,11 +165,18 @@ export default function PromoIntro7() {
       )}
 
       {/* Progress bar */}
-      <div style={{ position: "absolute", bottom: 52, left: "50%", transform: "translateX(-50%)", width: "min(76vw, 300px)", pointerEvents: "none" }}>
-        <div style={{ height: 1, background: "rgba(255,255,255,0.1)", borderRadius: 1, overflow: "hidden" }}>
-          <div style={{ height: "100%", background: "rgba(244,241,236,0.5)", width: `${loadPct}%`, transition: "width 0.08s linear", borderRadius: 1 }} />
+      <div style={{ position: "absolute", bottom: 52, left: "50%", transform: "translateX(-50%)", width: "min(76vw, 380px)", pointerEvents: "none", zIndex: 2 }}>
+        <div style={{ height: 5, background: "rgba(255,255,255,0.15)", borderRadius: 5, overflow: "hidden", boxShadow: "0 0 0 1px rgba(255,255,255,0.08)" }}>
+          <div style={{
+            height: "100%",
+            background: "linear-gradient(90deg, rgba(255,255,255,0.7) 0%, #fff 60%, rgba(220,235,255,0.95) 100%)",
+            width: `${loadPct}%`,
+            transition: "width 0.08s linear",
+            borderRadius: 5,
+            boxShadow: "0 0 10px 2px rgba(255,255,255,0.5), 0 0 24px 3px rgba(200,220,255,0.25)",
+          }} />
         </div>
-        <div style={{ marginTop: 8, textAlign: "center", fontFamily: "'Manrope', sans-serif", fontSize: 9, letterSpacing: "0.16em", color: "rgba(244,241,236,0.25)" }}>
+        <div style={{ marginTop: 10, textAlign: "center", fontFamily: "'Manrope', sans-serif", fontSize: 13, letterSpacing: "0.14em", color: "rgba(255,255,255,0.8)", textShadow: "0 1px 6px rgba(0,0,0,0.6)", fontWeight: 400 }}>
           {loadPct}%
         </div>
       </div>

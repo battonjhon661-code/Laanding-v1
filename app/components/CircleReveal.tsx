@@ -61,6 +61,7 @@ export default function CircleReveal({
   const v7ProjectsRef   = useRef<HTMLDivElement>(null);
   const v7ExRef         = useRef<HTMLDivElement>(null);
   const v7FooterZoneRef = useRef<HTMLDivElement>(null);
+  const v7CaptionRef    = useRef<HTMLDivElement>(null);
   const isFlat = useFlatLayout();
   const isMobile = useIsMobile();
   const version = useSiteVersion();
@@ -234,6 +235,73 @@ export default function CircleReveal({
 
     const ss = (v: number) => v * v * (3 - 2 * v);
 
+    const PHRASES_1 = [
+      "Свет, форма и стекло — наш язык.",
+      "Мы создаём пространство из прозрачности.",
+    ];
+    const PHRASES_2 = [
+      "Зеркало — это бесконечность в раме.",
+      "Каждое отражение меняет комнату навсегда.",
+    ];
+
+    let captionCancelRef = { cancelled: false };
+
+    const runPhrases = (phrases: string[]) => {
+      captionCancelRef = { cancelled: false };
+      const cancel = captionCancelRef;
+      const cap = v7CaptionRef.current;
+      if (!cap) return;
+      const label = cap.querySelector(".v7cap-label") as HTMLElement;
+      cap.style.display = "block";
+      cap.style.opacity = "0";
+
+      const FADE_MS = 350;
+      const VISIBLE_MS = 1600;
+
+      const showPhrase = (idx: number) => {
+        if (cancel.cancelled || idx >= phrases.length) return;
+        label.textContent = phrases[idx];
+        const t0 = performance.now();
+        const fadeIn = (now: number) => {
+          if (cancel.cancelled) return;
+          const p = Math.min(1, (now - t0) / FADE_MS);
+          cap.style.opacity = (p * p * (3 - 2 * p)).toFixed(3);
+          if (p < 1) { requestAnimationFrame(fadeIn); return; }
+          setTimeout(() => {
+            if (cancel.cancelled) return;
+            const t1 = performance.now();
+            const fadeOut = (now2: number) => {
+              if (cancel.cancelled) return;
+              const p2 = Math.min(1, (now2 - t1) / FADE_MS);
+              cap.style.opacity = (1 - p2 * p2 * (3 - 2 * p2)).toFixed(3);
+              if (p2 < 1) { requestAnimationFrame(fadeOut); return; }
+              cap.style.opacity = "0";
+              setTimeout(() => showPhrase(idx + 1), 100);
+            };
+            requestAnimationFrame(fadeOut);
+          }, VISIBLE_MS);
+        };
+        requestAnimationFrame(fadeIn);
+      };
+      showPhrase(0);
+    };
+
+    const hideCaption = () => {
+      captionCancelRef.cancelled = true;
+      const cap = v7CaptionRef.current;
+      if (!cap) return;
+      const startOp = parseFloat(cap.style.opacity || "1");
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const p = Math.min(1, (now - t0) / 300);
+        cap.style.opacity = (startOp * (1 - p * p * (3 - 2 * p))).toFixed(3);
+        if (p < 1) { requestAnimationFrame(tick); return; }
+        cap.style.display = "none";
+        cap.style.opacity = "0";
+      };
+      requestAnimationFrame(tick);
+    };
+
     const revealExamples = () => {
       if (revealed) return;
       revealed = true;
@@ -249,6 +317,7 @@ export default function CircleReveal({
         if (p < 1) { requestAnimationFrame(tick); return; }
         light!.style.pointerEvents = "auto";
         if (video) { video.pause(); video.style.display = "none"; video.style.opacity = ""; }
+        hideCaption();
       };
       requestAnimationFrame(tick);
     };
@@ -256,6 +325,7 @@ export default function CircleReveal({
     const revealMirror = () => {
       if (mirrorRevealed) return;
       mirrorRevealed = true;
+      hideCaption();
       const mirrorTitleEl = mirrorTitleRef.current;
       const exContent = exContentRef.current;
 
@@ -326,6 +396,7 @@ export default function CircleReveal({
     const playTransition = () => {
       if (animating || revealed) return;
       animating = true;
+      runPhrases(PHRASES_1);
       const unblock = makeBlockers();
 
       if (video) {
@@ -348,6 +419,7 @@ export default function CircleReveal({
     const playTransition2 = () => {
       if (phase2Animating || mirrorRevealed) return;
       phase2Animating = true;
+      runPhrases(PHRASES_2);
       light!.style.pointerEvents = "none";
       if (mirrorBg) mirrorBg.style.display = "block";
       const unblock = makeBlockers();
@@ -1217,6 +1289,36 @@ export default function CircleReveal({
             playsInline
             preload="auto"
           />
+          {/* Caption shown during video transitions */}
+          <div
+            ref={v7CaptionRef}
+            style={{
+              position: "fixed",
+              bottom: "clamp(36px, 5vh, 64px)",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 9995,
+              display: "none",
+              opacity: 0,
+              textAlign: "center",
+              pointerEvents: "none",
+              fontFamily: "'Manrope', sans-serif",
+            }}
+            aria-hidden="true"
+          >
+            <div
+              className="v7cap-label"
+              style={{
+                fontSize: "clamp(16px, 1.8vw, 26px)",
+                color: "rgba(244,241,236,0.88)",
+                fontWeight: 300,
+                letterSpacing: ".04em",
+                lineHeight: 1.45,
+                textShadow: "0 2px 20px rgba(0,0,0,0.7)",
+                whiteSpace: "nowrap",
+              }}
+            />
+          </div>
         </>
       )}
       <div className="cr-sticky">

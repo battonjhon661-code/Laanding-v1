@@ -51,6 +51,7 @@ next-env.d.ts
 !public/v7-1.mp4
 !public/v7-2.mp4
 !public/block3-transition.mp4
+!public/start.mp4
 
 # dev server log
 dev.log
